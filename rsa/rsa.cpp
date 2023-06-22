@@ -7,6 +7,7 @@
 #include <openssl/bn.h>
 #include <openssl/evp.h>
 #include <openssl/core_names.h>
+#include <chrono>
 
 
 const int kBits = 2048;
@@ -114,6 +115,7 @@ free(pem_key);
 return 0;
 }
 
+
 unsigned int rsa_roundtrip(char msg, RSA_Params* rsa)
 {
 
@@ -126,9 +128,55 @@ unsigned int rsa_roundtrip(char msg, RSA_Params* rsa)
   BN_mod_exp(cipher, data, rsa->e, rsa->n, BN_CTX_new());
   printf("cipher: %s\n", BN_bn2dec(cipher));
 
+  BN_clear(data);
+
+  auto start = std::chrono::high_resolution_clock::now();
   /* Decryption: msg = cipher^d mod n */
   BN_mod_exp(data, cipher, rsa->d, rsa->n, BN_CTX_new());
-  printf("decrypted: %s\n", BN_bn2dec(data));
+  
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+  printf("Decrypted without CRT in %d: %s\n", duration.count(), BN_bn2dec(data));
+
+
+  BN_clear(data);
+  start = std::chrono::high_resolution_clock::now();
+  /* Using CRT for decrpytion */
+  BN_CTX* ctx = BN_CTX_new();
+  BN_CTX_start(ctx);
+  BIGNUM* m1 = BN_CTX_get(ctx);
+  BIGNUM* m2 = BN_CTX_get(ctx);
+  BIGNUM* h = BN_CTX_get(ctx);
+  BIGNUM* m1subm2 = BN_CTX_get(ctx);
+  BIGNUM* hq = BN_CTX_get(ctx);
+
+  /* m1 = c^(dP) mod p */
+  BN_mod_exp(m1, cipher, rsa->dp, rsa->p, ctx);
+  
+  /* m2 = c^(dQ) mod q */
+  BN_mod_exp(m2, cipher, rsa->dq, rsa->q, ctx);
+  
+  /* m1subm2 = (m1-m2) */
+  BN_sub(m1subm2, m1, m2);
+  
+  /* h = qInv*(m1subm2) mod p */
+  BN_mod_mul(h, rsa->qInv, m1subm2, rsa->p, ctx);
+  
+  /* hq = h*q */
+  BN_mul(hq, h, rsa->q, ctx);
+  
+  /* m = m2+h*q */
+  BN_add(data, m2, hq);
+  
+  BN_clear(m1);
+  BN_clear(m2);
+  BN_clear(h);
+  BN_clear(m1subm2);
+  BN_clear(hq);
+  BN_CTX_end(ctx);
+  stop = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+  printf("Decrypted with CRT in %d: %s\n", duration.count(), BN_bn2dec(data));
 
 
   /* Example: P: 13, Q: 17, E: 7*/
@@ -195,8 +243,13 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, BN_CTX* ctx, int nBits)
   /*
    * Key Pair:
    * <d, n>: Form the private decryption key.
-   * <e, n>: Form the public decryption key.
+   * <e, n>: Form the public encryption key.
    * 
+   * Chinese Remainder Theorem Params:        
+   * <p, q, dP, dQ, qInv>: Form the quintuple private key used for decryption.
+   * CRT and Euler's Theorem are used here.
+   * https://www.di-mgt.com.au/crt_rsa.html
+   * Benefit of using RSA-CRT over RSA is to speed up the decryption time.
    */
 
 
