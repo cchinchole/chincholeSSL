@@ -21,7 +21,7 @@ struct RSA_Params {
 };
 
 int gen_rsa_sp800_56b(RSA_Params* rsa, BN_CTX* ctx, int nBits);
-unsigned int rsa_roundtrip(char msg, RSA_Params* rsa);
+int rsa_roundtrip(char msg, RSA_Params* rsa);
 
 int printParameter(const char* param_name, BIGNUM* num)
 {
@@ -116,32 +116,17 @@ return 0;
 }
 
 
-unsigned int rsa_roundtrip(char msg, RSA_Params* rsa)
+
+int rsa_decrypt_without_crt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa)
 {
-
-  BIGNUM* data = BN_new();
-  BIGNUM* cipher = BN_new();
-  BN_set_word(data, msg);
-  printf("original: %s\n", BN_bn2dec(data));
-
-  /* Encryption: cipher = msg^e mod n */
-  BN_mod_exp(cipher, data, rsa->e, rsa->n, BN_CTX_new());
-  printf("cipher: %s\n", BN_bn2dec(cipher));
-
-  BN_clear(data);
-
-  auto start = std::chrono::high_resolution_clock::now();
   /* Decryption: msg = cipher^d mod n */
   BN_mod_exp(data, cipher, rsa->d, rsa->n, BN_CTX_new());
-  
-  auto stop = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  printf("Decrypted without CRT in %d: %s\n", duration.count(), BN_bn2dec(data));
+  return 0;
+}
 
-
-  BN_clear(data);
-  start = std::chrono::high_resolution_clock::now();
-  /* Using CRT for decrpytion */
+int rsa_decrypt_with_crt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa)
+{
+  /* Using CRT for decryption */
   BN_CTX* ctx = BN_CTX_new();
   BN_CTX_start(ctx);
   BIGNUM* m1 = BN_CTX_get(ctx);
@@ -174,9 +159,43 @@ unsigned int rsa_roundtrip(char msg, RSA_Params* rsa)
   BN_clear(m1subm2);
   BN_clear(hq);
   BN_CTX_end(ctx);
+  return 0;
+}
+
+int rsa_encrypt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa)
+{
+    /* Encryption: cipher = msg^e mod n */
+    BN_mod_exp(cipher, data, rsa->e, rsa->n, BN_CTX_new());
+    return 0;
+}
+
+int rsa_roundtrip(char msg, RSA_Params* rsa)
+{
+
+  BIGNUM* data = BN_new();
+  BIGNUM* cipher = BN_new();
+  BN_set_word(data, msg);
+  printf("original: %s\n", BN_bn2dec(data));
+
+ 
+  rsa_encrypt(data, cipher, rsa);
+  printf("cipher: %s\n", BN_bn2dec(cipher));
+  BN_clear(data);
+
+  auto start = std::chrono::high_resolution_clock::now();
+  rsa_decrypt_without_crt(data, cipher, rsa);
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+ 
+  printf("Decrypted without CRT in %dms: %s\n", duration.count(), BN_bn2dec(data));
+  BN_clear(data);
+
+  start = std::chrono::high_resolution_clock::now();
+  rsa_decrypt_with_crt(data, cipher, rsa);
   stop = std::chrono::high_resolution_clock::now();
   duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  printf("Decrypted with CRT in %d: %s\n", duration.count(), BN_bn2dec(data));
+  
+  printf("Decrypted with CRT in %dms: %s\n", duration.count(), BN_bn2dec(data));
 
 
   /* Example: P: 13, Q: 17, E: 7*/
