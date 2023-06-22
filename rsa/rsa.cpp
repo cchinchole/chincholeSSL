@@ -20,7 +20,7 @@ struct RSA_Params {
   BIGNUM *p, *q, *e, *n, *d, *dp, *dq, *qInv;
 };
 
-int gen_rsa_sp800_56b(RSA_Params* rsa, BN_CTX* ctx, int nBits);
+int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx = BN_CTX_new());
 int rsa_roundtrip(char msg, RSA_Params* rsa);
 
 int printParameter(const char* param_name, BIGNUM* num)
@@ -45,10 +45,6 @@ pem_key = (char*)calloc(keylen+1, 1); // Null-terminate
 BIO_read(bio, pem_key, keylen);
 BIO_printf(bio_stdout, "%s\n\n\n", pem_key);
 
-BIGNUM* three = BN_new();
-BIGNUM* five = BN_new();
-BN_set_word(three, 3);
-BN_set_word(five, 5);
 BIGNUM* my_key_p = NULL;
 BIGNUM* my_key_q = NULL;
 BIGNUM* my_key_e = NULL;
@@ -78,7 +74,6 @@ printParameter("DQ", my_key_dq);
 #endif
 
 
-BN_CTX* ctx = BN_CTX_new();
 RSA_Params myRsaParams = {
   BN_new(), BN_new(), BN_new(), BN_new(), BN_new(), BN_new(), BN_new(), BN_new()
 };
@@ -95,11 +90,9 @@ BN_set_word(rsaPtr->q, 17);
 BN_set_word(rsaPtr->e, 7);
 #endif
 
-gen_rsa_sp800_56b(rsaPtr, ctx, kBits);
+gen_rsa_sp800_56b(rsaPtr, kBits);
 rsa_roundtrip('0', rsaPtr);
 
-BN_clear(three);
-BN_clear(five);
 BN_clear(my_key_p);
 BN_clear(my_key_q);
 BN_clear(my_key_e);
@@ -109,7 +102,6 @@ BN_clear(my_key_dp);
 BN_clear(my_key_dq);
 BIO_free_all(bio_stdout);
 BIO_free_all(bio);
-free(ctx);
 free(pKey);
 free(pem_key);
 return 0;
@@ -117,17 +109,17 @@ return 0;
 
 
 
-int rsa_decrypt_without_crt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa)
+int rsa_decrypt_without_crt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa, BN_CTX* ctx = BN_CTX_new())
 {
   /* Decryption: msg = cipher^d mod n */
-  BN_mod_exp(data, cipher, rsa->d, rsa->n, BN_CTX_new());
+  BN_mod_exp(data, cipher, rsa->d, rsa->n, ctx);
+  BN_CTX_free(ctx);
   return 0;
 }
 
-int rsa_decrypt_with_crt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa)
+int rsa_decrypt_with_crt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa, BN_CTX* ctx = BN_CTX_new())
 {
   /* Using CRT for decryption */
-  BN_CTX* ctx = BN_CTX_new();
   BN_CTX_start(ctx);
   BIGNUM* m1 = BN_CTX_get(ctx);
   BIGNUM* m2 = BN_CTX_get(ctx);
@@ -153,19 +145,16 @@ int rsa_decrypt_with_crt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa)
   /* m = m2+h*q */
   BN_add(data, m2, hq);
   
-  BN_clear(m1);
-  BN_clear(m2);
-  BN_clear(h);
-  BN_clear(m1subm2);
-  BN_clear(hq);
   BN_CTX_end(ctx);
+  BN_CTX_free(ctx);
   return 0;
 }
 
-int rsa_encrypt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa)
+int rsa_encrypt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa, BN_CTX* ctx = BN_CTX_new())
 {
     /* Encryption: cipher = msg^e mod n */
-    BN_mod_exp(cipher, data, rsa->e, rsa->n, BN_CTX_new());
+    BN_mod_exp(cipher, data, rsa->e, rsa->n, ctx);
+    BN_CTX_free(ctx);
     return 0;
 }
 
@@ -201,12 +190,14 @@ int rsa_roundtrip(char msg, RSA_Params* rsa)
   /* Example: P: 13, Q: 17, E: 7*/
   /* Cipher: 48^7 mod 221 = 74 */
   /* Unencrypted: 74^7 mod 221 = 48 */
+  BN_free(data);
+  BN_free(cipher);
   return 0;
 
 }
 
 /* Computes d, n, dP, dQ, qInv from the prime factors and public exponent */
-int gen_rsa_sp800_56b(RSA_Params* rsa, BN_CTX* ctx, int nBits)
+int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx)
 {
   
   BIGNUM *p1, *q1, *lcm, *p1q1, *gcd;
@@ -268,16 +259,12 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, BN_CTX* ctx, int nBits)
    * <p, q, dP, dQ, qInv>: Form the quintuple private key used for decryption.
    * CRT and Euler's Theorem are used here.
    * https://www.di-mgt.com.au/crt_rsa.html
+   * https://math.berkeley.edu/~charles/55/2-21.pdf
    * Benefit of using RSA-CRT over RSA is to speed up the decryption time.
    */
 
-
-  BN_clear(p1);
-  BN_clear(q1);
-  BN_clear(lcm);
-  BN_clear(p1q1);
-  BN_clear(gcd);
   BN_CTX_end(ctx);
+  BN_CTX_free(ctx);
   return 0;
 }
 
