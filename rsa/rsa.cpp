@@ -29,9 +29,9 @@ class Timer {
       duration = std::chrono::high_resolution_clock::now();
     }
     
-    std::chrono::microseconds getDuration()
+    unsigned int getDuration()
     {
-      return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - duration);
+      return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - duration).count();
     }
 };
 
@@ -192,13 +192,13 @@ int rsa_roundtrip(char msg, RSA_Params* rsa)
   t.start();
   rsa_decrypt_without_crt(data, cipher, rsa);
  
-  printf("Decrypted without CRT in %dms: %s\n", t.getDuration().count(), BN_bn2dec(data));
+  printf("Decrypted without CRT in %dms: %s\n", t.getDuration(), BN_bn2dec(data));
   BN_clear(data);
 
   t.start();
   rsa_decrypt_with_crt(data, cipher, rsa);
   
-  printf("Decrypted with CRT in %dms: %s\n", t.getDuration().count(), BN_bn2dec(data));
+  printf("Decrypted with CRT in %dms: %s\n", t.getDuration(), BN_bn2dec(data));
 
 
   /* Example: P: 13, Q: 17, E: 7*/
@@ -261,7 +261,7 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx)
   /* Step 6: qInv = q^(-1) mod(p) */
   BN_mod_inverse(rsa->qInv, rsa->q, rsa->p, ctx);
 
-  printf("Took: %dms to generate CRT parameters.", t.getDuration().count());
+  printf("Took: %dms to generate CRT parameters.", t.getDuration());
 
   printParameter("DP", rsa->dp);
   printParameter("DQ", rsa->dq);
