@@ -8,13 +8,15 @@
 #include <openssl/evp.h>
 #include <openssl/core_names.h>
 #include <chrono>
+#include <vector>
+#include <iostream>
 
 
 const int kBits = 2048;
 int keylen;
 char *pem_key;
 BIO *bio_stdout;
-bool doChecks = false;
+
 
 struct RSA_Params {
   BIGNUM *p, *q, *e, *n, *d, *dp, *dq, *qInv;
@@ -23,20 +25,29 @@ struct RSA_Params {
 class Timer {
   private:
     std::chrono::_V2::high_resolution_clock::time_point startp;
+    std::chrono::_V2::high_resolution_clock::time_point endp;
   public:
     void start()
     {
       startp = std::chrono::high_resolution_clock::now();
     }
-    
-    unsigned int getDuration()
+
+    void stop()
     {
-      return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - startp).count();
+      endp = std::chrono::high_resolution_clock::now();
+    }
+    
+    unsigned int getElapsed(bool useStop = false)
+    {
+      if(useStop)
+        stop();
+      return std::chrono::duration_cast<std::chrono::microseconds>(endp - startp).count();
     }
 };
 
 int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx = BN_CTX_new());
-int rsa_roundtrip(char msg, RSA_Params* rsa);
+int rsa_sp800_56b_pairwise_test(RSA_Params* rsa, BN_CTX* ctx = BN_CTX_new());
+int rsa_roundtrip(char* msg, RSA_Params* rsa);
 Timer t;
 
 int printParameter(const char* param_name, BIGNUM* num)
@@ -63,14 +74,7 @@ pem_key = (char*)calloc(keylen+1, 1); // Null-terminate
 BIO_read(bio, pem_key, keylen);
 BIO_printf(bio_stdout, "%s\n\n\n", pem_key);
 
-BIGNUM* my_key_p = NULL;
-BIGNUM* my_key_q = NULL;
-BIGNUM* my_key_e = NULL;
-BIGNUM* my_key_d = NULL;
-BIGNUM* my_key_n = NULL;
-BIGNUM* my_key_dp = NULL;
-BIGNUM* my_key_dq = NULL;
-
+BIGNUM* my_key_p = NULL,* my_key_q = NULL,* my_key_d = NULL,* my_key_e = NULL,* my_key_n = NULL,* my_key_dp = NULL,* my_key_dq = NULL;
 
 EVP_PKEY_get_bn_param(pKey, OSSL_PKEY_PARAM_RSA_FACTOR1, &my_key_p);
 EVP_PKEY_get_bn_param(pKey, OSSL_PKEY_PARAM_RSA_FACTOR2, &my_key_q);
@@ -109,7 +113,7 @@ BN_set_word(rsaPtr->e, 7);
 #endif
 
 gen_rsa_sp800_56b(rsaPtr, kBits);
-rsa_roundtrip('0', rsaPtr);
+rsa_roundtrip("sWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w", rsaPtr);
 
 BN_clear(my_key_p);
 BN_clear(my_key_q);
@@ -176,30 +180,76 @@ int rsa_encrypt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa, BN_CTX* ctx = BN_
     return 0;
 }
 
-int rsa_roundtrip(char msg, RSA_Params* rsa)
-{
+/*
+TODO: Make k byte chunks for BN_BIN2BN to process
+      Use string
+*/
 
+int rsa_roundtrip(char* msg, RSA_Params* rsa)
+{
   BIGNUM* data = BN_new();
   BIGNUM* cipher = BN_new();
-  BN_set_word(data, msg);
-  printf("original: %s\n", BN_bn2dec(data));
+  std::string finalOutput;
+  size_t msgLength = strlen(msg);
+  int msgPtr = 0;
+  char* msgBlockData;
+  char* dataOutput;
 
- 
-  rsa_encrypt(data, cipher, rsa);
-  printf("cipher: %s\n", BN_bn2dec(cipher));
-  BN_clear(data);
+  int maxBytes = (kBits/8)-1;
 
-  t.start();
-  rsa_decrypt_without_crt(data, cipher, rsa);
- 
-  printf("Decrypted without CRT in %dms: %s\n", t.getDuration(), BN_bn2dec(data));
-  BN_clear(data);
+  for(int i = 0; i <= ((msgLength-1)/maxBytes); i++)
+  {
+  printf("\n\nPerforming operations On section [ msgPtr = %d ] [Msg Length = %d ] [ MsgLength-Ptr = %d]\n\n", msgPtr, msgLength, msgLength-msgPtr);
+    
+  if( (msgLength-msgPtr) > maxBytes ){
+    msgBlockData = (char*)malloc( maxBytes );
+    strncpy(msgBlockData, msg + msgPtr, (maxBytes)  );
+  }
+  else{
+    msgBlockData = (char*)malloc( msgLength-msgPtr+1 );
+    strncpy(msgBlockData, msg + msgPtr, msgLength-msgPtr+1);
+  }
 
-  t.start();
-  rsa_decrypt_with_crt(data, cipher, rsa);
-  
-  printf("Decrypted with CRT in %dms: %s\n", t.getDuration(), BN_bn2dec(data));
 
+  if((msgLength-msgPtr) > maxBytes)
+    BN_bin2bn((unsigned char*)msgBlockData, (maxBytes), data);
+  else
+    BN_bin2bn((unsigned char*)msgBlockData, strlen(msgBlockData)+1, data);
+
+    rsa_encrypt(data, cipher, rsa);
+
+    dataOutput = (char*)malloc( BN_num_bytes(data) );
+    BN_bn2bin(data, (unsigned char*)dataOutput);
+    printf("original: %s\n", dataOutput);
+    printf("cipher: %s\n", BN_bn2dec(cipher));
+    
+    BN_clear(data);
+    free(dataOutput);
+    t.start();
+    rsa_decrypt_without_crt(data, cipher, rsa);
+    t.stop();
+    dataOutput = (char*)malloc( BN_num_bytes(data) );
+    BN_bn2bin(data, (unsigned char*)dataOutput);
+    //printf("Decrypted without CRT in %dms: %s\n", t.getElapsed(), outputMessage);
+    BN_clear(data);
+    free(dataOutput);
+
+    t.start();
+    rsa_decrypt_with_crt(data, cipher, rsa);
+    t.stop();
+    dataOutput = (char*)malloc( BN_num_bytes(data) );
+    BN_bn2bin(data, (unsigned char*)dataOutput);
+    //printf("Decrypted with CRT in %dms: %s\n", t.getElapsed(), outputMessage);
+    finalOutput.append(dataOutput);
+    printf("Decryped block: %s\n", dataOutput);
+    BN_clear(cipher);
+    free(msgBlockData);
+    free(dataOutput);
+    msgPtr+=(maxBytes);
+    }
+
+  printf("\n\n\n\nFinal output: %s\n", finalOutput.c_str());
+  printf("Comparison test: %d\n", strcmp(finalOutput.c_str(), msg));
 
   /* Example: P: 13, Q: 17, E: 7*/
   /* Cipher: 48^7 mod 221 = 74 */
@@ -208,6 +258,34 @@ int rsa_roundtrip(char msg, RSA_Params* rsa)
   BN_free(cipher);
   return 0;
 }
+
+/* Make sure that k = (k^e)^d mod n ; for some int k where 1 < k < n-1 */
+int rsa_sp800_56b_pairwise_test(RSA_Params* rsa, BN_CTX* ctx)
+{
+  BIGNUM* k, *tmp;
+  BN_CTX_start(ctx);
+  k = BN_CTX_get(ctx);
+  tmp = BN_CTX_get(ctx);
+
+  /* First set k to 2 (between 1 < n-1 ) then take ( k^e mod n )^d mod n and compare k to tmp */
+  int ret = ( BN_set_word(k, 2) && BN_mod_exp(tmp, k, rsa->e, rsa->n, ctx) && BN_mod_exp(tmp, tmp, rsa->d, rsa->n, ctx) && !BN_cmp(k, tmp) );
+  BN_CTX_end(ctx);
+  BN_CTX_free(ctx);
+  return ret;
+}
+
+ /*
+  * Key Pair:
+  * <d, n>: Form the private decryption key.
+  * <e, n>: Form the public encryption key.
+  * 
+  * Chinese Remainder Theorem Params:        
+  * <p, q, dP, dQ, qInv>: Form the quintuple private key used for decryption.
+  * CRT and Euler's Theorem are used here.
+  * https://www.di-mgt.com.au/crt_rsa.html
+  * https://math.berkeley.edu/~charles/55/2-21.pdf
+  * Benefit of using RSA-CRT over RSA is to speed up the decryption time.
+  */
 
 /* Computes d, n, dP, dQ, qInv from the prime factors and public exponent */
 int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx)
@@ -241,10 +319,14 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx)
  
   for(;;)
   {
-     BN_mod_inverse(rsa->d, rsa->e, lcm, ctx);
-     printParameter("D", rsa->d);
-     if (!(BN_num_bits(rsa->d) <= (nBits >> 1)) || !doChecks)
-      break;
+      BN_mod_inverse(rsa->d, rsa->e, lcm, ctx);
+      printParameter("D", rsa->d);
+      #ifdef DO_CHECKS
+        if (!(BN_num_bits(rsa->d) <= (nBits >> 1)))
+          break;
+      #else
+        break;
+      #endif
   }
 
   /* Step 3: n = pq */
@@ -261,24 +343,16 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx)
   /* Step 6: qInv = q^(-1) mod(p) */
   BN_mod_inverse(rsa->qInv, rsa->q, rsa->p, ctx);
 
-  printf("Took: %dms to generate CRT parameters.", t.getDuration());
+  printf("Took: %dms to generate CRT parameters.\n", t.getElapsed(true));
 
   printParameter("DP", rsa->dp);
   printParameter("DQ", rsa->dq);
-  printParameter("Qinv", rsa->qInv);
+  printParameter("QINV", rsa->qInv);
 
-  /*
-   * Key Pair:
-   * <d, n>: Form the private decryption key.
-   * <e, n>: Form the public encryption key.
-   * 
-   * Chinese Remainder Theorem Params:        
-   * <p, q, dP, dQ, qInv>: Form the quintuple private key used for decryption.
-   * CRT and Euler's Theorem are used here.
-   * https://www.di-mgt.com.au/crt_rsa.html
-   * https://math.berkeley.edu/~charles/55/2-21.pdf
-   * Benefit of using RSA-CRT over RSA is to speed up the decryption time.
-   */
+  if(rsa_sp800_56b_pairwise_test(rsa))
+    printf("Pairwise passed!\n");
+  else
+    printf("Pairwise failed!\n");
 
   BN_CTX_end(ctx);
   BN_CTX_free(ctx);
