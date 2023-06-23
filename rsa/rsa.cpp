@@ -22,16 +22,16 @@ struct RSA_Params {
 
 class Timer {
   private:
-    std::chrono::_V2::high_resolution_clock::time_point duration;
+    std::chrono::_V2::high_resolution_clock::time_point start;
   public:
     void start()
     {
-      duration = std::chrono::high_resolution_clock::now();
+      start = std::chrono::high_resolution_clock::now();
     }
     
     unsigned int getDuration()
     {
-      return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - duration).count();
+      return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count();
     }
 };
 
