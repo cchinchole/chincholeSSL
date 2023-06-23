@@ -20,14 +20,32 @@ struct RSA_Params {
   BIGNUM *p, *q, *e, *n, *d, *dp, *dq, *qInv;
 };
 
+class Timer {
+  private:
+    std::chrono::_V2::high_resolution_clock::time_point duration;
+  public:
+    void start()
+    {
+      duration = std::chrono::high_resolution_clock::now();
+    }
+    
+    std::chrono::microseconds getDuration()
+    {
+      return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - duration);
+    }
+};
+
 int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx = BN_CTX_new());
 int rsa_roundtrip(char msg, RSA_Params* rsa);
+Timer t;
 
 int printParameter(const char* param_name, BIGNUM* num)
 {
+  #ifdef PRINT_PARAMS
   BIO_printf(bio_stdout, "%-5s", param_name);
   BIO_printf(bio_stdout, "%s", BN_bn2dec(num));
   BIO_printf(bio_stdout, "\n");
+  #endif
   return 0;
 }
 
@@ -171,20 +189,16 @@ int rsa_roundtrip(char msg, RSA_Params* rsa)
   printf("cipher: %s\n", BN_bn2dec(cipher));
   BN_clear(data);
 
-  auto start = std::chrono::high_resolution_clock::now();
+  t.start();
   rsa_decrypt_without_crt(data, cipher, rsa);
-  auto stop = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
  
-  printf("Decrypted without CRT in %dms: %s\n", duration.count(), BN_bn2dec(data));
+  printf("Decrypted without CRT in %dms: %s\n", t.getDuration().count(), BN_bn2dec(data));
   BN_clear(data);
 
-  start = std::chrono::high_resolution_clock::now();
+  t.start();
   rsa_decrypt_with_crt(data, cipher, rsa);
-  stop = std::chrono::high_resolution_clock::now();
-  duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   
-  printf("Decrypted with CRT in %dms: %s\n", duration.count(), BN_bn2dec(data));
+  printf("Decrypted with CRT in %dms: %s\n", t.getDuration().count(), BN_bn2dec(data));
 
 
   /* Example: P: 13, Q: 17, E: 7*/
@@ -193,7 +207,6 @@ int rsa_roundtrip(char msg, RSA_Params* rsa)
   BN_free(data);
   BN_free(cipher);
   return 0;
-
 }
 
 /* Computes d, n, dP, dQ, qInv from the prime factors and public exponent */
@@ -238,16 +251,20 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx)
   BN_mul(rsa->n, rsa->p, rsa->q, ctx);
   printParameter("N", rsa->n);
 
+  t.start();
   /* Step 4: dP = d mod(p-1)*/
   BN_mod(rsa->dp, rsa->d, p1, ctx);
-  printParameter("DP", rsa->dp);
 
   /* Step 5: dQ = d mod(q-1)*/
   BN_mod(rsa->dq, rsa->d, q1, ctx);
-  printParameter("DQ", rsa->dq);
 
   /* Step 6: qInv = q^(-1) mod(p) */
   BN_mod_inverse(rsa->qInv, rsa->q, rsa->p, ctx);
+
+  printf("Took: %dms to generate CRT parameters.", t.getDuration().count());
+
+  printParameter("DP", rsa->dp);
+  printParameter("DQ", rsa->dq);
   printParameter("Qinv", rsa->qInv);
 
   /*
