@@ -45,16 +45,18 @@ class Timer {
     }
 };
 
+
 int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx = BN_CTX_new());
 int rsa_sp800_56b_pairwise_test(RSA_Params* rsa, BN_CTX* ctx = BN_CTX_new());
-int rsa_roundtrip(char* msg, RSA_Params* rsa);
+int rsa_roundtrip(std::string msg, RSA_Params* rsa);
+int printParameter(std::string param_name, BIGNUM* num);
 Timer t;
 
-int printParameter(const char* param_name, BIGNUM* num)
+int printParameter(std::string param_name, BIGNUM* num)
 {
   #ifdef PRINT_PARAMS
-  BIO_printf(bio_stdout, "%-5s", param_name);
-  BIO_printf(bio_stdout, "%s", BN_bn2dec(num));
+  BIO_printf(bio_stdout, "%-5s", param_name.c_str());
+  BIO_printf(bio_stdout, "%s", BN_bn2dec(num).c_str());
   BIO_printf(bio_stdout, "\n");
   #endif
   return 0;
@@ -74,7 +76,7 @@ pem_key = (char*)calloc(keylen+1, 1); // Null-terminate
 BIO_read(bio, pem_key, keylen);
 BIO_printf(bio_stdout, "%s\n\n\n", pem_key);
 
-BIGNUM* my_key_p = NULL,* my_key_q = NULL,* my_key_d = NULL,* my_key_e = NULL,* my_key_n = NULL,* my_key_dp = NULL,* my_key_dq = NULL;
+BIGNUM *my_key_p = nullptr, *my_key_q = nullptr, *my_key_d = nullptr, *my_key_e = nullptr, *my_key_n = nullptr, *my_key_dp = nullptr, *my_key_dq = nullptr;
 
 EVP_PKEY_get_bn_param(pKey, OSSL_PKEY_PARAM_RSA_FACTOR1, &my_key_p);
 EVP_PKEY_get_bn_param(pKey, OSSL_PKEY_PARAM_RSA_FACTOR2, &my_key_q);
@@ -113,19 +115,20 @@ BN_set_word(rsaPtr->e, 7);
 #endif
 
 gen_rsa_sp800_56b(rsaPtr, kBits);
-rsa_roundtrip("sWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w", rsaPtr);
+rsa_roundtrip("bbsWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w", rsaPtr);
 
-BN_clear(my_key_p);
-BN_clear(my_key_q);
-BN_clear(my_key_e);
-BN_clear(my_key_d);
-BN_clear(my_key_n);
-BN_clear(my_key_dp);
-BN_clear(my_key_dq);
 BIO_free_all(bio_stdout);
 BIO_free_all(bio);
+
+BN_free( my_key_p );
+BN_free( my_key_q );
+BN_free( my_key_d );
+BN_free( my_key_e );
+BN_free( my_key_n );
+BN_free( my_key_dp );
+BN_free( my_key_dq );
 free(pKey);
-free(pem_key);
+delete pem_key;
 return 0;
 }
 
@@ -172,7 +175,7 @@ int rsa_decrypt_with_crt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa, BN_CTX* 
   return 0;
 }
 
-int rsa_encrypt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa, BN_CTX* ctx = BN_CTX_new())
+int rsa_encrypt(BIGNUM *data, BIGNUM *cipher, RSA_Params *rsa, BN_CTX *ctx = BN_CTX_new())
 {
     /* Encryption: cipher = msg^e mod n */
     BN_mod_exp(cipher, data, rsa->e, rsa->n, ctx);
@@ -180,80 +183,70 @@ int rsa_encrypt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa, BN_CTX* ctx = BN_
     return 0;
 }
 
-/*
-TODO: Make k byte chunks for BN_BIN2BN to process
-      Use string
-*/
-
-int rsa_roundtrip(char* msg, RSA_Params* rsa)
+int rsa_roundtrip(std::string msg, RSA_Params* rsa)
 {
-  BIGNUM* data = BN_new();
-  BIGNUM* cipher = BN_new();
+  /* Example: P: 13, Q: 17, E: 7*/
+  /* Cipher: 48^7 mod 221 = 74 */
+  /* Unencrypted: 74^7 mod 221 = 48 */
+  BIGNUM* data = BN_new(), *cipher = BN_new();
   std::string finalOutput;
-  size_t msgLength = strlen(msg);
-  int msgPtr = 0;
-  char* msgBlockData;
-  char* dataOutput;
+  size_t msgLength = msg.length();
+  unsigned int msgPtr = 0;
+  char* msgBlockData, *dataOutput;
 
   int maxBytes = (kBits/8)-1;
 
   for(int i = 0; i <= ((msgLength-1)/maxBytes); i++)
   {
-  printf("\n\nPerforming operations On section [ msgPtr = %d ] [Msg Length = %d ] [ MsgLength-Ptr = %d]\n\n", msgPtr, msgLength, msgLength-msgPtr);
-    
-  if( (msgLength-msgPtr) > maxBytes ){
-    msgBlockData = (char*)malloc( maxBytes );
-    strncpy(msgBlockData, msg + msgPtr, (maxBytes)  );
-  }
-  else{
-    msgBlockData = (char*)malloc( msgLength-msgPtr+1 );
-    strncpy(msgBlockData, msg + msgPtr, msgLength-msgPtr+1);
-  }
-
-
-  if((msgLength-msgPtr) > maxBytes)
-    BN_bin2bn((unsigned char*)msgBlockData, (maxBytes), data);
-  else
-    BN_bin2bn((unsigned char*)msgBlockData, strlen(msgBlockData)+1, data);
-
-    rsa_encrypt(data, cipher, rsa);
-
-    dataOutput = (char*)malloc( BN_num_bytes(data) );
-    BN_bn2bin(data, (unsigned char*)dataOutput);
-    printf("original: %s\n", dataOutput);
-    printf("cipher: %s\n", BN_bn2dec(cipher));
-    
-    BN_clear(data);
-    free(dataOutput);
-    t.start();
-    rsa_decrypt_without_crt(data, cipher, rsa);
-    t.stop();
-    dataOutput = (char*)malloc( BN_num_bytes(data) );
-    BN_bn2bin(data, (unsigned char*)dataOutput);
-    //printf("Decrypted without CRT in %dms: %s\n", t.getElapsed(), outputMessage);
-    BN_clear(data);
-    free(dataOutput);
-
-    t.start();
-    rsa_decrypt_with_crt(data, cipher, rsa);
-    t.stop();
-    dataOutput = (char*)malloc( BN_num_bytes(data) );
-    BN_bn2bin(data, (unsigned char*)dataOutput);
-    //printf("Decrypted with CRT in %dms: %s\n", t.getElapsed(), outputMessage);
-    finalOutput.append(dataOutput);
-    printf("Decryped block: %s\n", dataOutput);
-    BN_clear(cipher);
-    free(msgBlockData);
-    free(dataOutput);
-    msgPtr+=(maxBytes);
+    printf("\n\nPerforming operations On section [ msgPtr = %d ] [Msg Length = %d ] [ MsgLength-Ptr = %d]\n\n", msgPtr, msgLength, msgLength-msgPtr);
+      
+    if( (msgLength-msgPtr) >= maxBytes ){
+      msgBlockData = (char*)malloc( maxBytes );
+      strncpy(msgBlockData, msg.c_str() + msgPtr, (maxBytes)  );
+    }
+    else{
+      msgBlockData = (char*)malloc( msgLength-msgPtr+1 );
+      strncpy(msgBlockData, msg.c_str() + msgPtr, msgLength-msgPtr+1);
     }
 
-  printf("\n\n\n\nFinal output: %s\n", finalOutput.c_str());
-  printf("Comparison test: %d\n", strcmp(finalOutput.c_str(), msg));
 
-  /* Example: P: 13, Q: 17, E: 7*/
-  /* Cipher: 48^7 mod 221 = 74 */
-  /* Unencrypted: 74^7 mod 221 = 48 */
+    if((msgLength-msgPtr) >= maxBytes)
+      BN_bin2bn((unsigned char*)msgBlockData, (maxBytes), data);
+    else
+      BN_bin2bn((unsigned char*)msgBlockData, strlen(msgBlockData)+1, data);
+
+      rsa_encrypt(data, cipher, rsa);
+
+      dataOutput = (char*)malloc( BN_num_bytes(data) );
+      BN_bn2bin(data, (unsigned char*)dataOutput);
+      printf("original: %s\n", dataOutput);
+      printf("cipher: %s\n", BN_bn2dec(cipher));
+      
+      BN_clear(data);
+      delete dataOutput;
+      t.start();
+      rsa_decrypt_without_crt(data, cipher, rsa);
+      t.stop();
+      dataOutput = (char*)malloc( BN_num_bytes(data) );
+      BN_bn2bin(data, (unsigned char*)dataOutput);
+      printf("Decrypted without CRT in %dms: %s\n", t.getElapsed(), dataOutput);
+      BN_clear(data);
+      delete dataOutput;
+
+      t.start();
+      rsa_decrypt_with_crt(data, cipher, rsa);
+      t.stop();
+      dataOutput = (char*)malloc( BN_num_bytes(data) );
+      BN_bn2bin(data, (unsigned char*)dataOutput);
+      printf("Decrypted with CRT in %dms: %s\n", t.getElapsed(), dataOutput);
+      finalOutput.append(dataOutput);
+      BN_clear(cipher);
+      delete msgBlockData;
+      delete dataOutput;
+      msgPtr+=(maxBytes);
+    }
+  printf("\n\n\n\nFinal output: %s\n", finalOutput.c_str());
+  printf("Comparison test: %d\n", strcmp(finalOutput.c_str(), msg.c_str()));
   BN_free(data);
   BN_free(cipher);
   return 0;
