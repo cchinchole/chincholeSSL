@@ -18,6 +18,7 @@ char *pem_key;
 BIO *bio_stdout;
 
 
+
 struct RSA_Params {
   BIGNUM *p, *q, *e, *n = BN_new(), *d = BN_new(), *dp = BN_new(), *dq = BN_new(), *qInv = BN_new();
 };
@@ -142,68 +143,113 @@ cRSA(int bits, BIGNUM *pp, BIGNUM *qq, BIGNUM *ee, BN_CTX* ctx = BN_CTX_new())
   BN_CTX_free(ctx);
 }
 
-int encrypt(BIGNUM** desti, int *len, char *src, BN_CTX *ctx = BN_CTX_new())
-{
-  int numBytes = strlen(src);
-  int maxBytes = (kBits/8)-1;
-  int numPages = ((numBytes)/maxBytes);
-  int msgPtr = 0;
-  BIGNUM* data = BN_new();
-  BIGNUM* dest = BN_new();
-  BN_CTX_start(ctx);
+unsigned char* encrypt(unsigned int *out_len, char *src, BN_CTX *ctx = BN_CTX_new())
+{ 
+  unsigned int numBytes = strlen(src)-1;
+  unsigned int maxBytes = (kBits/8);
+  unsigned int numPages = (numBytes/maxBytes);
+  unsigned char* returnData = (unsigned char*)malloc((numPages+1)*maxBytes);
+  unsigned int returnPtr = 0;
+  
   for(int i = 0; i <= numPages; i++)
   {
-    char* msgBlockData;
-    if( (numBytes-msgPtr) >= maxBytes ){
-      msgBlockData = (char*)malloc( maxBytes );
-      strncpy(msgBlockData, src + msgPtr, (maxBytes)  );
-    }
-    else{
-      msgBlockData = (char*)malloc( numBytes-msgPtr+1 );
-      strncpy(msgBlockData, src + msgPtr, numBytes-msgPtr+1);
-    }
+      BN_CTX_start(ctx);
 
-    if((numBytes-msgPtr) >= maxBytes)
-      BN_bin2bn((unsigned char*)msgBlockData, (maxBytes), data);
-    else
-      BN_bin2bn((unsigned char*)msgBlockData, strlen(msgBlockData)+1, data);
+      /* Convert the src buffer into a bignumber to be used for encryption */
+      BIGNUM* originalNumber = BN_CTX_get(ctx);
+      
+      BN_bin2bn( (unsigned char*)src + (i*maxBytes), maxBytes, originalNumber);
+      unsigned char* dataBuffer = (unsigned char*)malloc(BN_num_bytes(originalNumber));
+      BN_bn2bin(originalNumber, dataBuffer);
+      std::cout << "Original Data: " << BN_num_bytes(originalNumber) << "   " << dataBuffer << std::endl;
 
-      BN_mod_exp(dest, data, this->e, this->n, ctx);
+      std::cout << "Original Number: " << BN_bn2dec(originalNumber) <<std::endl;
 
-      desti[i] = BN_dup(dest);
-      msgPtr+=(maxBytes);
-      delete msgBlockData;
+      /* Encrypt the data */
+      BIGNUM* cipherNumber  = BN_CTX_get(ctx);
+      BN_mod_exp(cipherNumber, originalNumber, this->e, this->n, ctx);
+      std::cout << "Encrypted Number: " << BN_bn2dec(cipherNumber) << std::endl <<std::endl;
+
+      /* Convert big number to binary */
+      dataBuffer = (unsigned char*)malloc(maxBytes);
+      BN_bn2bin(cipherNumber, dataBuffer);
+      memcpy(returnData + (returnPtr), dataBuffer, BN_num_bytes(cipherNumber));
+      
+      returnPtr += BN_num_bytes(cipherNumber);
+      *out_len = returnPtr;
+      free(dataBuffer);
+      BN_CTX_end(ctx);
   }
-  *len = numBytes;
-  BN_CTX_end(ctx);
-  return 0;
-}
-
-int decrypt(std::string* data, int length, BIGNUM** src, BN_CTX *ctx = BN_CTX_new())
-{
-  int numBytes = length;
-  int maxBytes = (kBits/8)-1;
-  int numPages = ((numBytes-1)/maxBytes);
-  int msgPtr = 0;
-  BN_CTX_start(ctx);
-  printf("\nlength: %d\n", numBytes);
-  for(int i = 0; i <= numPages; i++)
-  {
-      BIGNUM* temp = BN_CTX_get(ctx);
-      printf("\n{Decryption} Performing operation on page [ %d ]\n", i);
-      BN_mod_exp(temp, src[i], this->d, this->n, ctx);
-      char* temp2 = (char*)malloc( BN_num_bytes(temp) );
-      BN_bn2bin(temp, (unsigned char*)temp2);
-      printf("\nDECRYPTED HERE: %s\n", temp2);
-      data->append(temp2);
-      free(temp2);
-  }
-  BN_CTX_end(ctx);
   BN_CTX_free(ctx);
-  return 0;
+
+  return returnData;
 }
 
+std::string decrypt(unsigned char* cipher, unsigned int cipher_length, BN_CTX *ctx = BN_CTX_new(), bool crt = true)
+{
+      unsigned int maxBytes = (kBits/8);
+      unsigned int numPages = (cipher_length/(maxBytes));
+      std::string returnData;
+      unsigned int returnPtr = 0;
+
+      std::cout << "MAX BYTES: " << maxBytes << std::endl << "PAGES: " << numPages << std::endl;
+
+      BIGNUM* cipherNumber = BN_new();
+      BIGNUM* decryptedData = BN_new();
+      for(int i = 0; i < numPages;i++)
+      {
+        /* Convert */
+        BN_bin2bn(cipher + (i*maxBytes), maxBytes , cipherNumber);
+        
+        if(crt)
+        { 
+          BIGNUM* m1 = BN_CTX_get(ctx);
+          BIGNUM* m2 = BN_CTX_get(ctx);
+          BIGNUM* h = BN_CTX_get(ctx);
+          BIGNUM* m1subm2 = BN_CTX_get(ctx);
+          BIGNUM* hq = BN_CTX_get(ctx);
+
+          /* m1 = c^(dP) mod p */
+          BN_mod_exp(m1, cipherNumber, this->dp, this->p, ctx);
+          
+          /* m2 = c^(dQ) mod q */
+          BN_mod_exp(m2, cipherNumber, this->dq, this->q, ctx);
+          
+          /* m1subm2 = (m1-m2) */
+          BN_sub(m1subm2, m1, m2);
+          
+          /* h = qInv*(m1subm2) mod p */
+          BN_mod_mul(h, this->qInv, m1subm2, this->p, ctx);
+          
+          /* hq = h*q */
+          BN_mul(hq, h, this->q, ctx);
+          
+          /* m = m2+h*q */
+          BN_add(decryptedData, m2, hq);
+        }
+        else
+          (decryptedData, cipherNumber, this->d, this->n, ctx);
+
+
+        std::cout << "Decrypted Numbers: " << BN_bn2dec(decryptedData) <<std::endl<<std::endl<<std::endl;
+
+        unsigned char* dataBuffer = (unsigned char*)malloc(BN_num_bytes(decryptedData));
+        BN_bn2bin(decryptedData, (unsigned char*)dataBuffer);
+        returnData.append((char*)dataBuffer);
+        
+      }
+    return returnData;
+}
 };
+
+
+
+int roundTrip(cRSA* rsa, char* str)
+{
+  unsigned int out_len = 0;
+  unsigned char* cipher = rsa->encrypt(&out_len, str);
+  return strcmp( str, (rsa->decrypt(cipher, out_len).c_str()));
+}
 
 int main(int argc, char *argv[]) {
 /* Setup the openssl basic io output*/
@@ -252,28 +298,26 @@ rsaPtr->q = BN_dup(my_key_q);
 rsaPtr->e = BN_dup(my_key_e);
 
 #ifdef TEST_PRIMES
-BN_set_word(rsaPtr->p, 13);
-BN_set_word(rsaPtr->q, 17);
-BN_set_word(rsaPtr->e, 7);
+BN_set_word(my_key_p, 13);
+BN_set_word(my_key_q, 17);
+BN_set_word(my_key_e, 7);
 #endif
 
-//gen_rsa_sp800_56b(rsaPtr, kBits);
-//rsa_roundtrip("bbsWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w", rsaPtr);
-
 cRSA* myRsa = new cRSA(kBits, my_key_p, my_key_q, my_key_e);
+//std::string output = "";
+//unsigned int out_len = 0;
+//unsigned char* cipher = myRsa->encrypt(&out_len, (char*)"zcvbbsWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w");
 
-BIGNUM* cipher = BN_new();
-std::string output = "";
-int length = 0;
-myRsa->encrypt(&cipher, &length, "bbsWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w");
-//printf("\nCipher2: %s\n", BN_bn2dec(cipher));
-//myRsa->decrypt(&output, length, &cipher);
-//printf("\nFinal point: %s %d\n", output.c_str(), strcmp(output.c_str(), "bbsWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w"));
+
+//std::string myMsg = myRsa->decrypt(cipher, out_len);
+//std::cout << myMsg << std::endl;
+
+int res = roundTrip(myRsa, "teststring");
+std::cout << "String test: " << res << std::endl;
 
 BIO_free_all(bio_stdout);
 BIO_free_all(bio);
 
-BN_free(cipher);
 BN_free( my_key_p );
 BN_free( my_key_q );
 BN_free( my_key_d );
@@ -284,126 +328,6 @@ BN_free( my_key_dq );
 free(pKey);
 delete pem_key;
 return 0;
-}
-
-
-
-int rsa_decrypt_without_crt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa, BN_CTX* ctx = BN_CTX_new())
-{
-  /* Decryption: msg = cipher^d mod n */
-  BN_mod_exp(data, cipher, rsa->d, rsa->n, ctx);
-  BN_CTX_free(ctx);
-  return 0;
-}
-
-int rsa_decrypt_with_crt(BIGNUM* data, BIGNUM* cipher, RSA_Params* rsa, BN_CTX* ctx = BN_CTX_new())
-{
-  /* Using CRT for decryption */
-  BN_CTX_start(ctx);
-  BIGNUM* m1 = BN_CTX_get(ctx);
-  BIGNUM* m2 = BN_CTX_get(ctx);
-  BIGNUM* h = BN_CTX_get(ctx);
-  BIGNUM* m1subm2 = BN_CTX_get(ctx);
-  BIGNUM* hq = BN_CTX_get(ctx);
-
-  /* m1 = c^(dP) mod p */
-  BN_mod_exp(m1, cipher, rsa->dp, rsa->p, ctx);
-  
-  /* m2 = c^(dQ) mod q */
-  BN_mod_exp(m2, cipher, rsa->dq, rsa->q, ctx);
-  
-  /* m1subm2 = (m1-m2) */
-  BN_sub(m1subm2, m1, m2);
-  
-  /* h = qInv*(m1subm2) mod p */
-  BN_mod_mul(h, rsa->qInv, m1subm2, rsa->p, ctx);
-  
-  /* hq = h*q */
-  BN_mul(hq, h, rsa->q, ctx);
-  
-  /* m = m2+h*q */
-  BN_add(data, m2, hq);
-  
-  BN_CTX_end(ctx);
-  BN_CTX_free(ctx);
-  return 0;
-}
-
-int rsa_encrypt(BIGNUM *data, BIGNUM *cipher, RSA_Params *rsa, BN_CTX *ctx = BN_CTX_new())
-{
-    /* Encryption: cipher = msg^e mod n */
-    BN_mod_exp(cipher, data, rsa->e, rsa->n, ctx);
-    BN_CTX_free(ctx);
-    return 0;
-}
-
-int rsa_roundtrip(std::string msg, RSA_Params* rsa)
-{
-  /* Example: P: 13, Q: 17, E: 7*/
-  /* Cipher: 48^7 mod 221 = 74 */
-  /* Unencrypted: 74^7 mod 221 = 48 */
-  BIGNUM* data = BN_new(), *cipher = BN_new();
-  std::string finalOutput;
-  size_t msgLength = msg.length();
-  unsigned int msgPtr = 0;
-  char* msgBlockData, *dataOutput;
-
-  int maxBytes = (kBits/8)-1;
-
-  for(int i = 0; i <= ((msgLength-1)/maxBytes); i++)
-  {
-    printf("\n\nPerforming operations On section [ msgPtr = %d ] [Msg Length = %d ] [ MsgLength-Ptr = %d]\n\n", msgPtr, msgLength, msgLength-msgPtr);
-      
-    if( (msgLength-msgPtr) >= maxBytes ){
-      msgBlockData = (char*)malloc( maxBytes );
-      strncpy(msgBlockData, msg.c_str() + msgPtr, (maxBytes)  );
-    }
-    else{
-      msgBlockData = (char*)malloc( msgLength-msgPtr+1 );
-      strncpy(msgBlockData, msg.c_str() + msgPtr, msgLength-msgPtr+1);
-    }
-
-
-    if((msgLength-msgPtr) >= maxBytes)
-      BN_bin2bn((unsigned char*)msgBlockData, (maxBytes), data);
-    else
-      BN_bin2bn((unsigned char*)msgBlockData, strlen(msgBlockData)+1, data);
-
-      rsa_encrypt(data, cipher, rsa);
-
-      dataOutput = (char*)malloc( BN_num_bytes(data) );
-      BN_bn2bin(data, (unsigned char*)dataOutput);
-      printf("original: %s\n", dataOutput);
-      printf("cipher: %s\n", BN_bn2dec(cipher));
-      
-      BN_clear(data);
-      delete dataOutput;
-      t.start();
-      rsa_decrypt_without_crt(data, cipher, rsa);
-      t.stop();
-      dataOutput = (char*)malloc( BN_num_bytes(data) );
-      BN_bn2bin(data, (unsigned char*)dataOutput);
-      printf("Decrypted without CRT in %dms: %s\n", t.getElapsed(), dataOutput);
-      BN_clear(data);
-      delete dataOutput;
-
-      t.start();
-      rsa_decrypt_with_crt(data, cipher, rsa);
-      t.stop();
-      dataOutput = (char*)malloc( BN_num_bytes(data) );
-      BN_bn2bin(data, (unsigned char*)dataOutput);
-      printf("Decrypted with CRT in %dms: %s\n", t.getElapsed(), dataOutput);
-      finalOutput.append(dataOutput);
-      BN_clear(cipher);
-      delete msgBlockData;
-      delete dataOutput;
-      msgPtr+=(maxBytes);
-    }
-  printf("\n\n\n\nFinal output: %s\n", finalOutput.c_str());
-  printf("Comparison test: %d\n", strcmp(finalOutput.c_str(), msg.c_str()));
-  BN_free(data);
-  BN_free(cipher);
-  return 0;
 }
 
 /* Make sure that k = (k^e)^d mod n ; for some int k where 1 < k < n-1 */
