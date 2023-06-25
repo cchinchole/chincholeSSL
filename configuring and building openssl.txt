@@ -1,0 +1,4 @@
+./Configure --openssldir=<build path> --prefix=<build path> -Wl,-rpath=<build path>/lib64
+make
+make test
+make install

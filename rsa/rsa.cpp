@@ -12,14 +12,14 @@
 #include <iostream>
 
 
-const int kBits = 2048;
+const int kBits = 1024;
 int keylen;
 char *pem_key;
 BIO *bio_stdout;
 
 
 struct RSA_Params {
-  BIGNUM *p, *q, *e, *n, *d, *dp, *dq, *qInv;
+  BIGNUM *p, *q, *e, *n = BN_new(), *d = BN_new(), *dp = BN_new(), *dq = BN_new(), *qInv = BN_new();
 };
 
 class Timer {
@@ -56,11 +56,154 @@ int printParameter(std::string param_name, BIGNUM* num)
 {
   #ifdef PRINT_PARAMS
   BIO_printf(bio_stdout, "%-5s", param_name.c_str());
-  BIO_printf(bio_stdout, "%s", BN_bn2dec(num).c_str());
+  BIO_printf(bio_stdout, "%s", BN_bn2dec(num));
   BIO_printf(bio_stdout, "\n");
   #endif
   return 0;
 }
+
+class cRSA {
+private:
+BIGNUM  *p, *q, *e, *n, *d, *dp, *dq, *qInv;
+int kBits;
+public:
+cRSA(int bits, BIGNUM *pp, BIGNUM *qq, BIGNUM *ee, BN_CTX* ctx = BN_CTX_new())
+{
+  
+  BIGNUM *p1 = nullptr, *q1 = nullptr, *lcm = nullptr, *p1q1 = nullptr, *gcd = nullptr;
+  this->p = BN_dup(pp);
+  this->q = BN_dup(qq);
+  this->e = BN_dup(ee);
+  this->n = BN_new();
+  this->d = BN_new();
+  this->dp = BN_new();
+  this->dq = BN_new();
+  this->qInv = BN_new();
+  this->kBits = bits;
+
+  BN_CTX_start(ctx);
+  p1 = BN_CTX_get(ctx);
+  q1 = BN_CTX_get(ctx);
+  lcm = BN_CTX_get(ctx);
+  p1q1 = BN_CTX_get(ctx);
+  gcd = BN_CTX_get(ctx);
+
+  printParameter("P", this->p);
+  printParameter("Q", this->q);
+  printParameter("E", this->e);
+
+  /* Step 1: Find the least common multiple of (p-1, q-1) */
+  BN_sub(p1, this->p, BN_value_one());  /* p - 1 */
+  BN_sub(q1, this->q, BN_value_one());  /* q - 1 */
+  BN_mul(p1q1, p1, q1, ctx);      /* (p-1)(q-1)*/
+  BN_gcd(gcd, p1, q1, ctx);       
+  BN_div(lcm, NULL, p1q1, gcd, ctx);
+  printParameter("GCD", gcd);
+  printParameter("LCM", lcm);
+
+  /* Step 2: d = e^(-1) mod(LCM[(p-1)(q-1)]) */
+  /* Keep repeating incase the bitsize is too short */
+ 
+  for(;;)
+  {
+      BN_mod_inverse(this->d, this->e, lcm, ctx);
+      printParameter("D", this->d);
+      #ifdef DO_CHECKS
+        if (!(BN_num_bits(this->d) <= (nBits >> 1)))
+          break;
+      #else
+        break;
+      #endif
+  }
+
+  /* Step 3: n = pq */
+  BN_mul(this->n, this->p, this->q, ctx);
+  printParameter("N", this->n);
+
+  t.start();
+  /* Step 4: dP = d mod(p-1)*/
+  BN_mod(this->dp, this->d, p1, ctx);
+
+  /* Step 5: dQ = d mod(q-1)*/
+  BN_mod(this->dq, this->d, q1, ctx);
+
+  /* Step 6: qInv = q^(-1) mod(p) */
+  BN_mod_inverse(this->qInv, this->q, this->p, ctx);
+
+  printf("Took: %dms to generate CRT parameters.\n", t.getElapsed(true));
+
+  printParameter("DP", this->dp);
+  printParameter("DQ", this->dq);
+  printParameter("QINV", this->qInv);
+
+  
+
+  BN_CTX_end(ctx);
+  BN_CTX_free(ctx);
+}
+
+int encrypt(BIGNUM** desti, int *len, char *src, BN_CTX *ctx = BN_CTX_new())
+{
+  int numBytes = strlen(src);
+  int maxBytes = (kBits/8)-1;
+  int numPages = ((numBytes)/maxBytes);
+  int msgPtr = 0;
+  BIGNUM* data = BN_new();
+  BIGNUM* dest = BN_new();
+  BN_CTX_start(ctx);
+  for(int i = 0; i <= numPages; i++)
+  {
+    char* msgBlockData;
+    if( (numBytes-msgPtr) >= maxBytes ){
+      msgBlockData = (char*)malloc( maxBytes );
+      strncpy(msgBlockData, src + msgPtr, (maxBytes)  );
+    }
+    else{
+      msgBlockData = (char*)malloc( numBytes-msgPtr+1 );
+      strncpy(msgBlockData, src + msgPtr, numBytes-msgPtr+1);
+    }
+
+    if((numBytes-msgPtr) >= maxBytes)
+      BN_bin2bn((unsigned char*)msgBlockData, (maxBytes), data);
+    else
+      BN_bin2bn((unsigned char*)msgBlockData, strlen(msgBlockData)+1, data);
+
+      BN_mod_exp(dest, data, this->e, this->n, ctx);
+
+      desti[i] = BN_dup(dest);
+      msgPtr+=(maxBytes);
+      delete msgBlockData;
+  }
+  *len = numBytes;
+  BN_CTX_end(ctx);
+  return 0;
+}
+
+int decrypt(std::string* data, int length, BIGNUM** src, BN_CTX *ctx = BN_CTX_new())
+{
+  int numBytes = length;
+  int maxBytes = (kBits/8)-1;
+  int numPages = ((numBytes-1)/maxBytes);
+  int msgPtr = 0;
+  BN_CTX_start(ctx);
+  printf("\nlength: %d\n", numBytes);
+  for(int i = 0; i <= numPages; i++)
+  {
+      BIGNUM* temp = BN_CTX_get(ctx);
+      printf("\n{Decryption} Performing operation on page [ %d ]\n", i);
+      BN_mod_exp(temp, src[i], this->d, this->n, ctx);
+      char* temp2 = (char*)malloc( BN_num_bytes(temp) );
+      BN_bn2bin(temp, (unsigned char*)temp2);
+      printf("\nDECRYPTED HERE: %s\n", temp2);
+      data->append(temp2);
+      free(temp2);
+  }
+  BN_CTX_end(ctx);
+  BN_CTX_free(ctx);
+  return 0;
+}
+
+};
 
 int main(int argc, char *argv[]) {
 /* Setup the openssl basic io output*/
@@ -114,12 +257,23 @@ BN_set_word(rsaPtr->q, 17);
 BN_set_word(rsaPtr->e, 7);
 #endif
 
-gen_rsa_sp800_56b(rsaPtr, kBits);
-rsa_roundtrip("bbsWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w", rsaPtr);
+//gen_rsa_sp800_56b(rsaPtr, kBits);
+//rsa_roundtrip("bbsWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w", rsaPtr);
+
+cRSA* myRsa = new cRSA(kBits, my_key_p, my_key_q, my_key_e);
+
+BIGNUM* cipher = BN_new();
+std::string output = "";
+int length = 0;
+myRsa->encrypt(&cipher, &length, "bbsWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w");
+//printf("\nCipher2: %s\n", BN_bn2dec(cipher));
+//myRsa->decrypt(&output, length, &cipher);
+//printf("\nFinal point: %s %d\n", output.c_str(), strcmp(output.c_str(), "bbsWcMTs5H7U4m6m5VrNsaV1NBpK9NIh8OlgNTYeKVGKHbrjWd69wwcpH0jDXXeulYtFqPKtjEbTjqlN8hhZFzimHciLjJivexPaNbuJldqRrIZ5r6C4I5ykVF7X93HZzFCwAfjxToF8gZ1RfulaO02HFa954fpu2alc7CGB6lcEwSslUJaDM4pLQwJEwF5mFJZp6P1WzCxlzQY9WaVOcz4P8BPFgEwEgkVxajO9547A5yJtc3rE9RNuGNGSQZ4w"));
 
 BIO_free_all(bio_stdout);
 BIO_free_all(bio);
 
+BN_free(cipher);
 BN_free( my_key_p );
 BN_free( my_key_q );
 BN_free( my_key_d );
