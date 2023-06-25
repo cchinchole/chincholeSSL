@@ -157,24 +157,23 @@ unsigned char* encrypt(unsigned int *out_len, char *src, BN_CTX *ctx = BN_CTX_ne
 
       /* Convert the src buffer into a bignumber to be used for encryption */
       BIGNUM* originalNumber = BN_CTX_get(ctx);
-      
       BN_bin2bn( (unsigned char*)src + (i*maxBytes), maxBytes, originalNumber);
-      unsigned char* dataBuffer = (unsigned char*)malloc(BN_num_bytes(originalNumber));
-      BN_bn2bin(originalNumber, dataBuffer);
-      std::cout << "Original Data: " << BN_num_bytes(originalNumber) << "   " << dataBuffer << std::endl;
-
+      #ifdef LOG_CRYPTO
       std::cout << "Original Number: " << BN_bn2dec(originalNumber) <<std::endl;
-
+      #endif
       /* Encrypt the data */
       BIGNUM* cipherNumber  = BN_CTX_get(ctx);
       BN_mod_exp(cipherNumber, originalNumber, this->e, this->n, ctx);
+      #ifdef LOG_CRYPTO
       std::cout << "Encrypted Number: " << BN_bn2dec(cipherNumber) << std::endl <<std::endl;
+      #endif
 
       /* Convert big number to binary */
-      dataBuffer = (unsigned char*)malloc(maxBytes);
+      unsigned char *dataBuffer = (unsigned char*)malloc(maxBytes);
       BN_bn2bin(cipherNumber, dataBuffer);
       memcpy(returnData + (returnPtr), dataBuffer, BN_num_bytes(cipherNumber));
       
+      /* Incremement the pointer and add to the output length*/
       returnPtr += BN_num_bytes(cipherNumber);
       *out_len = returnPtr;
       free(dataBuffer);
@@ -190,17 +189,17 @@ std::string decrypt(unsigned char* cipher, unsigned int cipher_length, BN_CTX *c
       unsigned int maxBytes = (kBits/8);
       unsigned int numPages = (cipher_length/(maxBytes));
       std::string returnData;
-      unsigned int returnPtr = 0;
 
-      std::cout << "MAX BYTES: " << maxBytes << std::endl << "PAGES: " << numPages << std::endl;
-
-      BIGNUM* cipherNumber = BN_new();
-      BIGNUM* decryptedData = BN_new();
       for(int i = 0; i < numPages;i++)
       {
+        BN_CTX_start(ctx);
+        BIGNUM* cipherNumber = BN_CTX_get(ctx);
+        BIGNUM* decryptedData = BN_CTX_get(ctx);
+
         /* Convert */
         BN_bin2bn(cipher + (i*maxBytes), maxBytes , cipherNumber);
         
+        /* Perform CRT Decryption */
         if(crt)
         { 
           BIGNUM* m1 = BN_CTX_get(ctx);
@@ -230,14 +229,17 @@ std::string decrypt(unsigned char* cipher, unsigned int cipher_length, BN_CTX *c
         else
           (decryptedData, cipherNumber, this->d, this->n, ctx);
 
-
-        std::cout << "Decrypted Numbers: " << BN_bn2dec(decryptedData) <<std::endl<<std::endl<<std::endl;
-
+        #ifdef LOG_CRYPTO
+          std::cout << "Decrypted Numbers: " << BN_bn2dec(decryptedData) <<std::endl<<std::endl<<std::endl;
+        #endif
         unsigned char* dataBuffer = (unsigned char*)malloc(BN_num_bytes(decryptedData));
         BN_bn2bin(decryptedData, (unsigned char*)dataBuffer);
         returnData.append((char*)dataBuffer);
         
+        free(dataBuffer);
+        BN_CTX_end(ctx);
       }
+    BN_CTX_free(ctx);
     return returnData;
 }
 };
