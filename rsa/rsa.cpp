@@ -12,6 +12,7 @@
 #include <iostream>
 #include "defs.hpp"
 #include "rsa.hpp"
+#include "primes.hpp"
 
 
 const int kBits = 1024;
@@ -29,7 +30,6 @@ int printParameter(std::string param_name, BIGNUM* num)
   #endif
   return 0;
 }
-
 
 class cRSA {
 private:
@@ -75,7 +75,7 @@ unsigned char* encrypt(unsigned int *out_len, char *src, BN_CTX *ctx = BN_CTX_ne
       BN_mod_exp(cipherNumber, originalNumber, this->params->e, this->params->n, ctx);
       #ifdef LOG_CRYPTO
       std::cout << "Encrypted Number: " << BN_bn2dec(cipherNumber) << std::endl <<std::endl;
-      #endif
+      #endif`
 
       /* Convert big number to binary */
       unsigned char *dataBuffer = (unsigned char*)malloc(maxBytes);
@@ -210,11 +210,15 @@ rsaPtr->p = BN_dup(my_key_p);
 rsaPtr->q = BN_dup(my_key_q);
 rsaPtr->e = BN_dup(my_key_e);
 
+
 #ifdef TEST_PRIMES
 BN_set_word(my_key_p, 13);
 BN_set_word(my_key_q, 17);
 BN_set_word(my_key_e, 7);
 #endif
+
+generatePrimes(); /* Being called currently as a test for prime generation. Not suitable for setting p and q yet. */
+
 
 cRSA* myRsa = new cRSA(kBits, my_key_p, my_key_q, my_key_e);
 
@@ -262,3 +266,11 @@ return 0;
  *    Can only use a BN_CTX within a single thread of execution.
  */
 
+/*
+ * https://math.stackexchange.com/questions/2500022/do-primes-expressed-in-binary-have-more-random-bits-on-average-than-natural :: Why there are leading ones in rng generation
+ * https://crypto.stanford.edu/pbc/notes/numbertheory/crt.html :: CRT
+ * https://mathstats.uncg.edu/sites/pauli/112/HTML/seceratosthenes.html :: Sieve of Eratosthenes
+ * http://www.cs.sjsu.edu/~stamp/CS265/SecurityEngineering/chapter5_SE/RSAmath.html :: RSA
+ * https://www.di-mgt.com.au/crt_rsa.html :: CRT encryption
+ * https://security.stackexchange.com/questions/176394/how-does-openssl-generate-a-big-prime-number-so-fast :: OpenSSL Generating prime numbers
+ */
