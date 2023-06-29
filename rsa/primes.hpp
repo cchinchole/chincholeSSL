@@ -274,4 +274,5 @@ static const prime_t primes[2048] = {
     17789, 17791, 17807, 17827, 17837, 17839, 17851, 17863,
 };
 
-int generatePrimes(int bits=2048);
+int generatePrimes(int bits=2048, int testingMR = 0);
+bool miller_robin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx = BN_CTX_new());
