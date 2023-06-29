@@ -13,6 +13,66 @@
 #include <math.h>
 
 
+/* Using Miller-Robin */
+bool miller_robin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx)
+{
+    BIGNUM *n1, *n2, *n4, *d, *a, *x, *y; 
+    int s = 1;
+
+    /* Confirm odd first */
+    if(!BN_is_odd(n))
+        return false;
+    
+    /* Need to be atleast > 3 else (n-1)=2*/
+    if(!BN_get_word(n) > 3)
+        return false;
+
+    /* s > 0 and d odd > 0 such that (n-1) = (2^s)*d # by factoring out powers of 2 from n-1 (https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test)*/
+    BN_CTX_start(ctx);
+    n1 = BN_CTX_get(ctx);
+    n2 = BN_CTX_get(ctx);
+    n4 = BN_CTX_get(ctx);
+    d = BN_CTX_get(ctx);
+    a = BN_CTX_get(ctx);
+    x = BN_CTX_get(ctx);
+    y = BN_CTX_get(ctx);
+
+    BN_sub(n1, n, BN_value_one());
+    BN_sub(n2, n1, BN_value_one());
+    BN_sub(n4, n2, BN_value_one());
+    BN_sub(n4, n4, BN_value_one());
+    /* Calculate s by checking largest number we can divide n-1 by 2^s */
+    while(!BN_is_bit_set(n1, s))
+        s++;
+
+    /* (n-1)/(2^s) = d */
+    BN_rshift(d, n1, s);
+
+    /* Repeat 'k' times where k=iterations */
+    for(int i = 0; i < iterations; i++)
+    {
+        
+        BN_rand_range(a, n4);
+        BN_add(a, a, BN_value_one());
+        BN_add(a, a, BN_value_one());
+        BN_mod_exp(x, a, d, n, ctx); /* a^d mod n */
+        /* Repeat 's' times */
+        for(int j = 0; j < s; j++)
+        {
+            BN_mod_sqr(y, x, n, ctx); /* x^2 mod n */
+            if(  BN_is_one(y) &&
+                !BN_is_one(x) &&
+                 BN_cmp(x, n1) != 0 )
+                return false;
+            x = BN_dup(y);
+        }
+        if( !BN_is_one(y) )
+            return false;
+    }
+
+    return true;
+}
+
 int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
 {
     BN_ULONG delta = 0;
@@ -82,19 +142,38 @@ int generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_new())
     return 0;
 }
 
-int generatePrimes(int bits)
+int generatePrimes(int bits, int testingMR)
 {
     int primes = 2, quo = 0, rmd = 0, bitsr[2];
     quo = bits / primes;
     rmd = bits % primes;
-    BIGNUM* results[2];
-
-    /* Fill the bits array with quotient bit size based on number of primes (Only 2 in this case)*/
-    for (int i = 0; i < primes; i++)
+    if(testingMR)
     {
-        bitsr[i] = (i < rmd) ? quo + 1 : quo;
-        results[i] = BN_new();
-        generate_prime(results[i], bitsr[i]);
+        int failed = 0, success = 0;
+        BIGNUM* results[200];
+        for(int z = 0; z < 200; z++)
+        {
+           results[z] = BN_new();
+           generate_prime(results[z], 1024); 
+        }
+
+        for(int z = 0; z < 200; z++)
+        {
+            miller_robin_is_prime(results[z], 1000) ? success++ : failed++;
+        }
+        printf("\n%d succeeded %d failed.\n", success, failed);
     }
+    else
+    {
+        BIGNUM* results[primes];
+    /* Fill the bits array with quotient bit size based on number of primes (Only 2 in this case)*/
+        for (int i = 0; i < primes; i++)
+        {
+            bitsr[i] = (i < rmd) ? quo + 1 : quo;
+            results[i] = BN_new();
+            generate_prime(results[i], bitsr[i]);
+        }
+    }
+   
     return 0;
 }

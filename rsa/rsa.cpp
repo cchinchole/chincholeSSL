@@ -164,6 +164,29 @@ int roundTrip(cRSA* rsa, char* str)
   return 0;
 }
 
+int testPrimesBetweenFuncs()
+{
+
+  BIGNUM* testPrime = BN_new();
+  int s = 0, j = 0;
+  for(int i = 4; i < 17863; i++)
+  {
+  BN_set_word(testPrime, i);
+  if(miller_robin_is_prime(testPrime, 64))
+    if(BN_is_prime(testPrime, 50, NULL, BN_CTX_new(), NULL))
+      s++;
+    else
+      j++;
+  else
+    if(BN_is_prime(testPrime, 50, NULL, BN_CTX_new(), NULL))
+      j++;
+  }
+  printf("Primes found: %d Discreptancies between other func: %d\n", s, j);
+  BN_free(testPrime);
+  
+  return 0;
+}
+
 int main(int argc, char *argv[]) {
 /* Setup the openssl basic io output*/
 bio_stdout = BIO_new_fp(stdout, BIO_NOCLOSE);
@@ -208,6 +231,12 @@ RSA_Params* rsaPtr = &myRsaParams;
 
 rsaPtr->p = BN_dup(my_key_p);
 rsaPtr->q = BN_dup(my_key_q);
+
+
+
+generatePrimes(kBits, 1);
+
+/*
 rsaPtr->e = BN_dup(my_key_e);
 
 
@@ -217,7 +246,7 @@ BN_set_word(my_key_q, 17);
 BN_set_word(my_key_e, 7);
 #endif
 
-generatePrimes(kBits); /* Being called currently as a test for prime generation. Not suitable for setting p and q yet. */
+generatePrimes(kBits); 
 
 
 cRSA *myRsa = new cRSA(kBits, my_key_p, my_key_q, my_key_e);
@@ -228,7 +257,7 @@ roundTrip(myRsa, "test string here! Hello World! 123456789");
 printf("\n\nTesting long string now.\n\n");
 char* binLongRand = (char*)BN_bn2dec(bnLongRand);
 roundTrip(myRsa, binLongRand);
-
+*/
 BIO_free_all(bio_stdout);
 BIO_free_all(bio);
 
