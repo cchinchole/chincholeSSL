@@ -10,11 +10,6 @@
 #include <vector>
 #include <iostream>
 
-
-BIGNUM* sievePrime(int n);
-
-
-
 typedef unsigned short prime_t;
 #define NUMPRIMES 2048
 #define MAXULONGSIZE 0xffffffffffffffffL
