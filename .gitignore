@@ -1,3 +1,4 @@
 rsa/rsa
+rsa/primes
 rsa/*.tex
 *.txt
