@@ -228,15 +228,18 @@ RSA_Params myRsaParams = {
 };
 
 RSA_Params* rsaPtr = &myRsaParams;
-
-rsaPtr->p = BN_dup(my_key_p);
-rsaPtr->q = BN_dup(my_key_q);
+rsaPtr->e = BN_dup(my_key_e);
 
 
 
-generatePrimes(kBits, 1);
+generatePrimes(rsaPtr->p, rsaPtr->q, rsaPtr->e,  kBits);
 
-/*
+printf("\n%s\n", BN_bn2dec(rsaPtr->p));
+printf("\n%s\n", BN_bn2dec(rsaPtr->q));
+
+
+//testPrimesBetweenFuncs();
+
 rsaPtr->e = BN_dup(my_key_e);
 
 
@@ -245,8 +248,6 @@ BN_set_word(my_key_p, 13);
 BN_set_word(my_key_q, 17);
 BN_set_word(my_key_e, 7);
 #endif
-
-generatePrimes(kBits); 
 
 
 cRSA *myRsa = new cRSA(kBits, my_key_p, my_key_q, my_key_e);
@@ -257,7 +258,6 @@ roundTrip(myRsa, "test string here! Hello World! 123456789");
 printf("\n\nTesting long string now.\n\n");
 char* binLongRand = (char*)BN_bn2dec(bnLongRand);
 roundTrip(myRsa, binLongRand);
-*/
 BIO_free_all(bio_stdout);
 BIO_free_all(bio);
 

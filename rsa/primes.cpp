@@ -64,14 +64,20 @@ bool miller_rabin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx)
             if(  BN_is_one(y) &&
                 !BN_is_one(x) &&
                  BN_cmp(x, n1) != 0 )
-                return false;
+                goto failure;
             x = BN_dup(y);
         }
         if( !BN_is_one(y) )
-            return false;
+            goto failure;
     }
-
+    BN_CTX_end(ctx);
+    BN_CTX_free(ctx);
     return true;
+
+    failure:
+        BN_CTX_end(ctx);
+        BN_CTX_free(ctx);
+        return false;
 }
 
 int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
@@ -130,51 +136,61 @@ int generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_new())
     loop:
         /* Generate a random number and set top and bottom bits */
         probable_prime(prime, bits, mods, ctx);
-        if( BN_is_prime(prime, checks, NULL, ctx, NULL) == 0 )
-        {
-            printf("%d failed prime.\n", attempts);
-            attempts++;
+        if(!miller_rabin_is_prime(prime, checks))    //if( BN_is_prime(prime, checks, NULL, ctx, NULL) == 0 )
             goto loop;
-        }
-    printf("[%d] %s passed prime test.\n", attempts, BN_bn2dec(prime));
     OPENSSL_free(mods);
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     return 0;
 }
 
-int generatePrimes(int bits, int testingMR)
+int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR)
 {
     int primes = 2, quo = 0, rmd = 0, bitsr[2];
     quo = bits / primes;
     rmd = bits % primes;
+    BIGNUM *results[primes], *r1  = BN_new() , *r2  = BN_new();
     if(testingMR)
     {
         int failed = 0, success = 0;
-        BIGNUM* results[200];
+        BIGNUM* rez[200];
         for(int z = 0; z < 200; z++)
         {
-           results[z] = BN_new();
-           generate_prime(results[z], 1024); 
+           rez[z] = BN_new();
+           generate_prime(rez[z], 1024); 
         }
 
         for(int z = 0; z < 200; z++)
         {
-            miller_rabin_is_prime(results[z], 1000) ? success++ : failed++;
+            miller_rabin_is_prime(rez[z], 1000) ? success++ : failed++;
+        }
+
+        for(int z = 0; z < 200; z++)
+        {
+            BN_free(rez[z]);
         }
         printf("\n%d succeeded %d failed.\n", success, failed);
     }
     else
     {
-        BIGNUM* results[primes];
-    /* Fill the bits array with quotient bit size based on number of primes (Only 2 in this case)*/
+        /* Fill the bits array with quotient bit size based on number of primes (Only 2 in this case)*/
         for (int i = 0; i < primes; i++)
         {
             bitsr[i] = (i < rmd) ? quo + 1 : quo;
             results[i] = BN_new();
-            generate_prime(results[i], bitsr[i]);
-        }
+            for(;;)
+            {
+                generate_prime(results[i], bitsr[i]);
+                
+                BN_sub(r2, results[i], BN_value_one());
+                if(BN_mod_inverse(r1, r2, e, BN_CTX_new()) != NULL)
+                    break;
+            }
+
+        } 
     }
+    p = results[0];
+    q = results[1];
    
     return 0;
 }
