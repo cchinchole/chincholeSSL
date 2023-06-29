@@ -13,8 +13,8 @@
 #include <math.h>
 
 
-/* Using Miller-Robin */
-bool miller_robin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx)
+/* Using Miller-Rabin */
+bool miller_rabin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx)
 {
     BIGNUM *n1, *n2, *n4, *d, *a, *x, *y; 
     int s = 1;
@@ -41,6 +41,7 @@ bool miller_robin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx)
     BN_sub(n2, n1, BN_value_one());
     BN_sub(n4, n2, BN_value_one());
     BN_sub(n4, n4, BN_value_one());
+
     /* Calculate s by checking largest number we can divide n-1 by 2^s */
     while(!BN_is_bit_set(n1, s))
         s++;
@@ -159,7 +160,7 @@ int generatePrimes(int bits, int testingMR)
 
         for(int z = 0; z < 200; z++)
         {
-            miller_robin_is_prime(results[z], 1000) ? success++ : failed++;
+            miller_rabin_is_prime(results[z], 1000) ? success++ : failed++;
         }
         printf("\n%d succeeded %d failed.\n", success, failed);
     }
