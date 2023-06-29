@@ -22,6 +22,7 @@ int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
     /* Using OpenSSL's random bit generator */
     /* Constrained to the top two bits being 1 with the number being odd: generates random bits of the given bits size (1024)*/
     repeat: /* Used if the rnd number failed */
+        delta = 0;
         BN_priv_rand_ex(rnd, bits, BN_RAND_TOP_TWO, BN_RAND_BOTTOM_ODD, 0, ctx); /* The probability of generating a prime increases with leading one's https://math.stackexchange.com/questions/2500022/do-primes-expressed-in-binary-have-more-random-bits-on-average-than-natural */
 
         /* Division test */
@@ -30,7 +31,6 @@ int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
             BN_ULONG mod = BN_mod_word(rnd, (BN_ULONG)primes[i]); /* Random Generated Num / prime table up to division (128) */
             mods[i] = (prime_t)mod;
         }
-        delta = 0; /* Incase a failure occurred */
         loop:
             for(int i = 1; i < divisions; i++)
             {
@@ -39,8 +39,10 @@ int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
                     if(square(primes[i]) > BN_get_word(rnd) + delta) /* Make sure we are within */
                         break;
 
-                if( (mods[i] + delta) % primes[i] == 0 ) /* use the remainder + delta and divide to by the prime table to check if composite*/
+                if( (mods[i] + delta) % primes[i] == 0 ) /* use the remainder + delta and divide by the prime table to check if composite*/
                 {
+                    /* Failed, had an even divide by primes */
+                    /* Increase the delta and retry */
                     delta += 2;
                     if(delta > maxDelta)
                         goto repeat;

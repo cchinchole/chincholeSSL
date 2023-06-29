@@ -65,13 +65,13 @@ unsigned char* encrypt(unsigned int *out_len, char *src, BN_CTX *ctx = BN_CTX_ne
       BN_CTX_start(ctx);
 
       /* Convert the src buffer into a bignumber to be used for encryption */
-      BIGNUM* originalNumber = BN_CTX_get(ctx);
+      BIGNUM *originalNumber = BN_CTX_get(ctx);
       BN_bin2bn( (unsigned char*)src + (i*maxBytes), maxBytes, originalNumber);
       #ifdef LOG_CRYPTO
       std::cout << "Original Number: " << BN_bn2dec(originalNumber) <<std::endl;
       #endif
       /* Encrypt the data */
-      BIGNUM* cipherNumber  = BN_CTX_get(ctx);
+      BIGNUM *cipherNumber  = BN_CTX_get(ctx);
       BN_mod_exp(cipherNumber, originalNumber, this->params->e, this->params->n, ctx);
       #ifdef LOG_CRYPTO
       std::cout << "Encrypted Number: " << BN_bn2dec(cipherNumber) << std::endl <<std::endl;
@@ -93,7 +93,7 @@ unsigned char* encrypt(unsigned int *out_len, char *src, BN_CTX *ctx = BN_CTX_ne
   return returnData;
 }
 
-std::string decrypt(unsigned char* cipher, unsigned int cipher_length, BN_CTX *ctx = BN_CTX_new(), bool crt = true)
+std::string decrypt(unsigned char *cipher, unsigned int cipher_length, BN_CTX *ctx = BN_CTX_new(), bool crt = true)
 {
       unsigned int maxBytes = (kBits/8);
       unsigned int numPages = (cipher_length/(maxBytes));
@@ -111,11 +111,11 @@ std::string decrypt(unsigned char* cipher, unsigned int cipher_length, BN_CTX *c
         /* Perform CRT Decryption */
         if(crt)
         { 
-          BIGNUM* m1 = BN_CTX_get(ctx);
-          BIGNUM* m2 = BN_CTX_get(ctx);
-          BIGNUM* h = BN_CTX_get(ctx);
-          BIGNUM* m1subm2 = BN_CTX_get(ctx);
-          BIGNUM* hq = BN_CTX_get(ctx);
+          BIGNUM *m1 = BN_CTX_get(ctx);
+          BIGNUM *m2 = BN_CTX_get(ctx);
+          BIGNUM *h = BN_CTX_get(ctx);
+          BIGNUM *m1subm2 = BN_CTX_get(ctx);
+          BIGNUM *hq = BN_CTX_get(ctx);
 
           /* m1 = c^(dP) mod p */
           BN_mod_exp(m1, cipherNumber, this->params->dp, this->params->p, ctx);
@@ -217,12 +217,17 @@ BN_set_word(my_key_q, 17);
 BN_set_word(my_key_e, 7);
 #endif
 
-generatePrimes(); /* Being called currently as a test for prime generation. Not suitable for setting p and q yet. */
+generatePrimes(kBits); /* Being called currently as a test for prime generation. Not suitable for setting p and q yet. */
 
 
-cRSA* myRsa = new cRSA(kBits, my_key_p, my_key_q, my_key_e);
+cRSA *myRsa = new cRSA(kBits, my_key_p, my_key_q, my_key_e);
 
-roundTrip(myRsa, "test string here! Hello World!123456789");
+BIGNUM *bnLongRand = BN_new();
+BN_rand_ex(bnLongRand, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, BN_CTX_new());
+roundTrip(myRsa, "test string here! Hello World! 123456789");
+printf("\n\nTesting long string now.\n\n");
+char* binLongRand = (char*)BN_bn2dec(bnLongRand);
+roundTrip(myRsa, binLongRand);
 
 BIO_free_all(bio_stdout);
 BIO_free_all(bio);
