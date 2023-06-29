@@ -9,6 +9,7 @@
 #include <chrono>
 #include <vector>
 #include <iostream>
+#include "rsa.hpp"
 
 typedef unsigned short prime_t;
 #define NUMPRIMES 2048
@@ -274,5 +275,5 @@ static const prime_t primes[2048] = {
     17789, 17791, 17807, 17827, 17837, 17839, 17851, 17863,
 };
 
-int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits = 2048, int testingMR = 0);
+int generatePrimes(RSA_Params *rsa, int bits = 2048, int testingMR = 0);
 bool miller_rabin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx = BN_CTX_new());

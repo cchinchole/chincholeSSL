@@ -9,7 +9,7 @@
 #include <chrono>
 #include <vector>
 #include <iostream>
-#include "primes.hpp"
+#include "inc/primes.hpp"
 #include <math.h>
 
 
@@ -144,7 +144,7 @@ int generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_new())
     return 0;
 }
 
-int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR)
+int generatePrimes(RSA_Params *rsa, int bits, int testingMR)
 {
     int primes = 2, quo = 0, rmd = 0, bitsr[2];
     quo = bits / primes;
@@ -181,16 +181,18 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR)
             for(;;)
             {
                 generate_prime(results[i], bitsr[i]);
+                printf("Testing: %s\n", BN_bn2dec(results[i]));
                 
                 BN_sub(r2, results[i], BN_value_one());
-                if(BN_mod_inverse(r1, r2, e, BN_CTX_new()) != NULL)
+                if(BN_mod_inverse(r1, r2, rsa->e, BN_CTX_new()) != NULL)
                     break;
             }
 
         } 
     }
-    p = results[0];
-    q = results[1];
+    printf("P found: %s\nQ found: %s\n", BN_bn2dec(results[0]), BN_bn2dec(results[1]));
+    rsa->p = BN_dup(results[0]);
+    rsa->q = BN_dup(results[1]);
    
     return 0;
 }

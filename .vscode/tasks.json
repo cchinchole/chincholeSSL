@@ -12,8 +12,9 @@
                 "-g",
                 "rsa.cpp",
                 "primes.cpp",
+                "main.cpp",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}",
+                "${fileDirname}/main",
                 "-lssl",
                 "-lcrypto"
             ],
