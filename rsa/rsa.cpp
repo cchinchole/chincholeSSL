@@ -172,7 +172,7 @@ int testPrimesBetweenFuncs()
   for(int i = 4; i < 17863; i++)
   {
   BN_set_word(testPrime, i);
-  if(miller_robin_is_prime(testPrime, 64))
+  if(miller_rabin_is_prime(testPrime, 64))
     if(BN_is_prime(testPrime, 50, NULL, BN_CTX_new(), NULL))
       s++;
     else
