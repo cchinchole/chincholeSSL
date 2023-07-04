@@ -18,12 +18,28 @@ int keylen;
 char *pem_key;
 BIO *bio_stdout;
 
+/*
+  * TODO:
+  *   Make Encryption / Decryption FIPS Compliant
+  *   Make Generating CRT Fips Compliant
+  *   Make Prime Generation Fips Compliant
+*/
+
+/* For FIPS:
+ *  Run the AVCP Test (Skip this part right now, deals with making sure the primes are generated correctly.)
+ *  Validate the strength of key size
+ *  Validate the rng strength
+ *  Set the public exponent
+ *  Generate the prime factors
+ *  Dervie the parameters
+ *  Do the pairwise test
+*/
 
 int roundTrip(cRSA* rsa, char* str)
 {
   unsigned int out_len = 0;
   unsigned char* cipher = rsa->encrypt(&out_len, str);
-  std::string out = (rsa->decrypt(cipher, out_len).c_str());
+  std::string out = (rsa->decrypt(cipher, out_len));
   int strresult = strcmp( (char*)str, (char*)out.c_str());
   std::cout << "- - - - - - - - Encryption Decryption self test - - - - - - - -" << std::endl << "The inputted string: " << str << std::endl << "The outputted string: " << out << std::endl << "STRCMP returned " << strresult << std::endl << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" << std::endl;
   return 0;
@@ -32,18 +48,18 @@ int roundTrip(cRSA* rsa, char* str)
 int testPrimesBetweenFuncs()
 {
 
-  BIGNUM* testPrime = BN_new();
+  BIGNUM* testPrime = BN_secure_new();
   int s = 0, j = 0;
   for(int i = 4; i < 17863; i++)
   {
   BN_set_word(testPrime, i);
   if(miller_rabin_is_prime(testPrime, 64))
-    if(BN_check_prime(testPrime, BN_CTX_new(), NULL))
+    if(BN_check_prime(testPrime, BN_CTX_secure_new(), NULL))
       s++;
     else
       j++;
   else
-    if(BN_check_prime(testPrime, BN_CTX_new(), NULL))
+    if(BN_check_prime(testPrime, BN_CTX_secure_new(), NULL))
       j++;
   }
   printf("Primes found: %d Discrepancies between other func: %d\n", s, j);
@@ -89,18 +105,25 @@ printParameter("DQ", my_key_dq);
 
 
 RSA_Params myRsaParams = {
-  BN_new(), BN_new(), BN_new(), BN_new(), BN_new(), BN_new(), BN_new(), BN_new()
+  BN_secure_new(), BN_secure_new(), BN_secure_new(), BN_secure_new(), BN_secure_new(), BN_secure_new(), BN_secure_new(), BN_secure_new()
 };
 
 RSA_Params* rsaPtr = &myRsaParams;
 rsaPtr->e = BN_dup(my_key_e);
 
+Timer t;
+
+t.start();
+miller_rabin_is_prime(rsaPtr->p, 64);
+t.stop();
+printf("\nMiller Rabin by me time took %dns", t.getElapsed(false, 1));
+t.start();
+BN_check_prime(rsaPtr->p, BN_CTX_secure_new(), NULL);
+t.stop();
+printf("\nMiller Rabin by SSL time took %dns", t.getElapsed(false, 1));
 
 
 generatePrimes(rsaPtr, kBits);
-
-rsaPtr->e = BN_dup(my_key_e);
-
 
 #ifdef TEST_PRIMES
 BN_set_word(my_key_p, 13);
@@ -108,14 +131,10 @@ BN_set_word(my_key_q, 17);
 BN_set_word(my_key_e, 7);
 #endif
 
-
-
-//cRSA *myRsa = new cRSA(kBits, my_key_p, my_key_q, my_key_e);
-
 cRSA *myRsa = new cRSA(kBits, rsaPtr->p, rsaPtr->q, rsaPtr->e);
 
-BIGNUM *bnLongRand = BN_new();
-BN_rand_ex(bnLongRand, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, BN_CTX_new());
+BIGNUM *bnLongRand = BN_secure_new();
+BN_rand_ex(bnLongRand, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, BN_CTX_secure_new());
 roundTrip(myRsa, (char*)"Test string HeRe! HelLO WoRLd!@#$^&*()_+ 1   2 34    567  89\nTest!");
 printf("\n\nTesting long string now.\n\n");
 roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));

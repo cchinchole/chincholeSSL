@@ -12,11 +12,11 @@
 
 
 struct RSA_Params {
-  BIGNUM *p, *q, *e, *n = BN_new(), *d = BN_new(), *dp = BN_new(), *dq = BN_new(), *qInv = BN_new();
+  BIGNUM *p, *q, *e, *n = BN_secure_new(), *d = BN_secure_new(), *dp = BN_secure_new(), *dq = BN_secure_new(), *qInv = BN_secure_new();
 };
 
-int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx = BN_CTX_new());
-int rsa_sp800_56b_pairwise_test(RSA_Params* rsa, BN_CTX* ctx = BN_CTX_new());
+int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx = BN_CTX_secure_new(), bool constTime = true);
+int rsa_sp800_56b_pairwise_test(RSA_Params* rsa, BN_CTX* ctx = BN_CTX_secure_new());
 int rsa_roundtrip(std::string msg, RSA_Params* rsa);
 int printParameter(std::string param_name, BIGNUM* num);
 
@@ -35,11 +35,15 @@ class Timer {
       endp = std::chrono::high_resolution_clock::now();
     }
     
-    unsigned int getElapsed(bool useStop = false)
+    unsigned int getElapsed(bool useStop = false, int secondType = 0)
     {
       if(useStop)
         stop();
-      return std::chrono::duration_cast<std::chrono::microseconds>(endp - startp).count();
+      
+      if(!secondType)
+        return std::chrono::duration_cast<std::chrono::microseconds>(endp - startp).count();
+      else
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(endp - startp).count();
     }
 };
 
@@ -49,23 +53,23 @@ private:
 RSA_Params* params;
 int kBits;
 public:
-cRSA(int bits, BIGNUM *pp, BIGNUM *qq, BIGNUM *ee, BN_CTX* ctx = BN_CTX_new())
+cRSA(int bits, BIGNUM *pp, BIGNUM *qq, BIGNUM *ee, BN_CTX* ctx = BN_CTX_secure_new())
 {
   params = new RSA_Params();
   BIGNUM *p1 = nullptr, *q1 = nullptr, *lcm = nullptr, *p1q1 = nullptr, *gcd = nullptr;
   this->params->p = BN_dup(pp);
   this->params->q = BN_dup(qq);
   this->params->e = BN_dup(ee);
-  this->params->n = BN_new();
-  this->params->d = BN_new();
-  this->params->dp = BN_new();
-  this->params->dq = BN_new();
-  this->params->qInv = BN_new();
+  this->params->n = BN_secure_new();
+  this->params->d = BN_secure_new();
+  this->params->dp = BN_secure_new();
+  this->params->dq = BN_secure_new();
+  this->params->qInv = BN_secure_new();
   this->kBits = bits;
   gen_rsa_sp800_56b(this->params, kBits);
 }
 
-unsigned char* encrypt(unsigned int *out_len, char *src, BN_CTX *ctx = BN_CTX_new())
+unsigned char* encrypt(unsigned int *out_len, char *src, BN_CTX *ctx = BN_CTX_secure_new())
 { 
   unsigned int numBytes = strlen(src)-1;
   unsigned int maxBytes = (kBits/8);
@@ -106,7 +110,7 @@ unsigned char* encrypt(unsigned int *out_len, char *src, BN_CTX *ctx = BN_CTX_ne
   return returnData;
 }
 
-std::string decrypt(unsigned char *cipher, unsigned int cipher_length, BN_CTX *ctx = BN_CTX_new(), bool crt = true)
+std::string decrypt(unsigned char *cipher, unsigned int cipher_length, BN_CTX *ctx = BN_CTX_secure_new(), bool crt = true)
 {
       unsigned int maxBytes = (kBits/8);
       unsigned int numPages = (cipher_length/(maxBytes));
