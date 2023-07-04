@@ -56,7 +56,7 @@ int rsa_sp800_56b_pairwise_test(RSA_Params* rsa, BN_CTX* ctx)
   */
 
 /* Computes d, n, dP, dQ, qInv from the prime factors and public exponent */
-int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx)
+int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
 {
   
   Timer t;
@@ -68,6 +68,20 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx)
   lcm = BN_CTX_get(ctx);
   p1q1 = BN_CTX_get(ctx);
   gcd = BN_CTX_get(ctx);
+
+  if(constTime)
+  {
+    BN_set_flags(p1, BN_FLG_CONSTTIME);
+    BN_set_flags(q1, BN_FLG_CONSTTIME);
+    BN_set_flags(lcm, BN_FLG_CONSTTIME);
+    BN_set_flags(p1q1, BN_FLG_CONSTTIME);
+    BN_set_flags(gcd, BN_FLG_CONSTTIME);
+    BN_set_flags(rsa->d, BN_FLG_CONSTTIME);
+    /* Note: N is not required to be constant time. */
+    BN_set_flags(rsa->dp, BN_FLG_CONSTTIME);
+    BN_set_flags(rsa->dq, BN_FLG_CONSTTIME);
+    BN_set_flags(rsa->qInv, BN_FLG_CONSTTIME);
+  }
 
   printParameter("P", rsa->p);
   printParameter("Q", rsa->q);
@@ -86,6 +100,8 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx)
   /* Step 2: d = e^(-1) mod(LCM[(p-1)(q-1)]) */
   /* Keep repeating incase the bitsize is too short */
  
+
+  /* Not compliant since will show D failures if the loop continues. Need to finish function and return a value to show failure to restart. */
   for(;;)
   {
       BN_mod_inverse(rsa->d, rsa->e, lcm, ctx);

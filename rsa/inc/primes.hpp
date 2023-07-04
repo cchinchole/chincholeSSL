@@ -276,4 +276,4 @@ static const prime_t primes[2048] = {
 };
 
 int generatePrimes(RSA_Params *rsa, int bits = 2048, int testingMR = 0);
-bool miller_rabin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx = BN_CTX_new());
+bool miller_rabin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx = BN_CTX_secure_new());

@@ -124,7 +124,7 @@ int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
 
 
 
-int generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_new())
+int generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_secure_new())
 {
     /* Initialize memory with zeroes and temp vars */
     BIGNUM *temp;
@@ -149,14 +149,14 @@ int generatePrimes(RSA_Params *rsa, int bits, int testingMR)
     int primes = 2, quo = 0, rmd = 0, bitsr[2];
     quo = bits / primes;
     rmd = bits % primes;
-    BIGNUM *results[primes], *r1  = BN_new() , *r2  = BN_new();
+    BIGNUM *results[primes], *r1  = BN_secure_new(), *r2  = BN_secure_new();
     if(testingMR)
     {
         int failed = 0, success = 0;
         BIGNUM* rez[200];
         for(int z = 0; z < 200; z++)
         {
-           rez[z] = BN_new();
+           rez[z] = BN_secure_new();
            generate_prime(rez[z], 1024); 
         }
 
@@ -177,14 +177,14 @@ int generatePrimes(RSA_Params *rsa, int bits, int testingMR)
         for (int i = 0; i < primes; i++)
         {
             bitsr[i] = (i < rmd) ? quo + 1 : quo;
-            results[i] = BN_new();
+            results[i] = BN_secure_new();
             for(;;)
             {
                 generate_prime(results[i], bitsr[i]);
                 printf("Testing: %s\n", BN_bn2dec(results[i]));
                 
                 BN_sub(r2, results[i], BN_value_one());
-                if(BN_mod_inverse(r1, r2, rsa->e, BN_CTX_new()) != NULL)
+                if(BN_mod_inverse(r1, r2, rsa->e, BN_CTX_secure_new()) != NULL)
                     break;
             }
 
