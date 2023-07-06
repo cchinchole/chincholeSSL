@@ -12,62 +12,67 @@
 #include "inc/primes.hpp"
 #include <math.h>
 
+int millerRabinIterations(int kBits);
 
 /* Using Miller-Rabin */
-bool miller_rabin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx)
+/* FIPS 186-4 C.3.1 */
+/* Returns true for PROBABLY PRIME and false for COMPOSITE */
+/* Refactored variable names for FIPS: n->w, s->a, a->b, y->z, m->m */
+bool miller_rabin_is_prime(BIGNUM* w, int iterations, BN_CTX *ctx)
 {
-    BIGNUM *n1, *n2, *n4, *d, *a, *x, *y; 
-    int s = 1;
+    BIGNUM *w1, *w2, *w4, *m, *b, *x, *z; 
+    int a = 1;
 
     /* Confirm odd first */
-    if(!BN_is_odd(n))
+    if(!BN_is_odd(w))
         return false;
     
     /* Need to be atleast > 3 else (n-1)=2*/
-    if(!BN_get_word(n) > 3)
+    if(!BN_get_word(w) > 3)
         return false;
 
     /* s > 0 and d odd > 0 such that (n-1) = (2^s)*d # by factoring out powers of 2 from n-1 (https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test)*/
     BN_CTX_start(ctx);
-    n1 = BN_CTX_get(ctx);
-    n2 = BN_CTX_get(ctx);
-    n4 = BN_CTX_get(ctx);
-    d = BN_CTX_get(ctx);
-    a = BN_CTX_get(ctx);
+    w1 = BN_CTX_get(ctx);
+    w2 = BN_CTX_get(ctx);
+    w4 = BN_CTX_get(ctx);
+    m = BN_CTX_get(ctx);
+    b = BN_CTX_get(ctx);
     x = BN_CTX_get(ctx);
-    y = BN_CTX_get(ctx);
+    z = BN_CTX_get(ctx);
 
-    BN_sub(n1, n, BN_value_one());
-    BN_sub(n2, n1, BN_value_one());
-    BN_sub(n4, n2, BN_value_one());
-    BN_sub(n4, n4, BN_value_one());
+    BN_sub(w1, w, BN_value_one());
+    BN_sub(w2, w1, BN_value_one());
+    BN_sub(w4, w2, BN_value_one());
+    BN_sub(w4, w4, BN_value_one());
 
     /* Calculate s by checking largest number we can divide n-1 by 2^s */
-    while(!BN_is_bit_set(n1, s))
-        s++;
+    while(!BN_is_bit_set(w1, a))
+        a++;
 
     /* (n-1)/(2^s) = d */
-    BN_rshift(d, n1, s);
+    BN_rshift(m, w1, a);
 
     /* Repeat 'k' times where k=iterations */
     for(int i = 0; i < iterations; i++)
     {
-        
-        BN_rand_range(a, n4);
-        BN_add(a, a, BN_value_one());
-        BN_add(a, a, BN_value_one());
-        BN_mod_exp(x, a, d, n, ctx); /* a^d mod n */
-        /* Repeat 's' times */
-        for(int j = 0; j < s; j++)
+            BN_rand_range(b, w4);
+            BN_add(b, b, BN_value_one());
+            BN_add(b, b, BN_value_one());
+            BN_mod_exp(x, b, m, w, ctx); /* a^m mod n */
+            /* Repeat 's' times */
+
+
+        for(int j = 0; j < a; j++)
         {
-            BN_mod_sqr(y, x, n, ctx); /* x^2 mod n */
-            if(  BN_is_one(y) &&
+            BN_mod_sqr(z, x, w, ctx); /* x^2 mod n */
+            if(  BN_is_one(z) &&
                 !BN_is_one(x) &&
-                 BN_cmp(x, n1) != 0 )
+                 BN_cmp(x, w1) != 0 )
                 goto failure;
-            x = BN_dup(y);
+            x = BN_dup(z);
         }
-        if( !BN_is_one(y) )
+        if( !BN_is_one(z) )
             goto failure;
     }
     BN_CTX_end(ctx);
@@ -80,6 +85,7 @@ bool miller_rabin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx)
         return false;
 }
 
+/* Probable prime generation is within FIPS 186-4.C.7 */
 int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
 {
     BN_ULONG delta = 0;
@@ -123,7 +129,6 @@ int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
 }
 
 
-
 int generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_secure_new())
 {
     /* Initialize memory with zeroes and temp vars */
@@ -131,7 +136,7 @@ int generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_secure_new())
     prime_t *mods = (prime_t*)OPENSSL_zalloc(sizeof(*mods)*NUMPRIMES);
     BN_CTX_start(ctx);
     temp = BN_CTX_get(ctx);
-    int checks = 64; /* Use 64 < 2048 bits is being used. */
+    int checks = millerRabinIterations(bits);//64; /* Use 64 < 2048 bits is being used. */
     int attempts = 0;
     loop:
         /* Generate a random number and set top and bottom bits */
@@ -195,4 +200,17 @@ int generatePrimes(RSA_Params *rsa, int bits, int testingMR)
     rsa->q = BN_dup(results[1]);
    
     return 0;
+}
+
+/* Minimum rounds of M-R testing from 186-4-C-3.1 */
+int millerRabinIterations(int kBits)
+{
+    if(kBits <= 512)
+        return 7;
+    else if(kBits <= 1024)
+        return 4;
+    else if(kBits <= 1536)
+        return 3;
+    else
+        return 5;
 }

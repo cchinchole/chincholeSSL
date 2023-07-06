@@ -58,6 +58,7 @@ int rsa_sp800_56b_pairwise_test(RSA_Params* rsa, BN_CTX* ctx)
 /* Computes d, n, dP, dQ, qInv from the prime factors and public exponent */
 int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
 {
+  generatePrimes(rsa, nBits, 0);
   
   Timer t;
   BIGNUM *p1, *q1, *lcm, *p1q1, *gcd;

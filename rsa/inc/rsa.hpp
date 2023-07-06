@@ -12,7 +12,7 @@
 
 
 struct RSA_Params {
-  BIGNUM *p, *q, *e, *n = BN_secure_new(), *d = BN_secure_new(), *dp = BN_secure_new(), *dq = BN_secure_new(), *qInv = BN_secure_new();
+  BIGNUM *p, *q, *e, *n, *d, *dp, *dq, *qInv;
 };
 
 int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx = BN_CTX_secure_new(), bool constTime = true);
@@ -53,12 +53,13 @@ private:
 RSA_Params* params;
 int kBits;
 public:
-cRSA(int bits, BIGNUM *pp, BIGNUM *qq, BIGNUM *ee, BN_CTX* ctx = BN_CTX_secure_new())
+cRSA(int bits, BIGNUM *ee, BN_CTX* ctx = BN_CTX_secure_new())
 {
   params = new RSA_Params();
+
   BIGNUM *p1 = nullptr, *q1 = nullptr, *lcm = nullptr, *p1q1 = nullptr, *gcd = nullptr;
-  this->params->p = BN_dup(pp);
-  this->params->q = BN_dup(qq);
+  this->params->p = BN_secure_new();
+  this->params->q = BN_secure_new();
   this->params->e = BN_dup(ee);
   this->params->n = BN_secure_new();
   this->params->d = BN_secure_new();
