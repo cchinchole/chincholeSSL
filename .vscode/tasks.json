@@ -10,6 +10,8 @@
                 "-I/home/christian/build/include/",
                 "-Wl,-rpath=/home/christian/src/openssl/build/lib64",
                 "-g",
+                "rand.cpp",
+                "test.cpp",
                 "rsa.cpp",
                 "primes.cpp",
                 "main.cpp",

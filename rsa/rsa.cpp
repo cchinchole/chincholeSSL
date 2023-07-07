@@ -58,6 +58,12 @@ int rsa_sp800_56b_pairwise_test(RSA_Params* rsa, BN_CTX* ctx)
 /* Computes d, n, dP, dQ, qInv from the prime factors and public exponent */
 int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
 {
+  /* FIPS requires the bit length to be within 17-256 */
+  if(!(BN_is_odd(rsa->e) && BN_num_bits(rsa->e) > 16 && BN_num_bits(rsa->e) < 257))
+  {
+    return -1; 
+  }
+
   generatePrimes(rsa, nBits, 0);
   
   Timer t;

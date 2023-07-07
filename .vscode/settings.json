@@ -63,7 +63,9 @@
         "mutex": "cpp",
         "semaphore": "cpp",
         "stop_token": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "forward_list": "cpp",
+        "valarray": "cpp"
     },
     "cmake.configureOnOpen": true
 }
