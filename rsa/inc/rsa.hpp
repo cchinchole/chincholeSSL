@@ -53,20 +53,31 @@ private:
 RSA_Params* params;
 int kBits;
 public:
-cRSA(int bits, BIGNUM *ee, BN_CTX* ctx = BN_CTX_secure_new())
+cRSA(int bits, BIGNUM *eGiven, BN_CTX* ctx = BN_CTX_secure_new())
 {
   params = new RSA_Params();
 
   BIGNUM *p1 = nullptr, *q1 = nullptr, *lcm = nullptr, *p1q1 = nullptr, *gcd = nullptr;
   this->params->p = BN_secure_new();
   this->params->q = BN_secure_new();
-  this->params->e = BN_dup(ee);
+
+  if(eGiven == NULL)
+  {
+    this->params->e = BN_new();
+    BN_set_word(this->params->e, 65537);
+  }
+  else
+    this->params->e = BN_dup(eGiven);
+
   this->params->n = BN_secure_new();
   this->params->d = BN_secure_new();
   this->params->dp = BN_secure_new();
   this->params->dq = BN_secure_new();
   this->params->qInv = BN_secure_new();
   this->kBits = bits;
+
+   
+
   gen_rsa_sp800_56b(this->params, kBits);
 }
 

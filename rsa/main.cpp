@@ -9,8 +9,10 @@
 #include <chrono>
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include "inc/defs.hpp"
 #include "inc/primes.hpp"
+#include "inc/test.hpp"
 
 
 const int kBits = 2048;
@@ -117,13 +119,15 @@ BN_set_word(my_key_e, 7);
 
 BN_set_word(my_key_e, 65537);
 rsaPtr->e = BN_dup(my_key_e);
-cRSA *myRsa = new cRSA(kBits, rsaPtr->e);
+cRSA *myRsa = new cRSA(kBits, NULL);
 
 BIGNUM *bnLongRand = BN_secure_new();
 BN_rand_ex(bnLongRand, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, BN_CTX_secure_new());
 roundTrip(myRsa, (char*)"Test string HeRe! HelLO WoRLd!@#$^&*()_+ 1   2 34    567  89\nTest!");
 printf("\n\nTesting long string now.\n\n");
 roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));
+
+readParameters();
 
 BIO_free_all(bio_stdout);
 BIO_free_all(bio);
