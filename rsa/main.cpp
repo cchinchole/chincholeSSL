@@ -119,6 +119,10 @@ BN_set_word(my_key_e, 7);
 
 BN_set_word(my_key_e, 65537);
 rsaPtr->e = BN_dup(my_key_e);
+rsaPtr->p = BN_new();
+rsaPtr->q = BN_new();
+FIPS186_4_GEN_PRIMES(rsaPtr, kBits);
+/*
 cRSA *myRsa = new cRSA(kBits, NULL);
 
 BIGNUM *bnLongRand = BN_secure_new();
@@ -128,6 +132,7 @@ printf("\n\nTesting long string now.\n\n");
 roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));
 
 readParameters();
+*/
 
 BIO_free_all(bio_stdout);
 BIO_free_all(bio);

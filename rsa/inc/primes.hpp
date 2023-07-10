@@ -275,5 +275,14 @@ static const prime_t primes[2048] = {
     17789, 17791, 17807, 17827, 17837, 17839, 17851, 17863,
 };
 
+struct ACVP_TEST {
+    BIGNUM *Xpout = NULL, *Xqout = NULL,
+           *Xp = NULL, *Xp1 = NULL, *Xp2 = NULL,
+           *Xq = NULL, *Xq1 = NULL, *Xq2 = NULL,
+           *p1 = NULL, *p2 = NULL,
+           *q1 = NULL, *q2 = NULL;
+};
+
 int generatePrimes(RSA_Params *rsa, int bits = 2048, int testingMR = 0);
 bool miller_rabin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx = BN_CTX_secure_new());
+int FIPS186_4_GEN_PRIMES(RSA_Params *rsa, int bits, bool doACVP = false, ACVP_TEST *testParams = NULL);

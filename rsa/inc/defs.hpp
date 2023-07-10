@@ -1,2 +1,2 @@
-#define LOG_CRYPTO
+//#define LOG_CRYPTO
 #define DO_CHECKS
