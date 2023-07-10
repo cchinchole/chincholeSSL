@@ -20,10 +20,9 @@ void readParameters()
     nlohmann::json data = nlohmann::json::parse(f);
     BIGNUM *p = BN_new(), *q = BN_new(), *n = BN_new();
 
-    auto &students = data["test-data"];
-    for(auto &testData : students)
+    auto &trials = data["test-data"];
+    for(auto &testData : trials)
     {
-        //std::cout << testData << std::endl;
         std::cout << "name: " << testData["name"].get<std::string>() << std::endl;
         BN_set_word(p, testData["age"].get<std::int64_t>());
         printf("\n%s\n", BN_bn2dec(p));
