@@ -13,7 +13,10 @@
 #include "inc/defs.hpp"
 #include "inc/primes.hpp"
 #include "inc/test.hpp"
-
+#include <cstdio>
+#include <cstdlib>
+#include <cassert>
+#include <openssl/rand.h>
 
 const int kBits = 2048;
 int keylen;
@@ -70,6 +73,46 @@ int testPrimesBetweenFuncs()
   return 0;
 }
 
+// These don't need to do anything if you don't have anything for them to do.
+static void stdlib_rand_cleanup() {}
+static int stdlib_rand_add(const void *buf, int num, double add_entropy) {return 0;}
+static int stdlib_rand_status() { return 1; }
+
+// Seed the RNG.  srand() takes an unsigned int, so we just use the first
+// sizeof(unsigned int) bytes in the buffer to seed the RNG.
+static int stdlib_rand_seed(const void *buf, int num)
+{
+        assert(num >= sizeof(unsigned int));
+        srand( *((unsigned int *) buf) );
+        return 0;
+}
+
+// Fill the buffer with random bytes.  For each byte in the buffer, we generate
+// a random number and clamp it to the range of a byte, 0-255.
+static int stdlib_rand_bytes(unsigned char *buf, int num)
+{
+        for( int index = 0; index < num; ++index )
+        {
+                buf[index] = rand() % 256;
+        }
+        return 1;
+}
+
+
+// Create the table that will link OpenSSL's rand API to our functions.
+RAND_METHOD stdlib_rand_meth = {
+        stdlib_rand_seed,
+        stdlib_rand_bytes,
+        stdlib_rand_cleanup,
+        stdlib_rand_add,
+        stdlib_rand_bytes,
+        stdlib_rand_status
+};
+
+// This is a public-scope accessor method for our table.
+RAND_METHOD *RAND_stdlib() { return &stdlib_rand_meth; }
+
+
 int main(int argc, char *argv[]) {
 /* Setup the openssl basic io output*/
 bio_stdout = BIO_new_fp(stdout, BIO_NOCLOSE);
@@ -117,13 +160,31 @@ BN_set_word(my_key_q, 17);
 BN_set_word(my_key_e, 7);
 #endif
 
-BN_set_word(my_key_e, 65537);
+BN_set_word(my_key_e, 0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000001);
 rsaPtr->e = BN_dup(my_key_e);
 rsaPtr->p = BN_new();
 rsaPtr->q = BN_new();
-FIPS186_4_GEN_PRIMES(rsaPtr, kBits);
-/*
+
+
+ACVP_TEST test = {
+           NULL, NULL,        /* XP Out, XQ Out */
+           NULL, NULL, NULL,  /* XP, XP1, XP2*/
+           NULL, NULL, NULL,  /* XQ, XQ1, XQ2 */
+           NULL, NULL,        /* P1, P2 */
+           NULL, NULL,        /* Q1, Q2 */
+};
+
+
+
+RAND_set_rand_method(RAND_stdlib());
+BIGNUM* seed = BN_new();
+BN_hex2bn(&seed, "e5f707e49c4e7cc8fb202b5cd957963713f1c4726677c09b6a7f5dfe");
+RAND_seed(&seed, sizeof(seed));
+
 cRSA *myRsa = new cRSA(kBits, NULL);
+FIPS186_4_GEN_PRIMES( (myRsa->params), kBits, true, &test);
+gen_rsa_sp800_56b(myRsa->params, kBits);
+
 
 BIGNUM *bnLongRand = BN_secure_new();
 BN_rand_ex(bnLongRand, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, BN_CTX_secure_new());
@@ -131,8 +192,7 @@ roundTrip(myRsa, (char*)"Test string HeRe! HelLO WoRLd!@#$^&*()_+ 1   2 34    56
 printf("\n\nTesting long string now.\n\n");
 roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));
 
-readParameters();
-*/
+
 
 BIO_free_all(bio_stdout);
 BIO_free_all(bio);

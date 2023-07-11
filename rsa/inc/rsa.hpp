@@ -50,9 +50,9 @@ class Timer {
 
 class cRSA {
 private:
-RSA_Params* params;
 int kBits;
 public:
+RSA_Params* params;
 cRSA(int bits, BIGNUM *eGiven, BN_CTX* ctx = BN_CTX_secure_new())
 {
   params = new RSA_Params();
