@@ -283,6 +283,37 @@ struct ACVP_TEST {
            *q1 = NULL, *q2 = NULL;
 };
 
+
+struct dataSqrt{
+    BN_ULONG* a;
+    int b;
+    int c;
+    int d;
+    int e;
+};
+
+#if BN_BITS2 == 64
+# define BN_DEF(lo, hi) (BN_ULONG)hi<<32|lo
+#else
+# define BN_DEF(lo, hi) lo, hi
+#endif
+
+# define OSSL_NELEM(x)    (sizeof(x)/sizeof((x)[0]))
+
+/* 1 / sqrt(2) * 2^256, rounded up */
+static const BN_ULONG inv_sqrt_2_val[] = {
+    BN_DEF(0x83339916UL, 0xED17AC85UL), BN_DEF(0x893BA84CUL, 0x1D6F60BAUL),
+    BN_DEF(0x754ABE9FUL, 0x597D89B3UL), BN_DEF(0xF9DE6484UL, 0xB504F333UL)
+};
+
+const dataSqrt ossl_bn_inv_sqrt_2 = {
+    (BN_ULONG *)inv_sqrt_2_val,
+    OSSL_NELEM(inv_sqrt_2_val),
+    OSSL_NELEM(inv_sqrt_2_val),
+    0,
+    BN_FLG_STATIC_DATA
+};
+
 int generatePrimes(RSA_Params *rsa, int bits = 2048, int testingMR = 0);
 bool miller_rabin_is_prime(BIGNUM* n, int iterations, BN_CTX *ctx = BN_CTX_secure_new());
 int FIPS186_4_GEN_PRIMES(RSA_Params *rsa, int bits, bool doACVP = false, ACVP_TEST *testParams = NULL);

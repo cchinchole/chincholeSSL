@@ -67,5 +67,5 @@
         "forward_list": "cpp",
         "valarray": "cpp"
     },
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": true,
 }
