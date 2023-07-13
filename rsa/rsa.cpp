@@ -10,20 +10,11 @@
 #include <chrono>
 #include <vector>
 #include <iostream>
+#include "inc/rsa.hpp"
 #include "inc/defs.hpp"
+#include "inc/logger.hpp"
 #include "inc/primes.hpp"
-
-
-int printParameter(std::string param_name, BIGNUM* num)
-{
-  #ifdef LOG_PARAMS
-  BIO_printf(bio_stdout, "%-5s", param_name.c_str());
-  BIO_printf(bio_stdout, "%s", BN_bn2dec(num));
-  BIO_printf(bio_stdout, "\n");
-  #endif
-  return 0;
-}
-
+#include "inc/time.hpp"
 
 
 /* Make sure that k = (k^e)^d mod n ; for some int k where 1 < k < n-1 */
@@ -64,7 +55,6 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
     return -1; 
   }
 
-  generatePrimes(rsa, nBits, 0);
   
   Timer t;
   BIGNUM *p1, *q1, *lcm, *p1q1, *gcd;
@@ -90,9 +80,9 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
     BN_set_flags(rsa->qInv, BN_FLG_CONSTTIME);
   }
 
-  printParameter("P", rsa->p);
-  printParameter("Q", rsa->q);
-  printParameter("E", rsa->e);
+  _Logger->parameter("P", rsa->p);
+  _Logger->parameter("Q", rsa->q);
+  _Logger->parameter("E", rsa->e);
 
   /* Step 1: Find the least common multiple of (p-1, q-1) */
   BN_sub(p1, rsa->p, BN_value_one());  /* p - 1 */
@@ -101,8 +91,8 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
   BN_gcd(gcd, p1, q1, ctx);       
   BN_div(lcm, NULL, p1q1, gcd, ctx);
 
-  printParameter("GCD", gcd);
-  printParameter("LCM", lcm);
+  _Logger->parameter("GCD", gcd);
+  _Logger->parameter("LCM", lcm);
 
   /* Step 2: d = e^(-1) mod(LCM[(p-1)(q-1)]) */
   /* Keep repeating incase the bitsize is too short */
@@ -112,7 +102,7 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
   for(;;)
   {
       BN_mod_inverse(rsa->d, rsa->e, lcm, ctx);
-      printParameter("D", rsa->d);
+      _Logger->parameter("D", rsa->d);
       #ifdef DO_CHECKS
         if (!(BN_num_bits(rsa->d) <= (nBits >> 1)))
           break;
@@ -123,7 +113,7 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
 
   /* Step 3: n = pq */
   BN_mul(rsa->n, rsa->p, rsa->q, ctx);
-  printParameter("N", rsa->n);
+  _Logger->parameter("N", rsa->n);
 
   t.start();
   /* Step 4: dP = d mod(p-1)*/
@@ -137,9 +127,9 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
 
   printf("Took: %dms to generate CRT parameters.\n", t.getElapsed(true));
 
-  printParameter("DP", rsa->dp);
-  printParameter("DQ", rsa->dq);
-  printParameter("QINV", rsa->qInv);
+  _Logger->parameter("DP", rsa->dp);
+  _Logger->parameter("DQ", rsa->dq);
+  _Logger->parameter("QINV", rsa->qInv);
 
   if(rsa_sp800_56b_pairwise_test(rsa))
     printf("Pairwise passed!\n");
@@ -151,8 +141,163 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
   return 0;
 }
 
+cRSA::cRSA(int bits, BIGNUM *eGiven, bool auxMode, BN_CTX* ctx)
+{
+  params = new RSA_Params();
 
+  BIGNUM *p1 = nullptr, *q1 = nullptr, *lcm = nullptr, *p1q1 = nullptr, *gcd = nullptr;
+  this->params->p = BN_secure_new();
+  this->params->q = BN_secure_new();
 
+  if(eGiven == NULL)
+  {
+    this->params->e = BN_new();
+    BN_set_word(this->params->e, 65537);
+  }
+  else
+    this->params->e = BN_dup(eGiven);
+
+  this->params->n = BN_secure_new();
+  this->params->d = BN_secure_new();
+  this->params->dp = BN_secure_new();
+  this->params->dq = BN_secure_new();
+  this->params->qInv = BN_secure_new();
+  this->kBits = bits;
+
+   
+  if(auxMode)
+  {
+    ACVP_TEST test = {
+           NULL, NULL,        /* XP Out, XQ Out */
+           NULL, NULL, NULL,  /* XP, XP1, XP2*/
+           NULL, NULL, NULL,  /* XQ, XQ1, XQ2 */
+           NULL, NULL,        /* P1, P2 */
+           NULL, NULL,        /* Q1, Q2 */
+    };
+
+    FIPS186_4_GEN_PRIMES( this->params->p, this->params->q, this->params->e, kBits, true, &test);
+    gen_rsa_sp800_56b(this->params, kBits);
+  } 
+  else
+  {
+    generatePrimes(this->params->p, this->params->q, this->params->e,  kBits, 0);
+    gen_rsa_sp800_56b(this->params, kBits);
+  }
+  
+}
+
+unsigned char* cRSA::encrypt(unsigned int *out_len, char *src, BN_CTX *ctx)
+{ 
+  unsigned int numBytes = strlen(src)-1;
+  unsigned int maxBytes = (kBits/8);
+  unsigned int numPages = (numBytes/maxBytes);
+  unsigned char* returnData = (unsigned char*)malloc((numPages+1)*maxBytes);
+  unsigned int returnPtr = 0;
+  
+  for(int i = 0; i <= numPages; i++)
+  {
+      BN_CTX_start(ctx);
+
+      /* Convert the src buffer into a bignumber to be used for encryption */
+      BIGNUM *originalNumber = BN_CTX_get(ctx);
+      BN_bin2bn( (unsigned char*)src + (i*maxBytes), maxBytes, originalNumber);
+      #ifdef LOG_CRYPTO
+      std::cout << "Original Number: " << BN_bn2dec(originalNumber) <<std::endl;
+      #endif
+      /* Encrypt the data */
+      BIGNUM *cipherNumber  = BN_CTX_get(ctx);
+      BN_mod_exp(cipherNumber, originalNumber, this->params->e, this->params->n, ctx);
+      #ifdef LOG_CRYPTO
+      std::cout << "Encrypted Number: " << BN_bn2dec(cipherNumber) << std::endl <<std::endl;
+      #endif
+
+      /* Convert big number to binary */
+      unsigned char *dataBuffer = (unsigned char*)malloc(maxBytes);
+      BN_bn2bin(cipherNumber, dataBuffer);
+      memcpy(returnData + (returnPtr), dataBuffer, BN_num_bytes(cipherNumber));
+      
+      /* Incremement the pointer and add to the output length*/
+      returnPtr += BN_num_bytes(cipherNumber);
+      *out_len = returnPtr;
+      free(dataBuffer);
+      BN_CTX_end(ctx);
+  }
+  BN_CTX_free(ctx);
+
+  return returnData;
+}
+
+std::string cRSA::decrypt(unsigned char *cipher, unsigned int cipher_length, BN_CTX *ctx, bool crt)
+{
+      unsigned int maxBytes = (kBits/8);
+      unsigned int numPages = (cipher_length/(maxBytes));
+      std::string returnData;
+
+      for(int i = 0; i < numPages;i++)
+      {
+        BN_CTX_start(ctx);
+        BIGNUM* cipherNumber = BN_CTX_get(ctx);
+        BIGNUM* decryptedData = BN_CTX_get(ctx);
+
+        /* Convert */
+        BN_bin2bn(cipher + (i*maxBytes), maxBytes , cipherNumber);
+        
+        /* Perform CRT Decryption */
+        if(crt)
+        { 
+          BIGNUM *m1 = BN_CTX_get(ctx);
+          BIGNUM *m2 = BN_CTX_get(ctx);
+          BIGNUM *h = BN_CTX_get(ctx);
+          BIGNUM *m1subm2 = BN_CTX_get(ctx);
+          BIGNUM *hq = BN_CTX_get(ctx);
+
+          /* m1 = c^(dP) mod p */
+          BN_mod_exp(m1, cipherNumber, this->params->dp, this->params->p, ctx);
+          
+          /* m2 = c^(dQ) mod q */
+          BN_mod_exp(m2, cipherNumber, this->params->dq, this->params->q, ctx);
+          
+          /* m1subm2 = (m1-m2) */
+          BN_sub(m1subm2, m1, m2);
+          
+          /* h = qInv*(m1subm2) mod p */
+          BN_mod_mul(h, this->params->qInv, m1subm2, this->params->p, ctx);
+          
+          /* hq = h*q */
+          BN_mul(hq, h, this->params->q, ctx);
+          
+          /* m = m2+h*q */
+          BN_add(decryptedData, m2, hq);
+        }
+        else
+          (decryptedData, cipherNumber, this->params->d, this->params->n, ctx);
+
+        #ifdef LOG_CRYPTO
+          std::cout << "Decrypted Numbers: " << BN_bn2dec(decryptedData) <<std::endl<<std::endl<<std::endl;
+        #endif
+        unsigned char* dataBuffer = (unsigned char*)malloc(BN_num_bytes(decryptedData));
+        BN_bn2bin(decryptedData, (unsigned char*)dataBuffer);
+        returnData.append((char*)dataBuffer);
+        
+        free(dataBuffer);
+        BN_CTX_end(ctx);
+      }
+    
+    BN_CTX_free(ctx);
+    return returnData;
+}
+
+int roundTrip(cRSA* rsa, char* str)
+{
+  unsigned int out_len = 0;
+  unsigned char* cipher = rsa->encrypt(&out_len, str);
+  std::string out = (rsa->decrypt(cipher, out_len));
+  int strresult = strcmp( (char*)str, (char*)out.c_str());
+  #ifdef LOG_CRYPTO
+  std::cout << "- - - - - - - - Encryption Decryption self test - - - - - - - -" << std::endl << "The inputted string: " << str << std::endl << "The outputted string: " << out << std::endl << "STRCMP returned " << strresult << std::endl << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" << std::endl;
+  #endif
+  return 0;
+}
 
 
 

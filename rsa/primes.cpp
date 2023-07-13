@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
-#include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/bn.h>
 #include <openssl/evp.h>
@@ -9,15 +8,32 @@
 #include <chrono>
 #include <vector>
 #include <iostream>
-#include "inc/primes.hpp"
 #include <math.h>
+#include "inc/logger.hpp"
+#include "inc/defs.hpp"
+#include "inc/primes.hpp"
 #include <openssl/types.h>
 
 #define RSA_FIPS1864_MIN_KEYGEN_KEYSIZE 2048
 #define RSA_FIPS1864_MIN_KEYGEN_STRENGTH 112
-int FIPS186_4_MR_Rounds(int nLen);
+int FIPS186_5_MR_Rounds_Aux(int nLen);
+int FIPS186_5_MR_Rounds_Prime(int nLen);
 int FIPS186_5_MIN_AUX(int nLen);
 int FIPS186_5_MAX_PROB_LEN(int nLen);
+
+/* 1 / sqrt(2) * 2^256, rounded up */
+static const BN_ULONG inv_sqrt_2_val[] = {
+    BN_DEF(0x83339916UL, 0xED17AC85UL), BN_DEF(0x893BA84CUL, 0x1D6F60BAUL),
+    BN_DEF(0x754ABE9FUL, 0x597D89B3UL), BN_DEF(0xF9DE6484UL, 0xB504F333UL)
+};
+
+const dataSqrt ossl_bn_inv_sqrt_2 = {
+    (BN_ULONG *)inv_sqrt_2_val,
+    OSSL_NELEM(inv_sqrt_2_val),
+    OSSL_NELEM(inv_sqrt_2_val),
+    0,
+    BN_FLG_STATIC_DATA
+};
 
 /* Using Miller-Rabin */
 /* FIPS 186-4 C.3.1 */
@@ -140,7 +156,7 @@ int generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_secure_new())
     prime_t *mods = (prime_t*)OPENSSL_zalloc(sizeof(*mods)*NUMPRIMES);
     BN_CTX_start(ctx);
     temp = BN_CTX_get(ctx);
-    int checks = FIPS186_4_MR_Rounds(bits);
+    int checks = FIPS186_5_MR_Rounds_Prime(bits);
     int attempts = 0;
     loop:
         /* Generate a random number and set top and bottom bits */
@@ -156,7 +172,7 @@ int generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_secure_new())
     return 0;
 }
 
-int generatePrimes(RSA_Params *rsa, int bits, int testingMR)
+int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR)
 {
     int primes = 2, quo = 0, rmd = 0, bitsr[2];
     quo = bits / primes;
@@ -181,7 +197,9 @@ int generatePrimes(RSA_Params *rsa, int bits, int testingMR)
         {
             BN_free(rez[z]);
         }
+        #ifdef LOG_PRIME_GEN_B_3_3
         printf("\n%d succeeded %d failed.\n", success, failed);
+        #endif
     }
     else
     {
@@ -193,30 +211,31 @@ int generatePrimes(RSA_Params *rsa, int bits, int testingMR)
             for(;;)
             {
                 generate_prime(results[i], bitsr[i]);
+                #ifdef LOG_PRIME_GEN_B_3_3
                 printf("Testing: %s\n", BN_bn2dec(results[i]));
+                #endif
                 
                 BN_sub(r2, results[i], BN_value_one());
-                if(BN_mod_inverse(r1, r2, rsa->e, BN_CTX_secure_new()) != NULL)
+                if(BN_mod_inverse(r1, r2, e, BN_CTX_secure_new()) != NULL)
                     break;
             }
 
         } 
     }
+    #ifdef LOG_PRIME_GEN_B_3_3
     printf("P found: %s\nQ found: %s\n", BN_bn2dec(results[0]), BN_bn2dec(results[1]));
-    rsa->p = BN_dup(results[0]);
-    rsa->q = BN_dup(results[1]);
+    #endif
+    p = BN_dup(results[0]);
+    q = BN_dup(results[1]);
    
     return 0;
 }
 
 
 
-
 /* FIPS 186-4-C.9 */
 int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X, BIGNUM *Xin, BIGNUM *r1, BIGNUM *r2, int nLen, BIGNUM *e, BN_CTX *ctx)
 {
-
-
     BIGNUM *R, *r1mul2, *r1_mul2_r2, *temp, *tempPrivFactor, *range, *base;
     int bits = nLen >> 1;
 
@@ -235,7 +254,10 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X, 
 
     /* GCD(2r1, r1) != 1 */
     if(BN_cmp(temp, r1mul2) != 0 && BN_cmp(temp, r2) != 0 && !BN_is_one(temp))
-        return -1;
+    {
+        _Logger->error(__func__, "GCD was not = 1 between the two auxiliary primes");
+        goto error;
+    }
 
     /* R= (( r2^(-1) mod 2r1 ) * r2 ) - (( (2r1)^(-1) mod r2) * 2r1) Applying CRT, so that R=1 (mod2r1) and R = -1(modr2) */
     
@@ -247,26 +269,36 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X, 
 
     BN_sub(R, R, temp);
 
-
-
+    /* If there is a supplied X-Random then use this, else generate one. */
     if(Xin != NULL)
         BN_copy(X, Xin);
     else
     {
-/* 1 / sqrt(2) * 2^256, rounded up */
-      //  BN_set_word(temp, 1/sqrt(2) * pow(2, 256) );
-      //  BIGNUM* sqrt2 = BN_new();
-      //  BIGNUM* two = BN_new();
-      //  BIGNUM* twofiftysix = BN_new();
-      //  BN_set_word(sqrt2, sqrt(2));
-     //   BN_set_word(two, 2);
-     //   BN_set_word(twofiftysix, 256);
-     //   BN_exp(temp, two, twofiftysix, ctx);
-     //   BN_div(temp, NULL, temp, sqrt2, ctx);
-        temp = BN_dup( (BIGNUM*)(&ossl_bn_inv_sqrt_2) );
+        /* 1 / sqrt(2) * 2^256, rounded up */
+        BIGNUM* sqrt2 = BN_new();
+        BIGNUM* two = BN_new();
+        BIGNUM* twofiftysix = BN_new();
+        BN_set_word(sqrt2, sqrt(2));
+        BN_set_word(two, 2);
+        BN_set_word(twofiftysix, 256);
+        BN_exp(temp, two, twofiftysix, ctx); /* 2^256 */
+        BN_div(temp, NULL, temp, sqrt2, ctx); /* 2^256 / sqrt(2) */
+     //   temp = BN_dup( (BIGNUM*)(&ossl_bn_inv_sqrt_2) ); Used this as a test
+
+        BN_free(sqrt2);
+        BN_free(two);
+        BN_free(twofiftysix);
+
+        if(bits < BN_num_bits(temp))
+        {
+            _Logger->error(__func__, "Bits was less than the temp");
+            goto error;
+        }
+
         BN_lshift(base, temp, bits-BN_num_bits(temp));
         BN_lshift(range, BN_value_one(), bits);
         BN_sub(range, range, base);
+
     }
 
     for(;;)
@@ -280,30 +312,47 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X, 
 
         BN_mod_sub(PRIV_PRIME_FACTOR, R, X, r1_mul2_r2, ctx); /* Generate the private prime factor Step 4 */
         BN_add(PRIV_PRIME_FACTOR, PRIV_PRIME_FACTOR, X);
-
-        for(int i = 0; i < 5 * nLen/2; i++)
+        int i = 0; /* 5 */
+        for(;;)
         {
-            if(BN_num_bits(PRIV_PRIME_FACTOR) > bits)
+            if(BN_num_bits(PRIV_PRIME_FACTOR) > bits) /* 6 */
                 if(Xin == NULL)
                     break;  /* Bad X generation so go back to step 3 */
                 else
-                    return -1; /* X was inputted if we make it here. */
+                {
+                    _Logger->error(__func__, "X was already declared.");
+                     goto error;
+                    /* X was inputted if we make it here. */
+                }
 
             BN_copy(tempPrivFactor, PRIV_PRIME_FACTOR);
             BN_sub_word(tempPrivFactor, 1);
 
-            if(BN_are_coprime(tempPrivFactor, e, ctx))
+            if(BN_are_coprime(tempPrivFactor, e, ctx)) /* 7 */
             {
-                if(miller_rabin_is_prime(PRIV_PRIME_FACTOR, FIPS186_4_MR_Rounds(nLen)))
+                if(miller_rabin_is_prime(PRIV_PRIME_FACTOR, FIPS186_5_MR_Rounds_Prime(nLen)))
                     goto ending;
             }
 
-            BN_add(PRIV_PRIME_FACTOR, PRIV_PRIME_FACTOR, r1_mul2_r2);
+            i++; /* 8 */
+            if(i >= 5*nLen/2) /* 9 */
+            {
+                _Logger->error(__func__, "I was >= 5*nlen/2");
+                goto error;
+            }
+            BN_add(PRIV_PRIME_FACTOR, PRIV_PRIME_FACTOR, r1_mul2_r2); /* 10 */
+
+
         }
+        //_Logger->error("Find Derived Prime", "X was already declared.");
     }
     ending:
         BN_CTX_end(ctx);
         return 0;
+    error:
+        BN_clear(PRIV_PRIME_FACTOR);
+        BN_CTX_end(ctx);
+        return -1;
 }
 
 
@@ -317,21 +366,18 @@ int FIPS186_4_FIND_AUX_PRIME(const BIGNUM *Xn1, BIGNUM *n1, int kbits, BN_CTX *c
     for(;;)
     {
         
-        if(miller_rabin_is_prime(n1, 50))
-        {
-              //  printf("\n%s was found to be prime returned with %d\n", BN_bn2dec(n1), BN_is_prime(n1, 512, NULL, BN_CTX_new(), NULL));
+        if(miller_rabin_is_prime(n1, FIPS186_5_MR_Rounds_Aux(kbits)))
                 break;
-        }
         else
-        {
             BN_add_word(n1, 2);
-        }
     }
     return 0;
 }
 
+
+
 /* FIPS 186-4-B.3.6 */
-int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2, BIGNUM *Xp, BIGNUM *Xp1, BIGNUM *Xp2, BIGNUM *e, int kbits, bool testParamsFilled, BN_CTX *ctx)
+int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2, BIGNUM *Xp, BIGNUM *Xp1, BIGNUM *Xp2, BIGNUM *e, int nlen, bool testParamsFilled, BN_CTX *ctx)
 {    
     BIGNUM *p1i = NULL, *p2i = NULL, *xp1i = NULL, *xp2i = NULL;
 
@@ -362,27 +408,27 @@ int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2, B
     /* If this is a test, skip generation else will proceed to generate Xn1 and Xn2 */
     if(Xp1 == NULL)
     {
-        BN_priv_rand_ex(xp1i, FIPS186_5_MIN_AUX(kbits), BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ODD, 0, ctx);
+        BN_priv_rand_ex(xp1i, FIPS186_5_MIN_AUX(nlen), BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ODD, 0, ctx);
     }
 
     if(Xp2 == NULL)
     {     
-        BN_priv_rand_ex(xp2i, FIPS186_5_MIN_AUX(kbits), BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ODD, 0, ctx);
+        BN_priv_rand_ex(xp2i, FIPS186_5_MIN_AUX(nlen), BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ODD, 0, ctx);
     }
 
     /* Generate the auxilary primes now */
-    FIPS186_4_FIND_AUX_PRIME(xp1i, p1i, kbits, ctx);
-    FIPS186_4_FIND_AUX_PRIME(xp2i, p2i, kbits, ctx);
+    FIPS186_4_FIND_AUX_PRIME(xp1i, p1i, nlen, ctx);
+    FIPS186_4_FIND_AUX_PRIME(xp2i, p2i, nlen, ctx);
 
     /* Make sure the auxilary primes' sum are within the max length */
-    if( (BN_num_bits(p1i) + BN_num_bits(p2i)) >= FIPS186_5_MAX_PROB_LEN(kbits)  )
+    if( (BN_num_bits(p1i) + BN_num_bits(p2i)) >= FIPS186_5_MAX_PROB_LEN(nlen)  )
+    {
+        _Logger->error(__func__, "Auxiliary primes sum was not within the maximum length.");
         return -1;
+    }
 
     /* Finally generate the prime using the auxilary primes */
-    if(FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(p, Xpout, Xp, p1i, p2i, kbits, e, ctx) == -1)
-    {
-        printf("\nFAILED\n");
-    }
+    if(FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(p, Xpout, Xp, p1i, p2i, nlen, e, ctx));
 
 
     BN_CTX_end(ctx);
@@ -408,7 +454,7 @@ int FIPS186_4_PRIME_EQUALITY_CHECK(BIGNUM *diff, const BIGNUM *p, const BIGNUM *
 }
 
 /* FIPS 186-4-B.3.6 */
-int FIPS186_4_GEN_PRIMES(RSA_Params *rsa, int bits, bool doACVP, ACVP_TEST *testParams)
+int FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP, ACVP_TEST *testParams)
 {
     BIGNUM *Xpo = NULL, *Xqo = NULL, *tmp = NULL, 
     *p1 = NULL, *p2 = NULL, *q1 = NULL, *q2 = NULL, 
@@ -446,21 +492,25 @@ int FIPS186_4_GEN_PRIMES(RSA_Params *rsa, int bits, bool doACVP, ACVP_TEST *test
 
     BN_set_flags(Xpo, BN_FLG_CONSTTIME);
     BN_set_flags(Xqo, BN_FLG_CONSTTIME);
-    BN_set_flags(rsa->p, BN_FLG_CONSTTIME);
-    BN_set_flags(rsa->q, BN_FLG_CONSTTIME);
+    BN_set_flags(p, BN_FLG_CONSTTIME);
+    BN_set_flags(q, BN_FLG_CONSTTIME);
 
-    FIPS186_4_GEN_PROB_PRIME(rsa->p, Xpo, p1, p2, Xp, Xp1, Xp2, rsa->e, bits, doACVP, ctx);
+    FIPS186_4_GEN_PROB_PRIME(p, Xpo, p1, p2, Xp, Xp1, Xp2, e, bits, doACVP, ctx);
     for(;;)
     {
         /* Generate the primes */
-        FIPS186_4_GEN_PROB_PRIME(rsa->q, Xqo, q1, q2, Xq, Xq1, Xq2, rsa->e, bits, doACVP, ctx);
+        FIPS186_4_GEN_PROB_PRIME(q, Xqo, q1, q2, Xq, Xq1, Xq2, e, bits, doACVP, ctx);
 
         if(FIPS186_4_PRIME_EQUALITY_CHECK(tmp, Xpo, Xqo, bits) == 0)
             continue;
-        if(FIPS186_4_PRIME_EQUALITY_CHECK(tmp, rsa->p, rsa->q, bits) == 0)
+        if(FIPS186_4_PRIME_EQUALITY_CHECK(tmp, p, q, bits) == 0)
             continue;
         break;
     }
+
+    #ifdef LOG_PRIME_GEN_B_3_6
+        printf("Found:\nP: %s\nQ: %s\n", BN_bn2hex(p), BN_bn2hex(q));
+    #endif
 
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
@@ -476,19 +526,31 @@ int FIPS186_4_GEN_PRIMES(RSA_Params *rsa, int bits, bool doACVP, ACVP_TEST *test
  * Can input Xp1, Xp2 (the random numbers which will generate the auxiliary primes)
  */
 
-/* Minimum rounds of M-R testing from 186-4-C-3.1 */
-int FIPS186_4_MR_Rounds(int nLen)
+/* Minimum rounds of M-R testing from 186-5-B-1 */
+/* 2^-100 error probability */
+int FIPS186_5_MR_Rounds_Aux(int nLen)
 {
-    if(nLen <= 512)
-        return 7;
-    else if(nLen <= 1024)
-        return 4;
-    else if(nLen <= 1536)
-        return 3;
-    else if(nLen <= 3072)
-        return 4;
+    if(nLen >= 1024)
+        return 32;
+    else if(nLen >= 1536)
+        return 27;
+    else if(nLen >= 2048)
+        return 22;
     else
-        return 5;
+        return -1;
+}
+
+/* Minimum rounds of M-R testing from 186-5-B-1 */
+int FIPS186_5_MR_Rounds_Prime(int nLen)
+{
+    if(nLen >= 1024)
+        return 4;
+    else if(nLen >= 1536)
+        return 3;
+    else if(nLen >= 2048)
+        return 2;
+    else
+        return -1;
 }
 
 /* Minimum length of an auxilary prime from FIPS 186-5-A.1 */
