@@ -115,26 +115,7 @@ RAND_METHOD *RAND_stdlib() { return &stdlib_rand_meth; }
 
 
 int main(int argc, char *argv[]) {
-
-
-#ifdef LOG_PKEY
-BIO_printf(bio_stdout, "Valid key: \n");
-printParameter("P", my_key_p);
-printParameter("Q", my_key_q);
-printParameter("E", my_key_e);
-printParameter("D", my_key_d);
-printParameter("N", my_key_n);
-printParameter("DP", my_key_dp);
-printParameter("DQ", my_key_dq);
-#endif
-
-
-
-#ifdef TEST_PRIMES
-BN_set_word(my_key_p, 13);
-BN_set_word(my_key_q, 17);
-BN_set_word(my_key_e, 7);
-#endif
+  
 BIGNUM* myE = BN_new();
 BN_set_word(myE, 0x100000001);
 
