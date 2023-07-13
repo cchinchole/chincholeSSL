@@ -139,6 +139,7 @@ BIGNUM* myE = BN_new();
 BN_set_word(myE, 0x100000001);
 
 /* Set the OPENSSL Rng to use our own method. */
+/* This is deprecated needs updated */
 RAND_set_rand_method(RAND_stdlib());
 
 /* Make a syscall to /dev/urandom for 4 bytes that can be used to seed the prng */
