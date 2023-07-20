@@ -22,6 +22,7 @@
 #include "inc/rsa.hpp"
 #include "inc/primes.hpp"
 #include "inc/rand.hpp"
+#include "inc/hash/sha.hpp"
 
 const int kBits = 2048;
 int keylen;
@@ -74,30 +75,38 @@ int testPrimesBetweenFuncs()
 
 
 int main(int argc, char *argv[]) {
-  
+  BIGNUM* myE = BN_new();
+  BN_set_word(myE, 0x100000001);
 
-BIGNUM* myE = BN_new();
-BN_set_word(myE, 0x100000001);
+  /* Set the OPENSSL Rng to use our own method. */
+  /* This is deprecated needs updated */
+  RAND_set_rand_method(RAND_stdlib());
 
-/* Set the OPENSSL Rng to use our own method. */
-/* This is deprecated needs updated */
-RAND_set_rand_method(RAND_stdlib());
+  /* Make a syscall to /dev/urandom for 4 bytes that can be used to seed the prng */
+  unsigned char buff[4];
+  syscall(SYS_getrandom, buff, 4, GRND_NONBLOCK);
 
-/* Make a syscall to /dev/urandom for 4 bytes that can be used to seed the prng */
-unsigned char buff[4];
-syscall(SYS_getrandom, buff, 4, GRND_NONBLOCK);
+  RAND_seed(&buff, sizeof(buff));
 
-RAND_seed(&buff, sizeof(buff));
-
-cRSA *myRsa = new cRSA(kBits, myE, true);
+  cRSA *myRsa = new cRSA(kBits, myE, true);
 
 
-BIGNUM *bnLongRand = BN_secure_new();
-BN_rand_ex(bnLongRand, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, BN_CTX_secure_new());
-unsigned char* testBytes = (unsigned char*)malloc(32*sizeof(char));
-RAND_bytes(testBytes, 32);
-roundTrip(myRsa, (char*)"Test string HeRe! HelLO WoRLd!@#$^&*()_+ 1   2 34    567  89\nTest!");
-printf("\n\nTesting long string now.\n\n");
-roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));
-return 0;
+  BIGNUM *bnLongRand = BN_secure_new();
+  BN_rand_ex(bnLongRand, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, BN_CTX_secure_new());
+  unsigned char* testBytes = (unsigned char*)malloc(32*sizeof(char));
+  RAND_bytes(testBytes, 32);
+  roundTrip(myRsa, (char*)"Test string HeRe! HelLO WoRLd!@#$^&*()_+ 1   2 34    567  89\nTest!");
+  printf("\n\nTesting long string now.\n\n");
+  roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));
+
+
+  char* msg = "abc";
+  unsigned char hexdigest[41];
+  SHA1_Context ctx;
+  sha1_update( (uint8_t*)msg, strlen(msg), &ctx);
+  sha1_digest(hexdigest, &ctx);
+  printf("%s\n", hexdigest);
+
+
+  return 0;
 }
