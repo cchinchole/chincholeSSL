@@ -51,5 +51,17 @@ int testSHA_1(char *msg, char *KAT)
   return res;
 }
 
+int testSHA_2(char *msg, char *KAT)
+{ 
+  unsigned char hexdigest[500];
+  SHA2_Context ctx;
+  sha2_update( (uint8_t*)msg, strlen(msg), &ctx);
+  sha2_digest(hexdigest, &ctx);
+  int res = strcmp((char*)hexdigest, KAT);
+  res==0 ? printf("HASH Returned: %s PASSED!\n", hexdigest) : printf("HASH Returned: %s FAILED!\n", hexdigest);
+  return res;
+}
+
+
 
 
