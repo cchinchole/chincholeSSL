@@ -11,6 +11,7 @@
                 "-Wl,-rpath=/home/christian/src/openssl/build/lib64",
                 "-g",
                 "global.cpp",
+                "sha1.cpp",
                 "rand.cpp",
                 "test.cpp",
                 "time.cpp",
