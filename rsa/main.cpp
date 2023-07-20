@@ -100,9 +100,9 @@ int main(int argc, char *argv[]) {
   printf("\n\nTesting long string now.\n\n");
   roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));
 
+
   testSHA_1("abc", "A9993E364706816ABA3E25717850C26C9CD0D89D");
   testSHA_1("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", "84983E441C3BD26EBAAE4AA1F95129E5E54670F1");
-
-
+  testSHA_2("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu", "8E959B75DAE313DA8CF4F72814FC143F8F7779C6EB9F7FA17299AEADB6889018501D289E4900F7E4331B99DEC4B5433AC7D329EEB6DD26545E96E55B874BE909");
   return 0;
 }

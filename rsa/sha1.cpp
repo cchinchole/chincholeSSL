@@ -3,6 +3,10 @@
 #include <math.h>
 
 #define DIGEST_OUT 160
+#define SHA1_NUM_WORDS 16
+#define SHA1_ROUNDS 80
+#define SHA1_MASK 0x0000000f
+#define SHA1_LEN_BYTES sizeof(uint64_t)
 #define SHA1_ROTL(value, bits) (((value) << (bits)) | ((value) >> (sizeof(uint32_t)*8 - (bits))))
 
 
@@ -158,7 +162,7 @@ int sha1_digest(unsigned char *digest_out, SHA1_Context *ctx)
 
     uint64_t nSize = ctx->bMsg_len;
 
-    for(int i = ( sizeof(uint64_t)*8 ) - 1; nSize; i--)
+    for(int i = ( SHA1_LEN_BYTES*8 ) - 1; nSize; i--)
     {
         /* Will pull the last byte of the size then remove it */
         ctx->state[i] = nSize; 

@@ -1,9 +1,6 @@
 #include <openssl/bn.h>
-
 #define SHA1_BLOCK_SIZE_BYTES 64
-#define SHA1_NUM_WORDS 16
-#define SHA1_ROUNDS 80
-#define SHA1_MASK 0x0000000f
+#define SHA2_BLOCK_SIZE_BYTES 128
 
 typedef struct SHA1_Context {
     uint64_t bMsg_len = 0;
@@ -20,6 +17,34 @@ typedef struct SHA1_Context {
     uint8_t state[SHA1_BLOCK_SIZE_BYTES];
 } SHA1_Context;
 
+enum SHA2_MODE {
+    SHA2_384,
+    SHA2_512,
+    SHA2_256,
+};
+
+typedef struct SHA2_Context {
+    uint64_t bMsg_len[2] = {0, 0};
+    SHA2_MODE mode = SHA2_512;
+    uint64_t H[8] = {
+        0x6a09e667f3bcc908,
+        0xbb67ae8584caa73b,
+        0x3c6ef372fe94f82b,
+        0xa54ff53a5f1d36f1,
+        0x510e527fade682d1,
+        0x9b05688c2b3e6c1f,
+        0x1f83d9abfb41bd6b,
+        0x5be0cd19137e2179
+    };
+
+    /* Using a pointer system to allow for additional data to be inputted and processed without having to setup a new context. */
+    uint statePtr = 0;
+    uint8_t state[SHA2_BLOCK_SIZE_BYTES];
+} SHA2_Context;
+
 
 int sha1_update(uint8_t *msg, uint8_t byMsg_len, SHA1_Context *ctx);
 int sha1_digest(unsigned char *digest_out, SHA1_Context *ctx);
+
+int sha2_update(uint8_t *msg, uint8_t byMsg_len, SHA2_Context *ctx);
+int sha2_digest(unsigned char *digest_out, SHA2_Context *ctx);

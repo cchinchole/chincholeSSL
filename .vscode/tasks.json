@@ -12,6 +12,7 @@
                 "-g",
                 "global.cpp",
                 "sha1.cpp",
+                "sha2.cpp",
                 "rand.cpp",
                 "test.cpp",
                 "time.cpp",
