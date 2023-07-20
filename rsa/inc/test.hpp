@@ -12,3 +12,4 @@
 
 void testFunction();
 void readParameters();
+int testSHA_1(char *msg, char *KAT);

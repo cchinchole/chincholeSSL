@@ -23,6 +23,7 @@
 #include "inc/primes.hpp"
 #include "inc/rand.hpp"
 #include "inc/hash/sha.hpp"
+#include "inc/test.hpp"
 
 const int kBits = 2048;
 int keylen;
@@ -99,13 +100,8 @@ int main(int argc, char *argv[]) {
   printf("\n\nTesting long string now.\n\n");
   roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));
 
-
-  char* msg = "abc";
-  unsigned char hexdigest[41];
-  SHA1_Context ctx;
-  sha1_update( (uint8_t*)msg, strlen(msg), &ctx);
-  sha1_digest(hexdigest, &ctx);
-  printf("%s\n", hexdigest);
+  testSHA_1("abc", "A9993E364706816ABA3E25717850C26C9CD0D89D");
+  testSHA_1("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", "84983E441C3BD26EBAAE4AA1F95129E5E54670F1");
 
 
   return 0;

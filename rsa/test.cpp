@@ -13,6 +13,7 @@
 #include "inc/test.hpp"
 #include <math.h>
 #include "inc/json.hpp"
+#include "inc/hash/sha.hpp"
 
 void readParameters()
 {
@@ -37,6 +38,17 @@ void testFunction()
     j["list"] = {1,2,3};
     std::ofstream o("test.json");
     o << j << std::endl;
+}
+
+int testSHA_1(char *msg, char *KAT)
+{ 
+  unsigned char hexdigest[41];
+  SHA1_Context ctx;
+  sha1_update( (uint8_t*)msg, strlen(msg), &ctx);
+  sha1_digest(hexdigest, &ctx);
+  int res = strcmp((char*)hexdigest, KAT);
+  res==0 ? printf("HASH Returned: %s PASSED!\n", hexdigest) : printf("HASH Returned: %s FAILED!\n", hexdigest);
+  return res;
 }
 
 
