@@ -15,7 +15,7 @@ enum SHA_MODE {
 class SHA_Context {
     private:
     public:
-        uint statePtr = 0;    
+        uint64_t blkPtr = 0;    
         SHA_MODE mode = SHA_1;
         virtual void clear(){}
         virtual ~SHA_Context(){}
@@ -24,7 +24,7 @@ class SHA_Context {
 class SHA_1_Context : public SHA_Context {
     public:
         uint64_t bMsg_len = 0;
-        uint8_t state[SHA1_BLOCK_SIZE_BYTES];
+        uint8_t block[SHA1_BLOCK_SIZE_BYTES];
         uint32_t H[5] = {
             0x67452301,
             0xefcdab89,
@@ -36,15 +36,15 @@ class SHA_1_Context : public SHA_Context {
      {
         mode = SHA_1;
         bMsg_len = 0;
-        statePtr = 0;
-        memset(state, 0, SHA1_BLOCK_SIZE_BYTES);
+        blkPtr = 0;
+        memset(block, 0, SHA1_BLOCK_SIZE_BYTES);
      }
 
      void clear()
      {
         bMsg_len = 0;
-        statePtr = 0;
-        memset(state, 0, SHA1_BLOCK_SIZE_BYTES);
+        blkPtr = 0;
+        memset(block, 0, SHA1_BLOCK_SIZE_BYTES);
 
         uint64_t SHA_1_H0[5] = {
         0x67452301,
@@ -64,7 +64,7 @@ class SHA_1_Context : public SHA_Context {
 class SHA_512_Context : public SHA_Context {
     public:
      uint64_t bMsg_len[2] = {0, 0};
-     uint8_t state[SHA2_384512_BLOCK_SIZE_BYTES];
+     uint8_t block[SHA2_384512_BLOCK_SIZE_BYTES];
      uint64_t H[8] = {
         0x6a09e667f3bcc908,
         0xbb67ae8584caa73b,
@@ -81,16 +81,16 @@ class SHA_512_Context : public SHA_Context {
         mode = SHA_512;
         bMsg_len[0] = 0;
         bMsg_len[1] = 0;
-        statePtr = 0;
-        memset(state, 0, SHA2_384512_BLOCK_SIZE_BYTES);
+        blkPtr = 0;
+        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
      }
 
      void clear()
      {
         bMsg_len[0] = 0;
         bMsg_len[1] = 0;
-        statePtr = 0;
-        memset(state, 0, SHA2_384512_BLOCK_SIZE_BYTES);
+        blkPtr = 0;
+        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
 
         uint64_t SHA_512_H0[8] = {
         0x6a09e667f3bcc908,
@@ -112,7 +112,7 @@ class SHA_512_Context : public SHA_Context {
      ~SHA_512_Context()
      {
         delete bMsg_len;
-        delete state;
+        delete block;
         delete H;
      }
 };
@@ -120,7 +120,7 @@ class SHA_512_Context : public SHA_Context {
 class SHA_384_Context : public SHA_Context {
     public:
      uint64_t bMsg_len[2] = {0, 0};
-     uint8_t state[SHA2_384512_BLOCK_SIZE_BYTES];
+     uint8_t block[SHA2_384512_BLOCK_SIZE_BYTES];
      uint64_t H[8] = {
         0xcbbb9d5dc1059ed8,
         0x629a292a367cd507,
@@ -135,16 +135,16 @@ class SHA_384_Context : public SHA_Context {
         mode = SHA_384;
         bMsg_len[0] = 0;
         bMsg_len[1] = 0;
-        statePtr = 0;
-        memset(state, 0, SHA2_384512_BLOCK_SIZE_BYTES);
+        blkPtr = 0;
+        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
      }
 
      void clear()
      {
         bMsg_len[0] = 0;
         bMsg_len[1] = 0;
-        statePtr = 0;
-        memset(state, 0, SHA2_384512_BLOCK_SIZE_BYTES);
+        blkPtr = 0;
+        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
 
         uint64_t SHA_384_H0[8] = {
         0xcbbb9d5dc1059ed8,
@@ -166,20 +166,20 @@ class SHA_384_Context : public SHA_Context {
      ~SHA_384_Context()
      {
         delete bMsg_len;
-        delete state;
+        delete block;
         delete H;
      }
 };
 
 char *SHA_MODE_NAME(SHA_MODE mode);
 
-int SHA_512_update(uint8_t *msg, uint8_t byMsg_len, SHA_512_Context *ctx);
+int SHA_512_update(uint8_t *msg, size_t byMsg_len, SHA_512_Context *ctx);
 int SHA_512_digest(uint8_t *digest_out, SHA_512_Context *ctx);
 
-int SHA_1_update(uint8_t *msg, uint8_t byMsg_len, SHA_1_Context *ctx);
+int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_1_Context *ctx);
 int SHA_1_digest(uint8_t *digest_out, SHA_1_Context *ctx);
 
-int sha_update(uint8_t *msg, uint8_t byMsg_len, SHA_Context *ctx);
+int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int sha_digest(uint8_t *digest_out, SHA_Context *ctx);
 
 SHA_Context *SHA_Context_new(SHA_MODE mode);

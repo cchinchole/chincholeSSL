@@ -74,7 +74,7 @@ int SHA_512_process(SHA_512_Context *ctx)
         for(int j = 0; j < sizeof(uint64_t); j++)
         {
             W[i] <<= 8;
-            W[i] |= ctx->state[i * sizeof(uint64_t) + j];
+            W[i] |= ctx->block[i * sizeof(uint64_t) + j];
         }
 
     for(int i = 16; i < 80; i++)
@@ -124,36 +124,13 @@ int SHA_512_process(SHA_512_Context *ctx)
     return 0;
 }
 
-int SHA_512_update(uint8_t *msg, uint8_t byMsg_len, SHA_512_Context *ctx)
+int SHA_512_update(uint8_t *msg, size_t byMsg_len, SHA_512_Context *ctx)
 {  
     if(ctx->mode != SHA_512 && ctx->mode != SHA_384)
         return -1;
 
-    uint msgPtr = 0;
-
-    while ((msgPtr < byMsg_len))
-    {
-        /* Check if we are closer to end of block or end of message*/
-        int blockSize = 0;
-        if(byMsg_len - msgPtr < getSHABlockLengthByMode(ctx->mode) - ctx->statePtr)
-            blockSize = byMsg_len - msgPtr;
-        else
-            blockSize = getSHABlockLengthByMode(ctx->mode) - ctx->statePtr;
-
-        memcpy(ctx->state + ctx->statePtr, msg + msgPtr, blockSize);
-        msgPtr += blockSize;
-        ctx->statePtr += blockSize;
-
-        if(ctx->statePtr == getSHABlockLengthByMode(ctx->mode))
-        {
-            /* Overlapping the block so process this information and await new */
-            SHA_512_process(ctx);
-            ctx->statePtr = 0;
-        }
-    }
     uint64_t carry = byMsg_len * 8;
     uint64_t nextCarry = 0;
-
     for (int i = 0; i < 2; i++)
     {
         if (carry)
@@ -171,6 +148,19 @@ int SHA_512_update(uint8_t *msg, uint8_t byMsg_len, SHA_512_Context *ctx)
         nextCarry = 0;
     }
 
+
+
+    const uint8_t* src = (uint8_t*)msg;
+    memset(ctx->block, 0, getSHABlockLengthByMode(ctx->mode));
+    while(byMsg_len--)
+    {
+            ctx->block[ctx->blkPtr++] = *src++;
+            if (ctx->blkPtr == getSHABlockLengthByMode(ctx->mode))
+            {
+                SHA_512_process(ctx);
+                ctx->blkPtr = 0;
+            }
+    }
     return 0;
 }
 
@@ -180,34 +170,32 @@ int SHA_512_digest(uint8_t *digest_out, SHA_512_Context *ctx)
     if(ctx->mode != SHA_512 && ctx->mode != SHA_384)
         return -1;
 
-
-        
     /* Set the first bit to 1 (0b10000000) */
-    ctx->state[ctx->statePtr++] = 0x80;
+    ctx->block[ctx->blkPtr++] = 0x80;
 
-    if( getSHABlockLengthByMode(ctx->mode) - ctx->statePtr > 0)
-        memset(ctx->state + ctx->statePtr, 0, getSHABlockLengthByMode(ctx->mode) - ctx->statePtr);
+    if( getSHABlockLengthByMode(ctx->mode) - ctx->blkPtr > 0)
+        memset(ctx->block + ctx->blkPtr, 0, getSHABlockLengthByMode(ctx->mode) - ctx->blkPtr);
 
     /* Check if we can fit the message length into current block if not then process a new block */
-    if(ctx->statePtr >= (getSHABlockLengthByMode(ctx->mode) - SHA2_512_LEN_BYTES) )
+    if(ctx->blkPtr > (getSHABlockLengthByMode(ctx->mode) - SHA2_512_LEN_BYTES) )
     {
         SHA_512_process(ctx);
-        ctx->statePtr = 0;
-        memset(ctx->state, 0, getSHABlockLengthByMode(ctx->mode));
+        ctx->blkPtr = 0;
+        memset(ctx->block, 0, getSHABlockLengthByMode(ctx->mode));
     }
 
     uint64_t nSize[2] = { ctx->bMsg_len[0], ctx->bMsg_len[1]};
 
     for(int i = ( SHA2_512_LEN_BYTES*8 ) - 1, sizeIdx = 0, byteCounter = 0; byteCounter < 16; i--, byteCounter++)
     {
-       ctx->state[i] = nSize[sizeIdx];
+       ctx->block[i] = nSize[sizeIdx];
        nSize[sizeIdx] >>= 8;
        if(i == getSHABlockLengthByMode(ctx->mode) - sizeof(uint64_t))
         sizeIdx++;
     }
 
     SHA_512_process(ctx);
-    ctx->statePtr = 0;
+    ctx->blkPtr = 0;
 
         
   

@@ -9,7 +9,6 @@
                 "-L/home/christian/src/openssl/build/lib64/",
                 "-I/home/christian/build/include/",
                 "-Wl,-rpath=/home/christian/src/openssl/build/lib64",
-                "-std=c++20",
                 "-g",
                 "global.cpp",
                 "sha1.cpp",

@@ -60,7 +60,7 @@ char *SHA_MODE_NAME(SHA_MODE mode)
     }
     return "";
 }
-int sha_update(uint8_t *msg, uint8_t byMsg_len, SHA_Context *ctx)
+int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
 {
     switch(ctx->mode)
     {
