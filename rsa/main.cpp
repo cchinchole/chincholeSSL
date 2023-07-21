@@ -24,55 +24,39 @@
 #include "inc/rand.hpp"
 #include "inc/hash/sha.hpp"
 #include "inc/test.hpp"
+#include "inc/hash/hmac.hpp"
 
 const int kBits = 2048;
 int keylen;
 char *pem_key;
 
+unsigned char *scanHex(char *str, int bytes) {
+    unsigned char *ret = (unsigned char*)malloc(bytes);
+    memset(ret, 0, bytes);
 
-/*
-  * TODO:
-  *   Make Encryption / Decryption FIPS Compliant
-  *   Make Generating CRT Fips Compliant
-  *   Make Prime Generation Fips Compliant
-*/
+    for (int i = 0, i2 = 0; i < bytes; i++, i2 += 2) {
+        // get value
+        for (int j = 0; j < 2; j++) {
+            ret[i] <<= 4;
+            unsigned char c = str[i2 + j];
+            if (c >= '0' && c <= '9') {
+                ret[i] += c - '0';
+            }
+            else if (c >= 'a' && c <= 'f') {
+                ret[i] += c - 'a' + 10;
+            }
+            else if (c >= 'A' && c <= 'F') {
+                ret[i] += c - 'A' + 10;
+            }
+            else {
+                free(ret);
+                return NULL;
+            }
+        }
+    }
 
-/* For FIPS:
- *  Run the AVCP Test (Skip this part right now, deals with making sure the primes are generated correctly.)
- *  Validate the strength of key size
- *  Validate the rng strength
- *  Set the public exponent
- *  Generate the prime factors
- *  Dervie the parameters
- *  Do the pairwise test
-*/
-
-
-
-int testPrimesBetweenFuncs()
-{
-  
-  BIGNUM* testPrime = BN_secure_new();
-  int s = 0, j = 0;
-  for(int i = 4; i < 17863; i++)
-  {
-  BN_set_word(testPrime, i);
-  if(miller_rabin_is_prime(testPrime, 64))
-    if(BN_check_prime(testPrime, BN_CTX_secure_new(), NULL))
-      s++;
-    else
-      j++;
-  else
-    if(BN_check_prime(testPrime, BN_CTX_secure_new(), NULL))
-      j++;
-  }
-  printf("Primes found: %d Discrepancies between other func: %d\n", s, j);
-  BN_free(testPrime);
-  
-  return 0;
+    return ret;
 }
-
-
 
 
 int main(int argc, char *argv[]) {
@@ -102,7 +86,24 @@ int main(int argc, char *argv[]) {
 
 
   testSHA_1("abc", "A9993E364706816ABA3E25717850C26C9CD0D89D");
+
+
   testSHA_1("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", "84983E441C3BD26EBAAE4AA1F95129E5E54670F1");
   testSHA_2("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu", "8E959B75DAE313DA8CF4F72814FC143F8F7779C6EB9F7FA17299AEADB6889018501D289E4900F7E4331B99DEC4B5433AC7D329EEB6DD26545E96E55B874BE909");
+  unsigned char tmp[getSHAReturnLengthByMode(SHA_1)];
+  unsigned char *key = scanHex("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b", 20);
+  unsigned char *msg = scanHex("4869205468657265", 8);
+
+  SHA2_Context ctx2;
+  initSHA384(&ctx2);
+  unsigned char hexdigest[getSHAReturnLengthByMode(ctx2.mode)];
+  sha2_update( (uint8_t*)"abc", strlen("abc"), &ctx2);
+  sha2_digest(hexdigest, &ctx2);
+
+  hmac_sha(SHA_512, tmp, (unsigned char*)"test", 4, (unsigned char*)"test", 4);
+  unsigned char *output = byteArrToHexArr(tmp, getSHAReturnLengthByMode(SHA_512)); 
+  printf("HMAC: %s\n", output);
+
+
   return 0;
 }

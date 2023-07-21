@@ -172,9 +172,12 @@ int sha1_digest(unsigned char *digest_out, SHA1_Context *ctx)
     sha1_process(ctx);
     ctx->statePtr = 0;
 
-    snprintf ( (char*)digest_out, 41, "%08X%08X%08X%08X%08X",
-              ctx->H[0],ctx->H[1],ctx->H[2],ctx->H[3],ctx->H[4]);
-        
-
+    for(int i = 0; i < getSHAReturnLengthByMode(SHA_1)/sizeof(ctx->H[i]); i++)
+    {
+        *(digest_out++) = ctx->H[i] >> 24;
+        *(digest_out++) = ctx->H[i] >> 16;
+        *(digest_out++) = ctx->H[i] >> 8;
+        *(digest_out++) = ctx->H[i];
+    }
     return 0;
 }
