@@ -60,7 +60,6 @@ char *SHA_MODE_NAME(SHA_MODE mode)
     }
     return "";
 }
-
 int sha_update(uint8_t *msg, uint8_t byMsg_len, SHA_Context *ctx)
 {
     switch(ctx->mode)
@@ -92,4 +91,25 @@ int sha_digest(uint8_t *digest_out, SHA_Context *ctx)
             break;
     }
     return 0;
+}
+
+SHA_Context *SHA_Context_new(SHA_MODE mode)
+{
+  SHA_Context *ctx = NULL;
+  switch(mode)
+  {
+    case SHA_1:
+      ctx = new SHA_1_Context;
+      break;
+    case SHA_384:
+      ctx = new SHA_384_Context;
+      break;
+    case SHA_512:
+      ctx = new SHA_512_Context;
+      break;
+    default:
+      ctx = new SHA_1_Context;
+      break;
+  }
+  return ctx;
 }
