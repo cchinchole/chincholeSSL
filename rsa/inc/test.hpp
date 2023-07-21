@@ -13,6 +13,6 @@
 void testFunction();
 void readParameters();
 int testPrimesBetweenFuncs();
-int testHMAC(char *msg, char *key, char *KAT, int mode);
-int testSHA(char *msg, char *KAT, int mode);
+int testHMAC(char *msg, size_t msg_len, char *key, size_t key_len, char *KAT, int mode);
+int testSHA(char *msg, size_t msg_len, char *KAT, int mode);
 unsigned char *byteArrToHexArr(unsigned char *bytes, size_t byte_len);

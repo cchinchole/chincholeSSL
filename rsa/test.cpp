@@ -78,26 +78,26 @@ int testPrimesBetweenFuncs()
   return 0;
 }
 
-int testSHA(char *msg, char *KAT, int mode)
+int testSHA(char *msg, size_t msg_len, char *KAT, int mode)
 {
   SHA_Context *ctx = SHA_Context_new(SHA_MODE(mode));
   unsigned char rawDigest[getSHAReturnLengthByMode(ctx->mode)];
-  sha_update( (uint8_t*)msg, strlen(msg), ctx);
+  sha_update( (uint8_t*)msg, msg_len, ctx);
   sha_digest(rawDigest, ctx);
   unsigned char *hexString = byteArrToHexArr(rawDigest, getSHAReturnLengthByMode(ctx->mode));
 
 
   int res = strcasecmp((char*)hexString, KAT);
-  res==0 ? printf("(%s Test) HASH Returned: %s PASSED!\n", SHA_MODE_NAME(SHA_MODE(mode)), hexString) : printf("(SHA2 Test) HASH Returned: %s FAILED!\n", hexString);
+  res==0 ? printf("(%s Test) HASH Returned: %s PASSED!\n", SHA_MODE_NAME(SHA_MODE(mode)), hexString) : printf("(%s Test) HASH Returned: %s FAILED!\n", SHA_MODE_NAME(SHA_MODE(mode)), hexString);
   return res;
 }
 
 
-int testHMAC(char *msg, char *key, char *KAT, int mode)
+int testHMAC(char *msg, size_t msg_len, char *key, size_t key_len, char *KAT, int mode)
 {
   unsigned char rawDigest[getSHAReturnLengthByMode( SHA_MODE(mode))];
   SHA_Context *ctx = SHA_Context_new(SHA_MODE(mode));
-  hmac_sha(ctx, rawDigest, (unsigned char *)msg, strlen((char*)msg), (unsigned char*)key, strlen((char*)key));
+  hmac_sha(ctx, rawDigest, (unsigned char *)msg, msg_len, (unsigned char*)key, key_len);
   unsigned char *hexString = byteArrToHexArr(rawDigest, getSHAReturnLengthByMode(SHA_MODE(mode)));
 
 
