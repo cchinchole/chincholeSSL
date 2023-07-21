@@ -17,6 +17,8 @@ class SHA_Context {
     public:
         uint statePtr = 0;    
         SHA_MODE mode = SHA_1;
+        virtual void clear(){}
+        virtual ~SHA_Context(){}
 };
 
 class SHA_1_Context : public SHA_Context {
@@ -179,6 +181,8 @@ int SHA_1_digest(uint8_t *digest_out, SHA_1_Context *ctx);
 
 int sha_update(uint8_t *msg, uint8_t byMsg_len, SHA_Context *ctx);
 int sha_digest(uint8_t *digest_out, SHA_Context *ctx);
+
+SHA_Context *SHA_Context_new(SHA_MODE mode);
 
 int getSHABlockLengthByMode(SHA_MODE mode);
 int getSHAReturnLengthByMode(SHA_MODE mode);
