@@ -2,7 +2,6 @@
 #include "inc/logger.hpp"
 #include <math.h>
 
-#define DIGEST_OUT 160
 #define SHA2_NUM_WORDS 16
 #define SHA2_ROUNDS 80
 
@@ -65,25 +64,7 @@ uint64_t sha2_k[80] = {
     0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817
 };
 
-int initSHA384(SHA2_Context *ctx)
-{
-unsigned long long sha384_h[8] = {
-    0xcbbb9d5dc1059ed8ULL,
-    0x629a292a367cd507ULL,
-    0x9159015a3070dd17ULL,
-    0x152fecd8f70e5939ULL,
-    0x67332667ffc00b31ULL,
-    0x8eb44a8768581511ULL,
-    0xdb0c2e0d64f98fa7ULL,
-    0x47b5481dbefa4fa4ULL};
-    ctx->mode = SHA_384;
-
-    for(int i = 0; i < 8; i++)
-        ctx->H[i] = sha384_h[i];
-    return 0;
-}
-
-int sha_384_512_process(SHA2_Context *ctx)
+int SHA_512_process(SHA_512_Context *ctx)
 {
     /* Using non circular queue this time */
     uint64_t W[80];
@@ -143,8 +124,11 @@ int sha_384_512_process(SHA2_Context *ctx)
     return 0;
 }
 
-int sha_384_512_update(uint8_t *msg, uint8_t byMsg_len, SHA2_Context *ctx)
-{
+int SHA_512_update(uint8_t *msg, uint8_t byMsg_len, SHA_512_Context *ctx)
+{  
+    if(ctx->mode != SHA_512 && ctx->mode != SHA_384)
+        return -1;
+
     uint msgPtr = 0;
 
     while ((msgPtr < byMsg_len))
@@ -163,7 +147,7 @@ int sha_384_512_update(uint8_t *msg, uint8_t byMsg_len, SHA2_Context *ctx)
         if(ctx->statePtr == getSHABlockLengthByMode(ctx->mode))
         {
             /* Overlapping the block so process this information and await new */
-            sha_384_512_process(ctx);
+            SHA_512_process(ctx);
             ctx->statePtr = 0;
         }
     }
@@ -190,9 +174,14 @@ int sha_384_512_update(uint8_t *msg, uint8_t byMsg_len, SHA2_Context *ctx)
     return 0;
 }
 
-int sha_384_512_digest(unsigned char *digest_out, SHA2_Context *ctx)
+int SHA_512_digest(uint8_t *digest_out, SHA_512_Context *ctx)
 {
 
+    if(ctx->mode != SHA_512 && ctx->mode != SHA_384)
+        return -1;
+
+
+        
     /* Set the first bit to 1 (0b10000000) */
     ctx->state[ctx->statePtr++] = 0x80;
 
@@ -202,7 +191,7 @@ int sha_384_512_digest(unsigned char *digest_out, SHA2_Context *ctx)
     /* Check if we can fit the message length into current block if not then process a new block */
     if(ctx->statePtr >= (getSHABlockLengthByMode(ctx->mode) - SHA2_512_LEN_BYTES) )
     {
-        sha_384_512_process(ctx);
+        SHA_512_process(ctx);
         ctx->statePtr = 0;
         memset(ctx->state, 0, getSHABlockLengthByMode(ctx->mode));
     }
@@ -217,7 +206,7 @@ int sha_384_512_digest(unsigned char *digest_out, SHA2_Context *ctx)
         sizeIdx++;
     }
 
-    sha_384_512_process(ctx);
+    SHA_512_process(ctx);
     ctx->statePtr = 0;
 
         
@@ -234,41 +223,5 @@ int sha_384_512_digest(unsigned char *digest_out, SHA2_Context *ctx)
         *(digest_out++) = ctx->H[i];
     }
 
-    return 0;
-}
-
-int sha2_update(uint8_t *msg, uint8_t byMsg_len, SHA2_Context *ctx)
-{
-    switch(ctx->mode)
-    {
-        case SHA_512:
-            sha_384_512_update(msg, byMsg_len, ctx);
-            break;
-        case SHA_384:
-            sha_384_512_update(msg, byMsg_len, ctx);
-            break;
-        default:
-            sha_384_512_update(msg, byMsg_len, ctx);
-            break;
-
-    }
-    return 0;
-}
-
-int sha2_digest(unsigned char *digest_out, SHA2_Context *ctx)
-{   
-    switch(ctx->mode)
-    {
-        case SHA_512:
-            sha_384_512_digest(digest_out, ctx);
-            break;
-        case SHA_384:
-            sha_384_512_digest(digest_out, ctx);
-            break;
-        default:
-            sha_384_512_digest(digest_out, ctx);
-            break;
-
-    }
     return 0;
 }
