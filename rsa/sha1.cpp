@@ -53,7 +53,7 @@ uint32_t sha1_k(int t)
         return -1;
 }
 
-int sha1_process(SHA1_Context *ctx)
+int SHA_1_Process(SHA_1_Context *ctx)
 {
     /* Using circular queue schedular in accordance to FIPS 180-4 6.1.3 */
     uint32_t W[SHA1_NUM_WORDS];
@@ -110,7 +110,7 @@ int sha1_process(SHA1_Context *ctx)
     return 0;
 }
 
-int sha1_update(uint8_t *msg, uint8_t byMsg_len, SHA1_Context *ctx)
+int SHA_1_update(uint8_t *msg, uint8_t byMsg_len, SHA_1_Context *ctx)
 {
     uint msgPtr = 0;
 
@@ -134,7 +134,7 @@ int sha1_update(uint8_t *msg, uint8_t byMsg_len, SHA1_Context *ctx)
         if(ctx->statePtr == SHA1_BLOCK_SIZE_BYTES)
         {
             /* Overlapping the block so process this information and await new */
-            sha1_process(ctx);
+            SHA_1_Process(ctx);
             ctx->statePtr = 0;
         }
     }
@@ -143,7 +143,7 @@ int sha1_update(uint8_t *msg, uint8_t byMsg_len, SHA1_Context *ctx)
     return 0;
 }
 
-int sha1_digest(unsigned char *digest_out, SHA1_Context *ctx)
+int SHA_1_digest(uint8_t *digest_out, SHA_1_Context *ctx)
 {
 
     /* Set the first bit to 1 (0b10000000) */
@@ -155,7 +155,7 @@ int sha1_digest(unsigned char *digest_out, SHA1_Context *ctx)
     /* Check if we can fit the message length into current block if not then process a new block */
     if(ctx->statePtr >= (SHA1_BLOCK_SIZE_BYTES - sizeof(uint64_t)) )
     {
-        sha1_process(ctx);
+        SHA_1_Process(ctx);
         ctx->statePtr = 0;
         memset(ctx->state, 0, SHA1_BLOCK_SIZE_BYTES);
     }
@@ -169,7 +169,7 @@ int sha1_digest(unsigned char *digest_out, SHA1_Context *ctx)
         nSize >>= 8;
     }
 
-    sha1_process(ctx);
+    SHA_1_Process(ctx);
     ctx->statePtr = 0;
 
     for(int i = 0; i < getSHAReturnLengthByMode(SHA_1)/sizeof(ctx->H[i]); i++)

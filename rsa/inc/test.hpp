@@ -14,5 +14,7 @@ void testFunction();
 void readParameters();
 int testPrimesBetweenFuncs();
 int testSHA_1(char *msg, char *KAT);
-int testSHA_2(char *msg, char *KAT);
+int testSHA_512(char *msg, char *KAT);
+int testSHA_384(char *msg, char *KAT);
+int testHMAC(char *msg, char *key, char *KAT, int mode);
 unsigned char *byteArrToHexArr(unsigned char *bytes, size_t byte_len);

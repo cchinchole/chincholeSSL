@@ -30,15 +30,15 @@ const int kBits = 2048;
 int keylen;
 char *pem_key;
 
-unsigned char *scanHex(char *str, int bytes) {
-    unsigned char *ret = (unsigned char*)malloc(bytes);
+uint8_t *scanHex(char *str, int bytes) {
+    uint8_t *ret = (uint8_t*)malloc(bytes);
     memset(ret, 0, bytes);
 
     for (int i = 0, i2 = 0; i < bytes; i++, i2 += 2) {
         // get value
         for (int j = 0; j < 2; j++) {
             ret[i] <<= 4;
-            unsigned char c = str[i2 + j];
+            uint8_t c = str[i2 + j];
             if (c >= '0' && c <= '9') {
                 ret[i] += c - '0';
             }
@@ -85,24 +85,13 @@ int main(int argc, char *argv[]) {
   roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));
 
 
-  testSHA_1("abc", "A9993E364706816ABA3E25717850C26C9CD0D89D");
-
-
   testSHA_1("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", "84983E441C3BD26EBAAE4AA1F95129E5E54670F1");
-  testSHA_2("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu", "8E959B75DAE313DA8CF4F72814FC143F8F7779C6EB9F7FA17299AEADB6889018501D289E4900F7E4331B99DEC4B5433AC7D329EEB6DD26545E96E55B874BE909");
-  unsigned char tmp[getSHAReturnLengthByMode(SHA_1)];
-  unsigned char *key = scanHex("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b", 20);
-  unsigned char *msg = scanHex("4869205468657265", 8);
+  testSHA_512("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu", "8E959B75DAE313DA8CF4F72814FC143F8F7779C6EB9F7FA17299AEADB6889018501D289E4900F7E4331B99DEC4B5433AC7D329EEB6DD26545E96E55B874BE909");
+  testSHA_384("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu", "09330C33F71147E83D192FC782CD1B4753111B173B3B05D22FA08086E3B0F712FCC7C71A557E2DB966C3E9FA91746039");
 
-  SHA2_Context ctx2;
-  initSHA384(&ctx2);
-  unsigned char hexdigest[getSHAReturnLengthByMode(ctx2.mode)];
-  sha2_update( (uint8_t*)"abc", strlen("abc"), &ctx2);
-  sha2_digest(hexdigest, &ctx2);
-
-  hmac_sha(SHA_512, tmp, (unsigned char*)"test", 4, (unsigned char*)"test", 4);
-  unsigned char *output = byteArrToHexArr(tmp, getSHAReturnLengthByMode(SHA_512)); 
-  printf("HMAC: %s\n", output);
+  testHMAC( (char*)scanHex("4869205468657265", 8) , (char*)scanHex("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b", 20) , "87aa7cdea5ef619d4ff0b4241a1d6cb02379f4e2ce4ec2787ad0b30545e17cdedaa833b7d6b8a702038b274eaea3f4e4be9d914eeb61f1702e696c203a126854", SHA_512);
+  testHMAC( (char*)scanHex("4869205468657265", 8) , (char*)scanHex("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b", 20) , "afd03944d84895626b0825f4ab46907f15f9dadbe4101ec682aa034c7cebc59cfaea9ea9076ede7f4af152e8b2fa9cb6", SHA_384);
+  testHMAC( "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopqabcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", "78e2e78c51a4b45a95536c4a1fa2bf72cfbd8f0b", SHA_1);
 
 
   return 0;
