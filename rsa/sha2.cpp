@@ -188,12 +188,14 @@ int SHA_512_digest(uint8_t *digest_out, SHA_512_Context *ctx)
 
     for(int i = ( SHA2_512_LEN_BYTES*8 ) - 1, sizeIdx = 0, byteCounter = 0; byteCounter < 16; i--, byteCounter++)
     {
+      /* Will pull the last byte of the size then remove it. Will enumerate up to 16 bytes then swap to the other 64 bit int in the array */
        ctx->block[i] = nSize[sizeIdx];
        nSize[sizeIdx] >>= 8;
        if(i == getSHABlockLengthByMode(ctx->mode) - sizeof(uint64_t))
         sizeIdx++;
     }
-
+    
+    /* The final message with the length to process */
     SHA_512_process(ctx);
     ctx->blkPtr = 0;
 

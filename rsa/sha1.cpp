@@ -91,7 +91,7 @@ int SHA_1_Process(SHA_1_Context *ctx)
                 1
             );
         }
-
+        
         tmp = SHA1_ROTL(a, 5) + sha1_f(b, c, d, t) + e + sha1_k(t) + W[s];
         e = d;
         d = c;
@@ -112,17 +112,11 @@ int SHA_1_Process(SHA_1_Context *ctx)
 
 int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_1_Context *ctx)
 {
-
-    
-
     /* Make sure the bits are not exceeding 2^64 */
-    
     if( (ctx->bMsg_len + (byMsg_len * 8)) >= pow(2, 64))
-    {
-        printf("\nERROR\n");
         return -1;
-    }
 
+   /* Clear the block with 0's then copy up to 64 bytes of a message into the block. If we hit 64 then process this message and continue. */
    const uint8_t* src = (uint8_t*)msg;
    memset(ctx->block, 0, getSHABlockLengthByMode(ctx->mode));
    ctx->bMsg_len += (byMsg_len * 8);
@@ -163,6 +157,7 @@ int SHA_1_digest(uint8_t *digest_out, SHA_1_Context *ctx)
       nSize >>= 8;
     }
 
+    /* The final message with the length to process */
     SHA_1_Process(ctx);
     ctx->blkPtr = 0;
 
