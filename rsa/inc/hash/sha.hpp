@@ -8,8 +8,12 @@
 enum SHA_MODE {
     SHA_1,
     SHA_384,
-    SHA_512,
     SHA_256,
+    SHA_512,
+    SHA_3_224,
+    SHA_3_256,
+    SHA_3_384,
+    SHA_3_512,
 };
 
 class SHA_Context {
@@ -19,6 +23,23 @@ class SHA_Context {
         SHA_MODE mode = SHA_1;
         virtual void clear(){}
         virtual ~SHA_Context(){}
+};
+
+class SHA_3_Context : public SHA_Context {
+   private:
+   public:
+      SHA_MODE mode = SHA_3_512;
+      uint64_t rRate = 0;
+      uint64_t bWidthSize = 0;
+      uint64_t wLaneSize = 0;
+      uint64_t lLogLane = 0;
+      uint64_t b = 0;
+      uint64_t c = 0;
+      uint64_t nr = 0;
+      SHA_3_Context(SHA_MODE mode)
+      {
+         
+      }
 };
 
 class SHA_1_Context : public SHA_Context {
@@ -175,6 +196,9 @@ int SHA_384512_digest(uint8_t *digest_out, SHA_384_Context *ctx);
 
 int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_1_Context *ctx);
 int SHA_1_digest(uint8_t *digest_out, SHA_1_Context *ctx);
+
+
+int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx);
 
 int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int sha_digest(uint8_t *digest_out, SHA_Context *ctx);
