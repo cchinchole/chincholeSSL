@@ -111,11 +111,9 @@ class SHA_512_Context : public SHA_Context {
 
      ~SHA_512_Context()
      {
-        delete bMsg_len;
-        delete block;
-        delete H;
      }
 };
+
 
 class SHA_384_Context : public SHA_Context {
     public:
@@ -165,9 +163,6 @@ class SHA_384_Context : public SHA_Context {
 
      ~SHA_384_Context()
      {
-        delete bMsg_len;
-        delete block;
-        delete H;
      }
 };
 
@@ -175,6 +170,8 @@ char *SHA_MODE_NAME(SHA_MODE mode);
 
 int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_512_Context *ctx);
 int SHA_384512_digest(uint8_t *digest_out, SHA_512_Context *ctx);
+int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_384_Context *ctx);
+int SHA_384512_digest(uint8_t *digest_out, SHA_384_Context *ctx);
 
 int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_1_Context *ctx);
 int SHA_1_digest(uint8_t *digest_out, SHA_1_Context *ctx);

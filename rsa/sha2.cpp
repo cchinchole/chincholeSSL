@@ -64,6 +64,158 @@ uint64_t sha2_k[80] = {
     0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817
 };
 
+int SHA_384512_process(SHA_384_Context *ctx)
+{
+    /* Using non circular queue this time */
+    uint64_t W[SHA2_ROUNDS];
+
+    /* Step 1: setup the message schedule */
+    for(int i = 0; i < SHA2_NUM_WORDS; i++)
+        for(int j = 0; j < sizeof(uint64_t); j++)
+        {
+            W[i] <<= 8;
+            W[i] |= ctx->block[i * sizeof(uint64_t) + j];
+        }
+
+    for(int i = 16; i < SHA2_ROUNDS; i++)
+    {
+        W[i] =  sigma1_512(W[i-2])+
+                W[i-7] +
+                sigma0_512(W[i-15]) +
+                W[i-16];
+    }
+
+    /* Step 2 init working vars */
+    uint64_t a = ctx->H[0];
+    uint64_t b = ctx->H[1];
+    uint64_t c = ctx->H[2];
+    uint64_t d = ctx->H[3];
+    uint64_t e = ctx->H[4];
+    uint64_t f = ctx->H[5];
+    uint64_t g = ctx->H[6];
+    uint64_t h = ctx->H[7];
+    uint64_t tmp1 = 0;
+    uint64_t tmp2 = 0;
+
+    /* Step 3 loop */
+    for(int t = 0; t < SHA2_ROUNDS; t++)
+    {
+        tmp1 = h + summat1_512(e)+Ch(e, f, g)+sha2_k[t]+W[t];
+        tmp2 = summat0_512(a) + Maj(a,b,c);
+        h = g;
+        g = f;
+        f = e;
+        e = d+tmp1;
+        d = c;
+        c = b;
+        b = a;
+        a = tmp1+tmp2;
+    }
+
+    ctx->H[0] += a;
+    ctx->H[1] += b;
+    ctx->H[2] += c;
+    ctx->H[3] += d;
+    ctx->H[4] += e;
+    ctx->H[5] += f;
+    ctx->H[6] += g;
+    ctx->H[7] += h;
+
+    return 0;
+}
+
+int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_384_Context *ctx)
+{  
+    if(ctx->mode != SHA_512 && ctx->mode != SHA_384)
+        return -1;
+
+    uint64_t carry = byMsg_len * 8;
+    uint64_t nextCarry = 0;
+    for (int i = 0; i < 2; i++)
+    {
+        if (carry)
+        {
+            uint64_t initial = ctx->bMsg_len[i];
+            ctx->bMsg_len[i] += carry;
+            carry = 0;
+            if (ctx->bMsg_len[i] < initial)
+            {
+                carry = 1;
+            }
+        }
+
+        carry += nextCarry;
+        nextCarry = 0;
+    }
+
+
+
+    const uint8_t* src = (uint8_t*)msg;
+    memset(ctx->block, 0, getSHABlockLengthByMode(ctx->mode));
+    while(byMsg_len--)
+    {
+            ctx->block[ctx->blkPtr++] = *src++;
+            if (ctx->blkPtr == getSHABlockLengthByMode(ctx->mode))
+            {
+                SHA_384512_process(ctx);
+                ctx->blkPtr = 0;
+            }
+    }
+    return 0;
+}
+
+int SHA_384512_digest(uint8_t *digest_out, SHA_384_Context *ctx)
+{
+
+    if(ctx->mode != SHA_512 && ctx->mode != SHA_384)
+        return -1;
+
+    /* Set the first bit to 1 (0b10000000) */
+    ctx->block[ctx->blkPtr++] = 0x80;
+
+    if( getSHABlockLengthByMode(ctx->mode) - ctx->blkPtr > 0)
+        memset(ctx->block + ctx->blkPtr, 0, getSHABlockLengthByMode(ctx->mode) - ctx->blkPtr);
+
+    /* Check if we can fit the message length into current block if not then process a new block */
+    if(ctx->blkPtr > (getSHABlockLengthByMode(ctx->mode) - SHA2_512_LEN_BYTES) )
+    {
+        SHA_384512_process(ctx);
+        ctx->blkPtr = 0;
+        memset(ctx->block, 0, getSHABlockLengthByMode(ctx->mode));
+    }
+
+    uint64_t nSize[2] = { ctx->bMsg_len[0], ctx->bMsg_len[1]};
+
+    for(int i = ( SHA2_512_LEN_BYTES*8 ) - 1, sizeIdx = 0, byteCounter = 0; byteCounter < 16; i--, byteCounter++)
+    {
+      /* Will pull the last byte of the size then remove it. Will enumerate up to 16 bytes then swap to the other 64 bit int in the array */
+       ctx->block[i] = nSize[sizeIdx];
+       nSize[sizeIdx] >>= 8;
+       if(i == getSHABlockLengthByMode(ctx->mode) - sizeof(uint64_t))
+        sizeIdx++;
+    }
+    
+    /* The final message with the length to process */
+    SHA_384512_process(ctx);
+    ctx->blkPtr = 0;
+
+        
+  
+    for(int i = 0; i < getSHAReturnLengthByMode(ctx->mode)/sizeof(ctx->H[i]); i++)
+    {
+        *(digest_out++) = ctx->H[i] >> 56;
+        *(digest_out++) = ctx->H[i] >> 48;
+        *(digest_out++) = ctx->H[i] >> 40;
+        *(digest_out++) = ctx->H[i] >> 32;
+        *(digest_out++) = ctx->H[i] >> 24;
+        *(digest_out++) = ctx->H[i] >> 16;
+        *(digest_out++) = ctx->H[i] >> 8;
+        *(digest_out++) = ctx->H[i];
+    }
+
+    return 0;
+}
+
 int SHA_384512_process(SHA_512_Context *ctx)
 {
     /* Using non circular queue this time */

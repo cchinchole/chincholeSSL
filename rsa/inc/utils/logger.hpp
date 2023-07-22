@@ -34,19 +34,11 @@ class Logger{
             return 0;
         }
 
-        int parameter(const char *pName, auto param, int paramType = PARAM_BN)
+        int parameter(const char *pName, BIGNUM* param)
         {
             #ifdef LOG_PARAMS
                 BIO_printf("[Parameter Log] ");
-                switch(paramType)
-                {
-                    case PARAM_BN:
-                        BIO_printf("%s: %d", pName, BN_bn2dec(((BIGNUM*)param)) );
-                    default:
-                        BIO_printf("%s: %d", );
-                        break;
-                }
-                BIO_printf(".\n");
+                BIO_printf("%s: %d\n", pName, BN_bn2dec(((BIGNUM*)param)) );
             #endif
             return 0;
         }
