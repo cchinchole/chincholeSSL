@@ -106,6 +106,7 @@ int main(int argc, char *argv[]) {
   testSHA((char*)scanHex((char*)"63bfc1ed7f78ab",
    56/8), 56/8, (char*)"860328d80509500c1783169ebf0ba0c4b94da5e5", SHA_1);
    
+   SHA_3_update( (uint8_t*) "a", 1, NULL);
   
 
   return 0;

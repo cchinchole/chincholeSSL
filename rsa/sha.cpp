@@ -32,6 +32,18 @@ int getSHAReturnLengthByMode(SHA_MODE mode)
         case SHA_512:
             return 512/8;
             break;
+        case SHA_3_224:
+            return 224/8;
+            break;
+        case SHA_3_256:
+            return 256/8;
+            break;
+        case SHA_3_384:
+            return 384/8;
+            break;
+        case SHA_3_512:
+            return 512/8;
+            break;
         default:
             return -1;
             break;
@@ -106,6 +118,9 @@ SHA_Context *SHA_Context_new(SHA_MODE mode)
       break;
     case SHA_512:
       ctx = new SHA_512_Context;
+      break;
+    case SHA_3_512:
+      ctx = new SHA_3_Context(mode);
       break;
     default:
       ctx = new SHA_1_Context;
