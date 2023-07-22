@@ -9,9 +9,9 @@
 #include <vector>
 #include <iostream>
 #include <math.h>
-#include "inc/logger.hpp"
+#include "inc/utils/logger.hpp"
 #include "inc/defs.hpp"
-#include "inc/primes.hpp"
+#include "inc/math/primes.hpp"
 #include <openssl/types.h>
 
 #define RSA_FIPS1864_MIN_KEYGEN_KEYSIZE 2048

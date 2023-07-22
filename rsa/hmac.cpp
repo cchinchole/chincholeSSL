@@ -1,7 +1,7 @@
 
 #include "inc/hash/sha.hpp"
 #include "inc/hash/hmac.hpp"
-#include "inc/logger.hpp"
+#include "inc/utils/logger.hpp"
 #include <math.h>
 
 /* FIPS 198-1 */

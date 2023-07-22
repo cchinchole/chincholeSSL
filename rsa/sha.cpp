@@ -68,10 +68,10 @@ int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
             SHA_1_update(msg, byMsg_len, (SHA_1_Context*)ctx);
             break;
         case SHA_512:
-            SHA_512_update(msg, byMsg_len, (SHA_512_Context*)ctx);
+            SHA_384512_update(msg, byMsg_len, (SHA_512_Context*)ctx);
             break;
         case SHA_384:
-            SHA_512_update(msg, byMsg_len, (SHA_512_Context*)ctx);
+            SHA_384512_update(msg, byMsg_len, (SHA_512_Context*)ctx);
             break;
     }
     return 0;
@@ -84,10 +84,10 @@ int sha_digest(uint8_t *digest_out, SHA_Context *ctx)
             SHA_1_digest(digest_out, (SHA_1_Context*)ctx);
             break;
         case SHA_512:
-            SHA_512_digest(digest_out, (SHA_512_Context*)ctx);
+            SHA_384512_digest(digest_out, (SHA_512_Context*)ctx);
             break;
         case SHA_384:
-            SHA_512_digest(digest_out, (SHA_512_Context*)ctx);
+            SHA_384512_digest(digest_out, (SHA_512_Context*)ctx);
             break;
     }
     return 0;

@@ -10,11 +10,11 @@
 #include <chrono>
 #include <vector>
 #include <iostream>
-#include "inc/rsa.hpp"
+#include "inc/crypto/rsa.hpp"
 #include "inc/defs.hpp"
-#include "inc/logger.hpp"
-#include "inc/primes.hpp"
-#include "inc/time.hpp"
+#include "inc/utils/logger.hpp"
+#include "inc/math/primes.hpp"
+#include "inc/utils/time.hpp"
 
 
 /* Make sure that k = (k^e)^d mod n ; for some int k where 1 < k < n-1 */

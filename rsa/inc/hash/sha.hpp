@@ -173,8 +173,8 @@ class SHA_384_Context : public SHA_Context {
 
 char *SHA_MODE_NAME(SHA_MODE mode);
 
-int SHA_512_update(uint8_t *msg, size_t byMsg_len, SHA_512_Context *ctx);
-int SHA_512_digest(uint8_t *digest_out, SHA_512_Context *ctx);
+int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_512_Context *ctx);
+int SHA_384512_digest(uint8_t *digest_out, SHA_512_Context *ctx);
 
 int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_1_Context *ctx);
 int SHA_1_digest(uint8_t *digest_out, SHA_1_Context *ctx);

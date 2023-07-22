@@ -10,12 +10,12 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-#include "inc/test.hpp"
 #include <math.h>
-#include "inc/json.hpp"
+#include "inc/utils/json.hpp"
 #include "inc/hash/sha.hpp"
 #include "inc/hash/hmac.hpp"
-#include "inc/primes.hpp"
+#include "inc/math/primes.hpp"
+#include "inc/tests/test.hpp"
 
 unsigned char *byteArrToHexArr(unsigned char *bytes, size_t byte_len)
 {
