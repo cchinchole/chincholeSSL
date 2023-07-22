@@ -17,13 +17,13 @@
 #include <linux/random.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-#include "inc/logger.hpp"
 #include "inc/defs.hpp"
-#include "inc/rsa.hpp"
-#include "inc/primes.hpp"
-#include "inc/rand.hpp"
+#include "inc/utils/logger.hpp"
+#include "inc/crypto/rsa.hpp"
+#include "inc/math/primes.hpp"
+#include "inc/math/rand.hpp"
 #include "inc/hash/sha.hpp"
-#include "inc/test.hpp"
+#include "inc/tests/test.hpp"
 #include "inc/hash/hmac.hpp"
 
 const int kBits = 2048;

@@ -1,5 +1,5 @@
 #include "inc/hash/sha.hpp"
-#include "inc/logger.hpp"
+#include "inc/utils/logger.hpp"
 #include <math.h>
 
 #define SHA2_NUM_WORDS 16
@@ -64,10 +64,10 @@ uint64_t sha2_k[80] = {
     0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817
 };
 
-int SHA_512_process(SHA_512_Context *ctx)
+int SHA_384512_process(SHA_512_Context *ctx)
 {
     /* Using non circular queue this time */
-    uint64_t W[80];
+    uint64_t W[SHA2_ROUNDS];
 
     /* Step 1: setup the message schedule */
     for(int i = 0; i < SHA2_NUM_WORDS; i++)
@@ -77,7 +77,7 @@ int SHA_512_process(SHA_512_Context *ctx)
             W[i] |= ctx->block[i * sizeof(uint64_t) + j];
         }
 
-    for(int i = 16; i < 80; i++)
+    for(int i = 16; i < SHA2_ROUNDS; i++)
     {
         W[i] =  sigma1_512(W[i-2])+
                 W[i-7] +
@@ -98,7 +98,7 @@ int SHA_512_process(SHA_512_Context *ctx)
     uint64_t tmp2 = 0;
 
     /* Step 3 loop */
-    for(int t = 0; t < 80; t++)
+    for(int t = 0; t < SHA2_ROUNDS; t++)
     {
         tmp1 = h + summat1_512(e)+Ch(e, f, g)+sha2_k[t]+W[t];
         tmp2 = summat0_512(a) + Maj(a,b,c);
@@ -112,19 +112,19 @@ int SHA_512_process(SHA_512_Context *ctx)
         a = tmp1+tmp2;
     }
 
-    ctx->H[0] = a + ctx->H[0];
-    ctx->H[1] = b + ctx->H[1];
-    ctx->H[2] = c + ctx->H[2];
-    ctx->H[3] = d + ctx->H[3];
-    ctx->H[4] = e + ctx->H[4];
-    ctx->H[5] = f + ctx->H[5];
-    ctx->H[6] = g + ctx->H[6];
-    ctx->H[7] = h + ctx->H[7];
+    ctx->H[0] += a;
+    ctx->H[1] += b;
+    ctx->H[2] += c;
+    ctx->H[3] += d;
+    ctx->H[4] += e;
+    ctx->H[5] += f;
+    ctx->H[6] += g;
+    ctx->H[7] += h;
 
     return 0;
 }
 
-int SHA_512_update(uint8_t *msg, size_t byMsg_len, SHA_512_Context *ctx)
+int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_512_Context *ctx)
 {  
     if(ctx->mode != SHA_512 && ctx->mode != SHA_384)
         return -1;
@@ -157,14 +157,14 @@ int SHA_512_update(uint8_t *msg, size_t byMsg_len, SHA_512_Context *ctx)
             ctx->block[ctx->blkPtr++] = *src++;
             if (ctx->blkPtr == getSHABlockLengthByMode(ctx->mode))
             {
-                SHA_512_process(ctx);
+                SHA_384512_process(ctx);
                 ctx->blkPtr = 0;
             }
     }
     return 0;
 }
 
-int SHA_512_digest(uint8_t *digest_out, SHA_512_Context *ctx)
+int SHA_384512_digest(uint8_t *digest_out, SHA_512_Context *ctx)
 {
 
     if(ctx->mode != SHA_512 && ctx->mode != SHA_384)
@@ -179,7 +179,7 @@ int SHA_512_digest(uint8_t *digest_out, SHA_512_Context *ctx)
     /* Check if we can fit the message length into current block if not then process a new block */
     if(ctx->blkPtr > (getSHABlockLengthByMode(ctx->mode) - SHA2_512_LEN_BYTES) )
     {
-        SHA_512_process(ctx);
+        SHA_384512_process(ctx);
         ctx->blkPtr = 0;
         memset(ctx->block, 0, getSHABlockLengthByMode(ctx->mode));
     }
@@ -196,7 +196,7 @@ int SHA_512_digest(uint8_t *digest_out, SHA_512_Context *ctx)
     }
     
     /* The final message with the length to process */
-    SHA_512_process(ctx);
+    SHA_384512_process(ctx);
     ctx->blkPtr = 0;
 
         

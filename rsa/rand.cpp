@@ -7,7 +7,7 @@
  *  5. DRBG Status
 */
 
-#include "inc/rand.hpp"
+#include "inc/math/rand.hpp"
 #include "assert.h"
 
 #define DRNG_NO_SUPPORT 0x0 /* For clarity */

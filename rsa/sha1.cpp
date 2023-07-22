@@ -1,5 +1,5 @@
 #include "inc/hash/sha.hpp"
-#include "inc/logger.hpp"
+#include "inc/utils/logger.hpp"
 #include <math.h>
 
 #define DIGEST_OUT 160
@@ -102,11 +102,11 @@ int SHA_1_Process(SHA_1_Context *ctx)
     }
 
     /* Step 4: compute intermediate hash value */
-    ctx->H[0] = a + ctx->H[0];
-    ctx->H[1] = b + ctx->H[1];
-    ctx->H[2] = c + ctx->H[2];
-    ctx->H[3] = d + ctx->H[3];
-    ctx->H[4] = e + ctx->H[4];
+    ctx->H[0] += a;
+    ctx->H[1] += b;
+    ctx->H[2] += c;
+    ctx->H[3] += d;
+    ctx->H[4] += e;
     return 0;
 }
 
@@ -161,7 +161,7 @@ int SHA_1_digest(uint8_t *digest_out, SHA_1_Context *ctx)
     SHA_1_Process(ctx);
     ctx->blkPtr = 0;
 
-    for(int i = 0; i < getSHAReturnLengthByMode(SHA_1)/sizeof(ctx->H[i]); i++)
+    for(int i = 0; i < getSHAReturnLengthByMode(ctx->mode)/sizeof(ctx->H[i]); i++)
     {
         *(digest_out++) = ctx->H[i] >> 24;
         *(digest_out++) = ctx->H[i] >> 16;
