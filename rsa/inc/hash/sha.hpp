@@ -4,6 +4,7 @@
 
 #define SHA1_BLOCK_SIZE_BYTES 64
 #define SHA2_384512_BLOCK_SIZE_BYTES 128
+#define SHA3_WORDS 25 /* 1600/8 / sizeof(uint64_t) */
 
 enum SHA_MODE {
     SHA_1,
@@ -29,6 +30,9 @@ class SHA_3_Context : public SHA_Context {
    private:
    public:
       SHA_MODE mode = SHA_3_512;
+      uint64_t bufferedPortion = 0;
+
+
       uint64_t rRate = 0;
       uint64_t bWidthSize = 0;
       uint64_t wLaneSize = 0;
@@ -36,6 +40,9 @@ class SHA_3_Context : public SHA_Context {
       uint64_t b = 0;
       uint64_t c = 0;
       uint64_t nr = 0;
+      uint64_t sponge[SHA3_WORDS];
+      uint64_t spongeWordPtr = 0;
+      uint64_t wordCap = 0;
       SHA_3_Context(SHA_MODE mode)
       {
          
