@@ -67,6 +67,7 @@ int SHA_1_Process(SHA_1_Context *ctx)
             W[i] |= ctx->block[i * sizeof(uint32_t) + j];
         }
 
+
     
     /* Step 2: Initialize working vars */
     uint32_t a = ctx->H[0];

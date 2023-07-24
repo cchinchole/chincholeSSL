@@ -5,16 +5,17 @@
 #define SHA1_BLOCK_SIZE_BYTES 64
 #define SHA2_384512_BLOCK_SIZE_BYTES 128
 #define SHA3_WORDS 25 /* 1600/8 / sizeof(uint64_t) */
+#define SHA3_SPONGE_ARR 5 /* 25 / 5*/
 
 enum SHA_MODE {
     SHA_1,
-    SHA_384,
     SHA_256,
+    SHA_384,
     SHA_512,
     SHA_3_224,
     SHA_3_256,
     SHA_3_384,
-    SHA_3_512,
+    SHA_3_512
 };
 
 class SHA_Context {
@@ -22,6 +23,7 @@ class SHA_Context {
     public:
         uint64_t blkPtr = 0;    
         SHA_MODE mode = SHA_1;
+        void *H;
         virtual void clear(){}
         virtual ~SHA_Context(){}
 };
@@ -29,23 +31,40 @@ class SHA_Context {
 class SHA_3_Context : public SHA_Context {
    private:
    public:
-      SHA_MODE mode = SHA_3_512;
-      uint64_t bufferedPortion = 0;
 
+      uint32_t r = 0;
+      uint8_t digestBytes = 0;
+      
+      union {
+         uint8_t bytes[SHA3_WORDS*8];
+         uint64_t words[SHA3_SPONGE_ARR][SHA3_SPONGE_ARR];
+      } sponge;
 
-      uint64_t rRate = 0;
-      uint64_t bWidthSize = 0;
-      uint64_t wLaneSize = 0;
-      uint64_t lLogLane = 0;
-      uint64_t b = 0;
-      uint64_t c = 0;
-      uint64_t nr = 0;
-      uint64_t sponge[SHA3_WORDS];
-      uint64_t spongeWordPtr = 0;
-      uint64_t wordCap = 0;
       SHA_3_Context(SHA_MODE mode)
       {
-         
+        // (uint64_t)H = &uint64_t[64];
+         this->mode = mode;
+         switch(mode)
+         {
+            case SHA_3_224:
+               this->digestBytes = 224/8;
+            break;
+            case SHA_3_256:
+               this->digestBytes = 256/8;
+            break;
+            case SHA_3_384:
+               this->digestBytes = 384/8;
+            break;
+            case SHA_3_512:
+               this->digestBytes = 512/8;
+            break;
+            default:
+               this->digestBytes = -1;
+            break;
+         }
+         memset(sponge.words, 0, SHA3_WORDS);
+         this->blkPtr = 0;
+         r = (SHA3_WORDS*8) - (2* (digestBytes) );
       }
 };
 
@@ -206,6 +225,7 @@ int SHA_1_digest(uint8_t *digest_out, SHA_1_Context *ctx);
 
 
 int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx);
+int SHA_3_digest(uint8_t *digest_out, SHA_3_Context *ctx);
 
 int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int sha_digest(uint8_t *digest_out, SHA_Context *ctx);
