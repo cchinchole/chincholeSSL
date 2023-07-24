@@ -101,7 +101,7 @@ int SHA3_keccakCHI(uint64_t B[SHA3_SPONGE_ARR][SHA3_SPONGE_ARR], uint64_t sponge
     return 0;
 }
 
-int SHA3_keccakI(uint64_t *spongeOrigin, int iteration)
+int SHA3_keccakIOTA(uint64_t *spongeOrigin, int iteration)
 {
     /* A[0,0] ^= RC */
     *spongeOrigin ^= SHA3_RC_K[iteration];
@@ -120,7 +120,7 @@ int SHA3_keccakf(uint64_t sponge[SHA3_SPONGE_ARR][SHA3_SPONGE_ARR])
         SHA3_keccakTHETA(sponge);
         SHA3_keccakRHOandPI(B, sponge);
         SHA3_keccakCHI(B, sponge);
-        SHA3_keccakI(&sponge[0][0], i);
+        SHA3_keccakIOTA(&sponge[0][0], i);
     }
     return 0;
 }
@@ -128,10 +128,10 @@ int SHA3_keccakf(uint64_t sponge[SHA3_SPONGE_ARR][SHA3_SPONGE_ARR])
 int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx)
 {  
     for (int i = 0; i < byMsg_len; i++) {
-        ctx->sponge.bytes[ctx->blkPtr++] ^= ((const uint8_t *) msg)[i];
-        if (ctx->blkPtr >= ctx->r) {
+        ctx->sponge.bytes[ctx->blockCur++] ^= ((const uint8_t *) msg)[i];
+        if (ctx->blockCur >= ctx->r) {
             SHA3_keccakf(ctx->sponge.words);
-            ctx->blkPtr = 0;
+            ctx->blockCur = 0;
         }
     }
     return 0;
@@ -139,7 +139,8 @@ int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx)
 
 int SHA_3_digest(uint8_t *digestOut, SHA_3_Context *ctx)
 {
-    ctx->sponge.bytes[ctx->blkPtr] ^= 0x06;
+    /* Padding and setting the last bits to 11 */
+    ctx->sponge.bytes[ctx->blockCur] ^= 0x06;
     ctx->sponge.bytes[ctx->r - 1] ^= 0x80;
     SHA3_keccakf(ctx->sponge.words);
 

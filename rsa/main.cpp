@@ -58,6 +58,21 @@ uint8_t *scanHex(char *str, int bytes) {
     return ret;
 }
 
+//perform the SHA3-512 hash using OpenSSL
+std::string sha3_512(char *input, size_t input_len)
+{
+    uint32_t digest_length = SHA512_DIGEST_LENGTH;
+    const EVP_MD* algorithm = EVP_sha3_512();
+    uint8_t* digest = static_cast<uint8_t*>(OPENSSL_malloc(digest_length));
+    EVP_MD_CTX* context = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(context, algorithm, nullptr);
+    EVP_DigestUpdate(context, input, input_len);
+    EVP_DigestFinal_ex(context, digest, &digest_length);
+    EVP_MD_CTX_destroy(context);
+    std::string output = (char*)byteArrToHexArr( (unsigned char*)digest, digest_length);
+    OPENSSL_free(digest);
+    return output;
+}
 
 
 int main(int argc, char *argv[]) {
@@ -110,7 +125,14 @@ int main(int argc, char *argv[]) {
   testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532", SHA_3_256);
   testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"ec01498288516fc926459f58e2c6ad8df9b473cb0fc08c2596da7cf0e49be4b298d88cea927ac7f539f1edf228376d25", SHA_3_384);
   testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0", SHA_3_512);
-   
+
+  /* Small test to make sure all my SHA_3 lines up with openssl's */
+  for(int i = 0; i < 10000; i++)
+  {
+    unsigned char buff[i];
+    syscall(SYS_getrandom, buff, i, GRND_NONBLOCK);
+    testSHA( (char*)buff, i, (char*)sha3_512( (char*)buff, i ).c_str(), SHA_3_512);
+  }
   
   return 0;
 }
