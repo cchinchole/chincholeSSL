@@ -20,14 +20,14 @@ int rsa_roundtrip(std::string msg, RSA_Params* rsa);
 int printParameter(std::string param_name, BIGNUM* num);
 
 
-class cRSA {
+class cRSAKey {
 private:
 int kBits;
 public:
 RSA_Params* params;
-cRSA(int bits, BIGNUM *eGiven, bool auxMode = true, BN_CTX* ctx = BN_CTX_secure_new());
+cRSAKey(int bits, BIGNUM *eGiven, bool auxMode = true, BN_CTX* ctx = BN_CTX_secure_new());
 unsigned char* encrypt(unsigned int *out_len, char *src, BN_CTX *ctx = BN_CTX_secure_new());
 std::string decrypt(unsigned char *cipher, unsigned int cipher_length, BN_CTX *ctx = BN_CTX_secure_new(), bool crt = true);
 };
 
-int roundTrip(cRSA* rsa, char* str);
+int roundTrip(cRSAKey* rsa, char* str);

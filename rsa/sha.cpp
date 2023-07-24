@@ -29,6 +29,109 @@ uint64_t SHA_384_H0[8] = {
         0x47b5481dbefa4fa4
 };
 
+SHA_3_Context::SHA_3_Context(SHA_MODE mode)
+      {
+         this->mode = mode;
+         switch(mode)
+         {
+            case SHA_3_224:
+               this->digestBytes = 224/8;
+            break;
+            case SHA_3_256:
+               this->digestBytes = 256/8;
+            break;
+            case SHA_3_384:
+               this->digestBytes = 384/8;
+            break;
+            case SHA_3_512:
+               this->digestBytes = 512/8;
+            break;
+            default:
+               this->digestBytes = -1;
+            break;
+         }
+         memset(sponge.words, 0, SHA3_WORDS);
+         this->blockCur = 0;
+         r = (SHA3_WORDS*8) - (2* (digestBytes) );
+      }
+
+SHA_1_Context::SHA_1_Context()
+{
+        /* Set the pointers */
+        bMsg_lenP = &bMsg_len;
+        HP = &H;
+        blockP = &block;
+
+        mode = SHA_1;
+        bMsg_len = 0;
+        blockCur = 0;
+        memset(block, 0, SHA1_BLOCK_SIZE_BYTES);
+}
+void SHA_1_Context::clear()
+{
+        bMsg_len = 0;
+        blockCur = 0;
+        memset(block, 0, SHA1_BLOCK_SIZE_BYTES);
+        for(int i = 0; i < 5; i++)
+        {
+            H[i] = SHA_1_H0[i];
+        }
+}
+
+
+SHA_512_Context::SHA_512_Context()
+{
+        /* Set the pointers */
+        bMsg_lenP = &bMsg_len;
+        HP = &H;
+        blockP = &block;
+
+        mode = SHA_512;
+        bMsg_len[0] = 0;
+        bMsg_len[1] = 0;
+        blockCur = 0;
+        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
+}
+void SHA_512_Context::clear()
+{
+        bMsg_len[0] = 0;
+        bMsg_len[1] = 0;
+        blockCur = 0;
+        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
+
+
+        for(int i = 0; i < 8; i++)
+        {
+            H[i] = SHA_512_H0[i];
+        }
+}
+
+
+SHA_384_Context::SHA_384_Context()
+{
+        /* Set the pointers */
+        bMsg_lenP = &bMsg_len;
+        HP = &H;
+        blockP = &block;
+
+        mode = SHA_384;
+        bMsg_len[0] = 0;
+        bMsg_len[1] = 0;
+        blockCur = 0;
+        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
+}
+void SHA_384_Context::clear()
+     {
+        bMsg_len[0] = 0;
+        bMsg_len[1] = 0;
+        blockCur = 0;
+        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
+        for(int i = 0; i < 8; i++)
+        {
+            H[i] = SHA_384_H0[i];
+        }
+     }
+
 int getSHABlockLengthByMode(SHA_MODE mode)
 {
     switch(mode)

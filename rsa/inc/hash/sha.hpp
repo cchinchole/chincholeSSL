@@ -7,10 +7,6 @@
 #define SHA3_WORDS 25 /* 1600/8 / sizeof(uint64_t) */
 #define SHA3_SPONGE_ARR 5 /* 25 / 5*/
 
-extern uint64_t SHA_1_H0[5];
-extern uint64_t SHA_512_H0[8];
-extern uint64_t SHA_384_H0[8];
-
 enum SHA_MODE {
     SHA_1,
     SHA_256,
@@ -45,31 +41,7 @@ class SHA_3_Context : public SHA_Context {
          uint64_t words[SHA3_SPONGE_ARR][SHA3_SPONGE_ARR];
       } sponge;
 
-      SHA_3_Context(SHA_MODE mode)
-      {
-         this->mode = mode;
-         switch(mode)
-         {
-            case SHA_3_224:
-               this->digestBytes = 224/8;
-            break;
-            case SHA_3_256:
-               this->digestBytes = 256/8;
-            break;
-            case SHA_3_384:
-               this->digestBytes = 384/8;
-            break;
-            case SHA_3_512:
-               this->digestBytes = 512/8;
-            break;
-            default:
-               this->digestBytes = -1;
-            break;
-         }
-         memset(sponge.words, 0, SHA3_WORDS);
-         this->blockCur = 0;
-         r = (SHA3_WORDS*8) - (2* (digestBytes) );
-      }
+      SHA_3_Context(SHA_MODE mode);
 };
 
 class SHA_1_Context : public SHA_Context {
@@ -84,29 +56,9 @@ class SHA_1_Context : public SHA_Context {
         };
         uint8_t block[SHA1_BLOCK_SIZE_BYTES];
     public:
-     SHA_1_Context()
-     {
-        /* Set the pointers */
-        bMsg_lenP = &bMsg_len;
-        HP = &H;
-        blockP = &block;
+     SHA_1_Context();
 
-        mode = SHA_1;
-        bMsg_len = 0;
-        blockCur = 0;
-        memset(block, 0, SHA1_BLOCK_SIZE_BYTES);
-     }
-
-     void clear()
-     {
-        bMsg_len = 0;
-        blockCur = 0;
-        memset(block, 0, SHA1_BLOCK_SIZE_BYTES);
-        for(int i = 0; i < 5; i++)
-        {
-            H[i] = SHA_1_H0[i];
-        }
-     }
+     void clear();
 };
 
 class SHA_512_Context : public SHA_Context {
@@ -124,39 +76,9 @@ class SHA_512_Context : public SHA_Context {
         0x5be0cd19137e2179
         };
     public:
-     SHA_512_Context()
-     {
-        /* Set the pointers */
-        bMsg_lenP = &bMsg_len;
-        HP = &H;
-        blockP = &block;
-
-        mode = SHA_512;
-        bMsg_len[0] = 0;
-        bMsg_len[1] = 0;
-        blockCur = 0;
-        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
-     }
-
-     void clear()
-     {
-        bMsg_len[0] = 0;
-        bMsg_len[1] = 0;
-        blockCur = 0;
-        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
-
-
-        for(int i = 0; i < 8; i++)
-        {
-            H[i] = SHA_512_H0[i];
-        }
-     }
-
-     ~SHA_512_Context()
-     {
-     }
+     SHA_512_Context();
+     void clear();
 };
-
 
 class SHA_384_Context : public SHA_Context {
     private:
@@ -173,35 +95,8 @@ class SHA_384_Context : public SHA_Context {
         0x47b5481dbefa4fa4
         };
     public:
-     SHA_384_Context()
-     {
-        /* Set the pointers */
-        bMsg_lenP = &bMsg_len;
-        HP = &H;
-        blockP = &block;
-
-        mode = SHA_384;
-        bMsg_len[0] = 0;
-        bMsg_len[1] = 0;
-        blockCur = 0;
-        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
-     }
-
-     void clear()
-     {
-        bMsg_len[0] = 0;
-        bMsg_len[1] = 0;
-        blockCur = 0;
-        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
-        for(int i = 0; i < 8; i++)
-        {
-            H[i] = SHA_384_H0[i];
-        }
-     }
-
-     ~SHA_384_Context()
-     {
-     }
+     SHA_384_Context();
+     void clear();
 };
 
 char *SHA_MODE_NAME(SHA_MODE mode);

@@ -141,7 +141,7 @@ int gen_rsa_sp800_56b(RSA_Params* rsa, int nBits, BN_CTX* ctx, bool constTime)
   return 0;
 }
 
-cRSA::cRSA(int bits, BIGNUM *eGiven, bool auxMode, BN_CTX* ctx)
+cRSAKey::cRSAKey(int bits, BIGNUM *eGiven, bool auxMode, BN_CTX* ctx)
 {
   params = new RSA_Params();
 
@@ -186,7 +186,7 @@ cRSA::cRSA(int bits, BIGNUM *eGiven, bool auxMode, BN_CTX* ctx)
   
 }
 
-unsigned char* cRSA::encrypt(unsigned int *out_len, char *src, BN_CTX *ctx)
+unsigned char* cRSAKey::encrypt(unsigned int *out_len, char *src, BN_CTX *ctx)
 { 
   unsigned int numBytes = strlen(src)-1;
   unsigned int maxBytes = (kBits/8);
@@ -227,7 +227,7 @@ unsigned char* cRSA::encrypt(unsigned int *out_len, char *src, BN_CTX *ctx)
   return returnData;
 }
 
-std::string cRSA::decrypt(unsigned char *cipher, unsigned int cipher_length, BN_CTX *ctx, bool crt)
+std::string cRSAKey::decrypt(unsigned char *cipher, unsigned int cipher_length, BN_CTX *ctx, bool crt)
 {
       unsigned int maxBytes = (kBits/8);
       unsigned int numPages = (cipher_length/(maxBytes));
@@ -287,7 +287,7 @@ std::string cRSA::decrypt(unsigned char *cipher, unsigned int cipher_length, BN_
     return returnData;
 }
 
-int roundTrip(cRSA* rsa, char* str)
+int roundTrip(cRSAKey* rsa, char* str)
 {
   unsigned int out_len = 0;
   unsigned char* cipher = rsa->encrypt(&out_len, str);
