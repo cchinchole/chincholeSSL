@@ -59,6 +59,7 @@ uint8_t *scanHex(char *str, int bytes) {
 }
 
 
+
 int main(int argc, char *argv[]) {
   BIGNUM* myE = BN_new();
   BN_set_word(myE, 0x100000001);
@@ -84,7 +85,6 @@ int main(int argc, char *argv[]) {
   printf("\n\nTesting long string now.\n\n");
   roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));
 
-
   testSHA( (char*)"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" , strlen("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"), (char*)"84983E441C3BD26EBAAE4AA1F95129E5E54670F1", SHA_1);
   testSHA( (char*)"abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu", strlen((char*)"abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"),
   (char*)"09330C33F71147E83D192FC782CD1B4753111B173B3B05D22FA08086E3B0F712FCC7C71A557E2DB966C3E9FA91746039", SHA_384);
@@ -106,8 +106,11 @@ int main(int argc, char *argv[]) {
   testSHA((char*)scanHex((char*)"63bfc1ed7f78ab",
    56/8), 56/8, (char*)"860328d80509500c1783169ebf0ba0c4b94da5e5", SHA_1);
    
-   SHA_3_update( (uint8_t*) "a", 1, NULL);
+  testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"e642824c3f8cf24ad09234ee7d3c766fc9a3a5168d0c94ad73b46fdf", SHA_3_224);
+  testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532", SHA_3_256);
+  testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"ec01498288516fc926459f58e2c6ad8df9b473cb0fc08c2596da7cf0e49be4b298d88cea927ac7f539f1edf228376d25", SHA_3_384);
+  testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0", SHA_3_512);
+   
   
-
   return 0;
 }
