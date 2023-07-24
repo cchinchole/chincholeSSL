@@ -1,0 +1,2 @@
+build:
+	g++ -o main -g -O0 -fdiagnostics-color=always -L/home/christian/src/openssl/build/lib64/ -I/home/christian/build/include/ -Wl,-rpath=/home/christian/src/openssl/build/lib64 -lssl -lcrypto global.cpp sha1.cpp sha2.cpp sha3.cpp sha.cpp hmac.cpp rand.cpp time.cpp rsa.cpp primes.cpp test.cpp main.cpp
