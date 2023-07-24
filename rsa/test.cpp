@@ -45,6 +45,24 @@ void readParameters()
     }
 }
 
+ SHATestCase::SHATestCase(size_t msg_len, int digest, uint8_t *msg, uint8_t *KAT, uint8_t *Test)
+{
+        this->data_len = msg_len;
+
+        this->msg_bytes = (uint8_t*)malloc( msg_len*2 );
+        this->KAT_hash = (uint8_t*)malloc( (digest/8) * 2 );
+        this->TEST_hash = (uint8_t*)malloc( (digest/8) * 2 );
+
+        memcpy(this->msg_bytes, msg, msg_len*2);
+        memcpy(this->TEST_hash, Test, (digest/8) * 2);
+        memcpy(this->KAT_hash, KAT, (digest/8) * 2);
+}
+
+void SHATestCase::setCaseState(bool state)
+{
+  this->failed = state;
+}
+
 void testFunction()
 {
     nlohmann::json j;
@@ -78,7 +96,7 @@ int testPrimesBetweenFuncs()
   return 0;
 }
 
-int testSHA(char *msg, size_t msg_len, char *KAT, int mode)
+int testSHA(char *msg, size_t msg_len, char *KAT, int mode, bool quiet)
 {
   SHA_Context *ctx = SHA_Context_new(SHA_MODE(mode));
   unsigned char rawDigest[getSHAReturnLengthByMode(ctx->mode)];
@@ -88,8 +106,12 @@ int testSHA(char *msg, size_t msg_len, char *KAT, int mode)
 
 
   int res = strcasecmp((char*)hexString, KAT);
-  res==0 ? printf("(%s Test) HASH Returned: %s PASSED!\n", SHA_MODE_NAME(SHA_MODE(mode)), hexString) : printf("(%s Test) HASH Returned: %s FAILED!\n", SHA_MODE_NAME(SHA_MODE(mode)), hexString);
+  if(!quiet)
+    res==0 ? printf("(%s Test) HASH Returned: %s PASSED!\n", SHA_MODE_NAME(SHA_MODE(mode)), hexString) : printf("(%s Test) HASH Returned: %s FAILED!\n", SHA_MODE_NAME(SHA_MODE(mode)), hexString);
+  
   return res;
+
+
 }
 
 

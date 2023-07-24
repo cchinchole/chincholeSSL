@@ -25,6 +25,8 @@
 #include "inc/hash/sha.hpp"
 #include "inc/tests/test.hpp"
 #include "inc/hash/hmac.hpp"
+#include "inc/crypto/ec.hpp"
+#include "inc/utils/time.hpp"
 
 const int kBits = 2048;
 int keylen;
@@ -59,7 +61,7 @@ uint8_t *scanHex(char *str, int bytes) {
 }
 
 //perform the SHA3-512 hash using OpenSSL
-std::string sha3_512(char *input, size_t input_len)
+char *sha3_512(char *input, size_t input_len)
 {
     uint32_t digest_length = SHA512_DIGEST_LENGTH;
     const EVP_MD* algorithm = EVP_sha3_512();
@@ -69,7 +71,7 @@ std::string sha3_512(char *input, size_t input_len)
     EVP_DigestUpdate(context, input, input_len);
     EVP_DigestFinal_ex(context, digest, &digest_length);
     EVP_MD_CTX_destroy(context);
-    std::string output = (char*)byteArrToHexArr( (unsigned char*)digest, digest_length);
+    char* output = (char*)byteArrToHexArr( (unsigned char*)digest, digest_length);
     OPENSSL_free(digest);
     return output;
 }
@@ -89,7 +91,7 @@ int main(int argc, char *argv[]) {
 
   //RAND_seed(&buff, sizeof(buff));
 
-  cRSA *myRsa = new cRSA(kBits, myE, true);
+  cRSAKey *myRsa = new cRSAKey(kBits, myE, true);
 
 
   BIGNUM *bnLongRand = BN_secure_new();
@@ -127,12 +129,65 @@ int main(int argc, char *argv[]) {
   testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0", SHA_3_512);
 
   /* Small test to make sure all my SHA_3 lines up with openssl's */
-  for(int i = 0; i < 10000; i++)
+
+  /*
+  
+  int failed = 0, passed = 0;
+
+
+  SHATestCase *failedCases[50];
+
+  float osslTime = 0;
+  float myTime = 0;
+  
+  for(int i = 50000; i < 55000; i++)
   {
     unsigned char buff[i];
     syscall(SYS_getrandom, buff, i, GRND_NONBLOCK);
-    testSHA( (char*)buff, i, (char*)sha3_512( (char*)buff, i ).c_str(), SHA_3_512);
+    Timer t;
+
+    t.start();
+    SHA_Context *ctx = SHA_Context_new(SHA_MODE(SHA_512));
+    unsigned char rawDigest[getSHAReturnLengthByMode(ctx->mode)];
+    sha_update( (uint8_t*)buff, i, ctx);
+    sha_digest(rawDigest, ctx);
+    unsigned char *hexStringMINE = byteArrToHexArr(rawDigest, getSHAReturnLengthByMode(ctx->mode));
+    myTime += t.getElapsed(true, 0);
+
+
+
+    t.start();
+    unsigned char osslHash[getSHAReturnLengthByMode(ctx->mode)];
+    SHA512( (unsigned char*)buff, i, osslHash);
+    unsigned char *hexStringOSSL = byteArrToHexArr(osslHash, getSHAReturnLengthByMode(ctx->mode));
+    osslTime += t.getElapsed(true, 0);
+
+
+
+
+
+    if(strcasecmp((char*)hexStringMINE, (char*)hexStringOSSL) != 0)
+    {
+        failedCases[failed++] = new SHATestCase(i, 512, (uint8_t*)byteArrToHexArr(buff, i), (uint8_t*)hexStringOSSL, (uint8_t*)hexStringMINE);
+    }
+    else
+        passed++;
   }
-  
+  printf("%f is my average time\n", myTime/(failed+passed) );
+  printf("%f is ossl average time\n", osslTime/(failed+passed) );
+  printf("%d test cases passed\n", passed);
+  printf("%d test cases failed\n", failed);
+  for(int i = 0; i < failed; i++)
+  {
+    
+    SHATestCase *c = failedCases[i];
+    printf("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
+    printf("Case Number: %d\n", c->data_len);
+    printf("Original Data: %s\n", c->msg_bytes);
+    printf("My       Data: %s\n", c->TEST_hash);
+    printf("KAT      Data: %s\n", c->KAT_hash);
+    printf("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
+  }
+  */
   return 0;
 }
