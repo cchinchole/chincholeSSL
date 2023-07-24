@@ -68,4 +68,11 @@
         "valarray": "cpp"
     },
     "cmake.configureOnOpen": true,
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/christian/src/chincholeSSL",
+            "binaryPath": "/home/christian/src/chincholeSSL/main",
+            "binaryArgs": []
+        }
+    ],
 }
