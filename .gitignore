@@ -1,5 +1,4 @@
-rsa/rsa
-rsa/primes
-rsa/main
-rsa/*.tex
+main
+*.tex
 *.txt
+Literature/*.txt

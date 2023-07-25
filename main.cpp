@@ -129,17 +129,17 @@ int main(int argc, char *argv[]) {
   testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0", SHA_3_512);
   /* Small test to make sure all my SHA_3 lines up with openssl's */
 
-  /*
+  
   
   int failed = 0, passed = 0;
 
 
   SHATestCase *failedCases[50];
 
-  float osslTime = 0;
-  float myTime = 0;
+  int osslTime = 0;
+  int myTime = 0;
   
-  for(int i = 50000; i < 55000; i++)
+  for(int i = 1000; i < 55000; i++)
   {
     unsigned char buff[i];
     syscall(SYS_getrandom, buff, i, GRND_NONBLOCK);
@@ -151,18 +151,21 @@ int main(int argc, char *argv[]) {
     sha_update( (uint8_t*)buff, i, ctx);
     sha_digest(rawDigest, ctx);
     unsigned char *hexStringMINE = byteArrToHexArr(rawDigest, getSHAReturnLengthByMode(ctx->mode));
-    myTime += t.getElapsed(true, 0);
-
+    t.stop();
+    myTime = t.getElapsed();
 
 
     t.start();
     unsigned char osslHash[getSHAReturnLengthByMode(ctx->mode)];
     SHA512( (unsigned char*)buff, i, osslHash);
     unsigned char *hexStringOSSL = byteArrToHexArr(osslHash, getSHAReturnLengthByMode(ctx->mode));
-    osslTime += t.getElapsed(true, 0);
+    t.stop();
+    osslTime = t.getElapsed();
 
 
 
+
+    printf("Test [ %d ]: Time difference from mine to ossl %dms\n", i, myTime - osslTime);
 
 
     if(strcasecmp((char*)hexStringMINE, (char*)hexStringOSSL) != 0)
@@ -172,8 +175,8 @@ int main(int argc, char *argv[]) {
     else
         passed++;
   }
-  printf("%f is my average time\n", myTime/(failed+passed) );
-  printf("%f is ossl average time\n", osslTime/(failed+passed) );
+  printf("%dms is my average time\n", myTime );
+  printf("%dms is ossl average time\n", osslTime );
   printf("%d test cases passed\n", passed);
   printf("%d test cases failed\n", failed);
   for(int i = 0; i < failed; i++)
@@ -187,6 +190,6 @@ int main(int argc, char *argv[]) {
     printf("KAT      Data: %s\n", c->KAT_hash);
     printf("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
   }
-  */
+  
   return 0;
 }
