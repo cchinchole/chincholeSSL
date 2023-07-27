@@ -1,11 +1,22 @@
 #include "inc/hash/sha.hpp"
 
-uint64_t SHA_1_H0[5] = {
+uint32_t SHA_1_H0[5] = {
         0x67452301,
         0xefcdab89,
         0x98badcfe,
         0x10325476,
         0xc3d2e1f0
+};
+
+uint32_t SHA_256_H0[8] = {
+        0x6a09e667,
+        0xbb67ae85,
+        0x3c6ef372,
+        0xa54ff53a,
+        0x510e527f,
+        0x9b05688c,
+        0x1f83d9ab,
+        0x5be0cd19
 };
 
 uint64_t SHA_512_H0[8] = {
@@ -139,6 +150,9 @@ int getSHABlockLengthByMode(SHA_MODE mode)
         case SHA_1:
             return SHA1_BLOCK_SIZE_BYTES;
             break;
+        case SHA_256:
+            return SHA1_BLOCK_SIZE_BYTES;
+            break;
         case SHA_384:
             return SHA2_384512_BLOCK_SIZE_BYTES;
             break;
@@ -157,6 +171,9 @@ int getSHAReturnLengthByMode(SHA_MODE mode)
     {
         case SHA_1:
             return 160/8;
+            break;
+        case SHA_256:
+            return 256/8;
             break;
         case SHA_384:
             return 384/8;
