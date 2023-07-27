@@ -64,6 +64,8 @@ uint64_t sha2_k[80] = {
     0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817
 };
 
+
+
 int SHA_384512_process(SHA_Context *ctx)
 {
     uint8_t *block = (uint8_t*)(ctx->blockP);
