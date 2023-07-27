@@ -61,4 +61,21 @@ class cECKey {
     cECPoint *pub = new cECPoint(); /* Q */;
 };
 
-int ec_generate_key(  );
+class cECSignature {
+    public:
+        BIGNUM *k;
+        BIGNUM *kInv;
+        BIGNUM *R;
+        BIGNUM *S;
+    cECSignature()
+    {
+        k = BN_new();
+        kInv = BN_new();
+        R = BN_new();
+        S = BN_new();
+    }
+};
+
+int ec_generate_signature(cECSignature *sig, cECKey *key);
+int ec_generate_key( cECKey *ret );
+int ec_sign_message(uint8_t *data);

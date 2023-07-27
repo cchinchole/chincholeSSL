@@ -238,9 +238,28 @@ int test_math()
     return 0;
 }
 
+/* FIPS 186-4 B.5.2 */
+int ec_generate_signature(cECSignature *sig, cECKey *key)
+{
+    BN_CTX *ctx = BN_CTX_new();
+    BN_CTX_start(ctx);
 
+    BIGNUM *k = BN_CTX_get(ctx);
+    BIGNUM *kInv = BN_CTX_get(ctx);
 
-int ec_generate_key(  )
+    BN_rand_range_ex(k, key->group->n, 0, ctx);
+
+    BN_mod_inverse(kInv, k, key->group->n, ctx);
+
+    BN_CTX_end(ctx);
+
+    sig->k = k;
+    sig->kInv = kInv;
+    return 0;
+}
+
+/* FIPS 186-4 B.4.2 */
+int ec_generate_key( cECKey *ret )
 {
     
     BN_CTX *ctx = BN_CTX_new();
@@ -268,5 +287,18 @@ int ec_generate_key(  )
     
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
+    ret->group = key.group;
+    ret->priv = key.priv;
+    ret->pub = key.pub;
+    return 0;
+}
+
+int ec_sign_message(uint8_t *data)
+{
+    cECKey *myKey = new cECKey();
+    cECSignature *mySig = new cECSignature();
+    ec_generate_key(myKey);
+    
+    ec_generate_signature(mySig, myKey);
     return 0;
 }
