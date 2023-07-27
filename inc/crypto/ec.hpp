@@ -5,14 +5,14 @@ class cECPoint {
     BIGNUM *x = BN_secure_new(), *y = BN_secure_new();
 };
 
-class cECGroup {
+class cECPrimeField {
     public:
     BIGNUM *p = BN_secure_new(), *a = BN_secure_new(), *b = BN_secure_new(), *n = BN_secure_new();
     int h;
     cECPoint *G = new cECPoint();
 };
 
-class Prime256v1 : public cECGroup {
+class Prime256v1 : public cECPrimeField {
     public:
     Prime256v1()
     {
@@ -32,7 +32,7 @@ class Prime256v1 : public cECGroup {
     }
 };
 
-class PrimeTestField : public cECGroup {
+class PrimeTestField : public cECPrimeField {
     public:
     PrimeTestField()
     {
@@ -56,9 +56,9 @@ class PrimeTestField : public cECGroup {
 
 class cECKey {
     public:
-    cECGroup *group;
+    cECPrimeField *group;
     BIGNUM *priv = BN_new() /* d */;
-    cECPoint *pub; /* Q */;
+    cECPoint *pub = new cECPoint(); /* Q */;
 };
 
 int ec_generate_key(  );

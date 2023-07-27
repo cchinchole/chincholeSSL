@@ -79,13 +79,6 @@ char *sha3_512(char *input, size_t input_len)
     return output;
 }
 
-template<typename T, typename D>
-std::unique_ptr<T, D> make_handle(T* handle, D deleter)
-{
-    return std::unique_ptr<T, D>{handle, deleter};
-}
-
-
 int main(int argc, char *argv[]) {
   BIGNUM* myE = BN_new();
   BN_set_word(myE, 0x100000001);
@@ -142,19 +135,15 @@ int main(int argc, char *argv[]) {
   
   */
 
+  ec_generate_key();
   
-  int failed = 0, passed = 0;
 
-
-  SHATestCase *failedCases[50];
-
-  int osslTime = 0;
-  int myTime = 0;
-
-  
-    ec_generate_key();
 
   /*
+  int failed = 0, passed = 0;
+  SHATestCase *failedCases[50];
+  int osslTime = 0;
+  int myTime = 0;
   for(int i = 1000; i < 55000; i++)
   {
     unsigned char buff[i];
@@ -170,7 +159,6 @@ int main(int argc, char *argv[]) {
     t.stop();
     myTime = t.getElapsed();
 
-
     t.start();
     unsigned char osslHash[getSHAReturnLengthByMode(ctx->mode)];
     SHA512( (unsigned char*)buff, i, osslHash);
@@ -178,11 +166,7 @@ int main(int argc, char *argv[]) {
     t.stop();
     osslTime = t.getElapsed();
 
-
-
-
     printf("Test [ %d ]: Time difference from mine to ossl %dms\n", i, myTime - osslTime);
-
 
     if(strcasecmp((char*)hexStringMINE, (char*)hexStringOSSL) != 0)
     {
