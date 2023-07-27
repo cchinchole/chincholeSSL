@@ -72,6 +72,5 @@ class cECSignature {
     }
 };
 
-int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key);
 int ec_generate_key( cECKey *ret );
 int ec_sign_message(char *msg);
