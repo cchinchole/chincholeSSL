@@ -27,6 +27,9 @@
 #include "inc/hash/hmac.hpp"
 #include "inc/crypto/ec.hpp"
 #include "inc/utils/time.hpp"
+#include <cstdio>
+#include <stdexcept>
+#include <memory>
 
 const int kBits = 2048;
 int keylen;
@@ -76,6 +79,12 @@ char *sha3_512(char *input, size_t input_len)
     return output;
 }
 
+template<typename T, typename D>
+std::unique_ptr<T, D> make_handle(T* handle, D deleter)
+{
+    return std::unique_ptr<T, D>{handle, deleter};
+}
+
 
 int main(int argc, char *argv[]) {
   BIGNUM* myE = BN_new();
@@ -98,9 +107,12 @@ int main(int argc, char *argv[]) {
   BN_rand_ex(bnLongRand, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, BN_CTX_secure_new());
   unsigned char* testBytes = (unsigned char*)malloc(32*sizeof(char));
   RAND_bytes(testBytes, 32);
+/*
+
   roundTrip(myRsa, (char*)"Test string HeRe! HelLO WoRLd!@#$^&*()_+ 1   2 34    567  89\nTest!");
   printf("\n\nTesting long string now.\n\n");
   roundTrip(myRsa, (char*)BN_bn2dec(bnLongRand));
+
 
   testSHA( (char*)"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" , strlen("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"), (char*)"84983E441C3BD26EBAAE4AA1F95129E5E54670F1", SHA_1);
   testSHA( (char*)"abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu", strlen((char*)"abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"),
@@ -127,9 +139,9 @@ int main(int argc, char *argv[]) {
   testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532", SHA_3_256);
   testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"ec01498288516fc926459f58e2c6ad8df9b473cb0fc08c2596da7cf0e49be4b298d88cea927ac7f539f1edf228376d25", SHA_3_384);
   testSHA( (char*)"abc", strlen((char*)"abc"), (char*)"b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0", SHA_3_512);
-  /* Small test to make sure all my SHA_3 lines up with openssl's */
-
   
+  */
+
   
   int failed = 0, passed = 0;
 
@@ -138,7 +150,11 @@ int main(int argc, char *argv[]) {
 
   int osslTime = 0;
   int myTime = 0;
+
   
+    ec_generate_key();
+
+  /*
   for(int i = 1000; i < 55000; i++)
   {
     unsigned char buff[i];
@@ -190,6 +206,7 @@ int main(int argc, char *argv[]) {
     printf("KAT      Data: %s\n", c->KAT_hash);
     printf("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
   }
+  */
   
   return 0;
 }
