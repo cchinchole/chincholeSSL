@@ -241,7 +241,7 @@ int test_math()
 }
 
 /* FIPS 186-5 6.3.1 */
-int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key)
+int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key, char *KSecret = NULL)
 {
     int retCode = -1;
     BN_CTX *ctx = BN_CTX_new();
@@ -253,24 +253,28 @@ int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key)
     BIGNUM *E = BN_CTX_get(ctx);
     cECPoint *RPoint = new cECPoint();
 
-
     /* Step 1 - 2 */
     SHA_Context *shaCtx = SHA_Context_new(SHA_512);
-    uint8_t hash[ getSHAReturnLengthByMode(SHA_512) ];
+    uint8_t hash[ getSHAReturnLengthByMode(shaCtx->mode) ];
     sha_update( (uint8_t*)msg, strlen(msg), shaCtx);
     sha_digest(hash, shaCtx);
-    unsigned char* hashHex = byteArrToHexArr(hash, getSHAReturnLengthByMode(SHA_512));
-    BN_hex2bn(&E, (char*)hashHex);
-    int N = BN_num_bits( key->group->n ); /* N = len(n) */
-
-    if( BN_num_bits(E) > N )
-    {
-        int ShiftAmount = (int)log2(BN_num_bits(key->group->n));
-        BN_rshift(E, E, BN_num_bits(E)-ShiftAmount);
-    }
+    int NLen = BN_num_bits( key->group->n ); /* N = len(n) */
+    int HLen = getSHAReturnLengthByMode(shaCtx->mode)*8;
+    BN_bin2bn(hash, getSHAReturnLengthByMode(shaCtx->mode), tmp);
+    if( HLen > NLen )
+        BN_rshift(E, tmp, HLen - NLen);
+    else
+        BN_copy(E, tmp);
 
     /* Step 3 - 4 */
-    BN_rand_range_ex(k, key->group->n, 0, ctx);
+    if(KSecret == NULL)
+    {
+        BN_rand_range_ex(k, key->group->n, 0, ctx);
+    }
+    else
+    {
+        BN_hex2bn(&k, KSecret);
+    }
     BN_mod_inverse(kInv, k, key->group->n, ctx);
 
     /* Step 5 */
@@ -284,6 +288,7 @@ int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key)
     BN_add(tmp, tmp, E);
     BN_mod_mul(sig->S, kInv, tmp, key->group->n, ctx);
 
+    //printf("k:  %s\n", BN_bn2hex(k));
     /* Step 10 */
     BN_zero(k);
     BN_zero(kInv);
@@ -291,11 +296,12 @@ int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key)
     /* Step 11 */
     if( BN_is_zero(sig->S) || BN_is_zero(sig->R) )
     {
+        printf("%s\n%s\n", BN_bn2hex(sig->S), BN_bn2hex(sig->R));
         retCode = -1;
         goto ending;
     }
     retCode = 0;
-    printf("R:  %s\nS:  %s\n", BN_bn2hex(sig->R), BN_bn2hex(sig->S));
+    //printf("R:  %s\nS:  %s\n", BN_bn2hex(sig->R), BN_bn2hex(sig->S));
     ending:
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
@@ -321,18 +327,16 @@ int ec_verify_signature( cECSignature *sig, char *msg, cECPrimeField *D, cECPoin
 
     /* Step 2 - 3 */
     SHA_Context *shaCtx = SHA_Context_new(SHA_512);
-    uint8_t hash[ getSHAReturnLengthByMode(SHA_512) ];
+    uint8_t hash[ getSHAReturnLengthByMode(shaCtx->mode) ];
     sha_update( (uint8_t*)msg, strlen(msg), shaCtx);
     sha_digest(hash, shaCtx);
-    unsigned char* hashHex = byteArrToHexArr(hash, getSHAReturnLengthByMode(SHA_512));
-    BN_hex2bn(&E, (char*)hashHex);
-    int N = BN_num_bits( D->n ); /* N = len(n) */
-
-    if( BN_num_bits(E) > N )
-    {
-        int ShiftAmount = (int)log2(BN_num_bits(D->n));
-        BN_rshift(E, E, BN_num_bits(E)-ShiftAmount);
-    }
+    BN_bin2bn(hash, getSHAReturnLengthByMode(shaCtx->mode), tmp);
+    int NLen = BN_num_bits( D->n ); /* N = len(n) */
+    int HLen = getSHAReturnLengthByMode(shaCtx->mode)*8;
+    if( HLen > NLen )
+        BN_rshift(E, tmp, HLen - NLen);
+    else
+        BN_copy(E, tmp);
 
     /* Step 4 */
     BN_mod_inverse(sInv, sig->S, D->n, ctx);
@@ -389,10 +393,6 @@ int ec_generate_key( cECKey *ret )
     }
     ECScalarMult(key.group, key.pub, key.priv, key.group->G);
     
-    //printf("D:  %s\n", BN_bn2hex(key.priv));
-    //printf("Qx: %s\n", BN_bn2hex(key.pub->x));
-    //printf("Qy: %s\n", BN_bn2hex(key.pub->y));
-    
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     ret->group = key.group;
@@ -409,9 +409,21 @@ int ec_sign_message(char *msg)
     cECSignature *mySig2 = new cECSignature();
     ec_generate_key(myKey);
     ec_generate_key(myKey2);
+
+    //printf("D:  %s\n", BN_bn2hex(myKey->priv));
+    //printf("Qx: %s\n", BN_bn2hex(myKey->pub->x));
+    //printf("Qy: %s\n", BN_bn2hex(myKey->pub->y));
+
     
-    ec_generate_signature(mySig, msg, myKey);
-    ec_generate_signature(mySig2, msg, myKey2);
+    if(ec_generate_signature(mySig, msg, myKey) != 0)
+    {
+        printf("Failed to generate signature\n");
+    }
+
+    if(ec_generate_signature(mySig2, msg, myKey2) != 0)
+    {
+        printf("Failed to generate signature\n");
+    }
 
     printf("Verifying against correct signature: %s\n", ec_verify_signature(mySig, msg, myKey->group, myKey->pub)==0 ? "Passed!" : "Failed!");
     printf("Verifying against wrong signature: %s\n", ec_verify_signature(mySig2, msg, myKey->group, myKey->pub)==-1 ? "Passed!" : "Failed!");
