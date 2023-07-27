@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
   
   */
 
-  ec_generate_key();
+  ec_sign_message("helloworld");
   
 
 

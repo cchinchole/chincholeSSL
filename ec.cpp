@@ -3,6 +3,9 @@
 #include <linux/random.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <math.h>
+#include "inc/hash/sha.hpp"
+#include "inc/tests/test.hpp"
 
 
 /* FIPS 186-4 */
@@ -203,7 +206,6 @@ void ECScalarMult(cECPrimeField *g, cECPoint *Q_output, BIGNUM *scalar, cECPoint
     ECCopyPoint(Q_output, QRes);
 }
 
-
 int test_math()
 {
     BN_CTX *ctx = BN_CTX_new();
@@ -238,24 +240,130 @@ int test_math()
     return 0;
 }
 
-/* FIPS 186-4 B.5.2 */
-int ec_generate_signature(cECSignature *sig, cECKey *key)
+/* FIPS 186-5 6.3.1 */
+int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key)
 {
+    int retCode = -1;
     BN_CTX *ctx = BN_CTX_new();
     BN_CTX_start(ctx);
 
     BIGNUM *k = BN_CTX_get(ctx);
     BIGNUM *kInv = BN_CTX_get(ctx);
+    BIGNUM *tmp = BN_CTX_get(ctx);
+    BIGNUM *E = BN_CTX_get(ctx);
+    cECPoint *RPoint = new cECPoint();
 
+
+    /* Step 1 - 2 */
+    SHA_Context *shaCtx = SHA_Context_new(SHA_512);
+    uint8_t hash[ getSHAReturnLengthByMode(SHA_512) ];
+    sha_update( (uint8_t*)msg, strlen(msg), shaCtx);
+    sha_digest(hash, shaCtx);
+    unsigned char* hashHex = byteArrToHexArr(hash, getSHAReturnLengthByMode(SHA_512));
+    BN_hex2bn(&E, (char*)hashHex);
+    int N = BN_num_bits( key->group->n ); /* N = len(n) */
+
+    if( BN_num_bits(E) > N )
+    {
+        int ShiftAmount = (int)log2(BN_num_bits(key->group->n));
+        BN_rshift(E, E, BN_num_bits(E)-ShiftAmount);
+    }
+
+    /* Step 3 - 4 */
     BN_rand_range_ex(k, key->group->n, 0, ctx);
-
     BN_mod_inverse(kInv, k, key->group->n, ctx);
 
-    BN_CTX_end(ctx);
+    /* Step 5 */
+    ECScalarMult(key->group, RPoint, k, key->group->G);
 
-    sig->k = k;
-    sig->kInv = kInv;
-    return 0;
+    /* Step 6 - 8 */
+    BN_mod(sig->R, RPoint->x, key->group->n, ctx);
+
+    /* Step 9 */
+    BN_mul(tmp, sig->R, key->priv, ctx);
+    BN_add(tmp, tmp, E);
+    BN_mod_mul(sig->S, kInv, tmp, key->group->n, ctx);
+
+    /* Step 10 */
+    BN_zero(k);
+    BN_zero(kInv);
+
+    /* Step 11 */
+    if( BN_is_zero(sig->S) || BN_is_zero(sig->R) )
+    {
+        retCode = -1;
+        goto ending;
+    }
+    retCode = 0;
+    printf("R:  %s\nS:  %s\n", BN_bn2hex(sig->R), BN_bn2hex(sig->S));
+    ending:
+    BN_CTX_end(ctx);
+    BN_CTX_free(ctx);
+    return retCode;
+}
+
+/* FIPS 186-5 6.4.2 */
+int ec_verify_signature( cECSignature *sig, char *msg, cECPrimeField *D, cECPoint *Q )
+{
+    int retCode = -1;
+
+    BN_CTX *ctx = BN_CTX_secure_new();
+    BN_CTX_start(ctx);
+
+    BIGNUM *sInv = BN_CTX_get(ctx);
+    BIGNUM *E = BN_CTX_get(ctx);
+    BIGNUM *u = BN_CTX_get(ctx);
+    BIGNUM *v = BN_CTX_get(ctx);
+    BIGNUM *tmp = BN_CTX_get(ctx);
+    cECPoint *addend1 = new cECPoint();
+    cECPoint *addend2 = new cECPoint();
+    cECPoint *RPoint = new cECPoint();
+
+    /* Step 2 - 3 */
+    SHA_Context *shaCtx = SHA_Context_new(SHA_512);
+    uint8_t hash[ getSHAReturnLengthByMode(SHA_512) ];
+    sha_update( (uint8_t*)msg, strlen(msg), shaCtx);
+    sha_digest(hash, shaCtx);
+    unsigned char* hashHex = byteArrToHexArr(hash, getSHAReturnLengthByMode(SHA_512));
+    BN_hex2bn(&E, (char*)hashHex);
+    int N = BN_num_bits( D->n ); /* N = len(n) */
+
+    if( BN_num_bits(E) > N )
+    {
+        int ShiftAmount = (int)log2(BN_num_bits(D->n));
+        BN_rshift(E, E, BN_num_bits(E)-ShiftAmount);
+    }
+
+    /* Step 4 */
+    BN_mod_inverse(sInv, sig->S, D->n, ctx);
+
+    /* Step 5 */
+    BN_mod_mul(u, E, sInv, D->n, ctx);
+    BN_mod_mul(v, sig->R, sInv, D->n, ctx);
+
+
+    ECScalarMult(D, addend1, u, D->G);
+    ECScalarMult(D, addend2, v, Q);
+
+    ECadd(D, RPoint, addend1, addend2);
+
+    BN_mod(tmp, RPoint->x, D->n, ctx);
+
+    if(BN_cmp(sig->R, tmp) == 0)
+    {
+        retCode = 0;
+        goto ending;
+    }
+    else
+    {
+        retCode = -1;
+        goto ending;
+    }
+
+    ending:
+    BN_CTX_end(ctx);
+    BN_CTX_free(ctx);
+    return retCode;
 }
 
 /* FIPS 186-4 B.4.2 */
@@ -268,9 +376,9 @@ int ec_generate_key( cECKey *ret )
     key.group = new Prime256v1();
     BIGNUM *tmp = BN_dup(key.group->n);
     BN_sub(tmp, tmp, BN_value_one());
-    printf("N:  %s\n", BN_bn2hex(key.group->n));
-    printf("Gx: %s\n", BN_bn2hex(key.group->G->x));
-    printf("Gy: %s\n", BN_bn2hex(key.group->G->y));
+    //printf("N:  %s\n", BN_bn2hex(key.group->n));
+    //printf("Gx: %s\n", BN_bn2hex(key.group->G->x));
+    //printf("Gy: %s\n", BN_bn2hex(key.group->G->y));
 
     Generate:
         BN_priv_rand_range_ex(key.priv, tmp, 0, ctx);
@@ -281,9 +389,9 @@ int ec_generate_key( cECKey *ret )
     }
     ECScalarMult(key.group, key.pub, key.priv, key.group->G);
     
-    printf("D:  %s\n", BN_bn2hex(key.priv));
-    printf("Qx: %s\n", BN_bn2hex(key.pub->x));
-    printf("Qy: %s\n", BN_bn2hex(key.pub->y));
+    //printf("D:  %s\n", BN_bn2hex(key.priv));
+    //printf("Qx: %s\n", BN_bn2hex(key.pub->x));
+    //printf("Qy: %s\n", BN_bn2hex(key.pub->y));
     
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
@@ -293,12 +401,23 @@ int ec_generate_key( cECKey *ret )
     return 0;
 }
 
-int ec_sign_message(uint8_t *data)
+int ec_sign_message(char *msg)
 {
     cECKey *myKey = new cECKey();
+    cECKey *myKey2 = new cECKey();
     cECSignature *mySig = new cECSignature();
+    cECSignature *mySig2 = new cECSignature();
     ec_generate_key(myKey);
+    ec_generate_key(myKey2);
     
-    ec_generate_signature(mySig, myKey);
+    ec_generate_signature(mySig, msg, myKey);
+    ec_generate_signature(mySig2, msg, myKey2);
+
+    printf("Verifying against correct signature: %s\n", ec_verify_signature(mySig, msg, myKey->group, myKey->pub)==0 ? "Passed!" : "Failed!");
+    printf("Verifying against wrong signature: %s\n", ec_verify_signature(mySig2, msg, myKey->group, myKey->pub)==-1 ? "Passed!" : "Failed!");
+    printf("Verifying against wrong message: %s\n", ec_verify_signature(mySig, "sdfsdfsdfsdfsd0xx00x0z98z8882828kzzkzkzku2228828", myKey->group, myKey->pub)==-1 ? "Passed!" : "Failed!");
+     
+
+
     return 0;
 }
