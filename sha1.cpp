@@ -2,7 +2,6 @@
 #include "inc/utils/logger.hpp"
 #include <math.h>
 
-#define DIGEST_OUT 160
 #define SHA1_NUM_WORDS 16
 #define SHA1_ROUNDS 80
 #define SHA1_MASK 0x0000000f

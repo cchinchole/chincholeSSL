@@ -2,14 +2,14 @@
 #include "inc/utils/logger.hpp"
 #include <math.h>
 
-#define SHA2_NUM_WORDS 16
-#define SHA2_ROUNDS 80
+#define SHA384512_NUM_WORDS 16
+#define SHA384512_ROUNDS 80
 
 #define SHA2_512_LEN_BYTES 2*sizeof(uint64_t)
 
-#define SHA2_ROTR(value, bits) (((value) >> (bits)) | ((value) << (sizeof(uint64_t)*8 - (bits))))
-#define SHA2_ROTL(value, bits) (((value) << (bits)) | ((value) >> (sizeof(uint64_t)*8 - (bits))))
-#define SHA2_SHR(value, bits) ((value) >> bits)
+#define SHA384512_ROTR(value, bits) (((value) >> (bits)) | ((value) << (sizeof(uint64_t)*8 - (bits))))
+#define SHA384512_ROTL(value, bits) (((value) << (bits)) | ((value) >> (sizeof(uint64_t)*8 - (bits))))
+#define SHA384512_SHR(value, bits) ((value) >> bits)
 
 uint64_t Ch(uint64_t x, uint64_t y, uint64_t z)
 {
@@ -23,25 +23,25 @@ uint64_t Maj(uint64_t x, uint64_t y, uint64_t z)
 
 uint64_t summat0_512(uint64_t x)
 {
-    return SHA2_ROTR(x, 28) ^ SHA2_ROTR(x, 34) ^ SHA2_ROTR(x, 39);
+    return SHA384512_ROTR(x, 28) ^ SHA384512_ROTR(x, 34) ^ SHA384512_ROTR(x, 39);
 }
 
 uint64_t summat1_512(uint64_t x)
 {
-    return SHA2_ROTR(x, 14) ^ SHA2_ROTR(x, 18) ^ SHA2_ROTR(x, 41);
+    return SHA384512_ROTR(x, 14) ^ SHA384512_ROTR(x, 18) ^ SHA384512_ROTR(x, 41);
 }
 
 uint64_t sigma0_512(uint64_t x)
 {
-    return SHA2_ROTR(x, 1) ^ SHA2_ROTR(x, 8) ^ SHA2_SHR(x, 7);
+    return SHA384512_ROTR(x, 1) ^ SHA384512_ROTR(x, 8) ^ SHA384512_SHR(x, 7);
 }
 
 uint64_t sigma1_512(uint64_t x)
 {
-    return SHA2_ROTR(x, 19) ^ SHA2_ROTR(x, 61) ^ SHA2_SHR(x, 6);
+    return SHA384512_ROTR(x, 19) ^ SHA384512_ROTR(x, 61) ^ SHA384512_SHR(x, 6);
 }
 
-uint64_t sha2_k[80] = {
+uint64_t sha384512_k[80] = {
     0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc,
     0x3956c25bf348b538, 0x59f111f1b605d019, 0x923f82a4af194f9b, 0xab1c5ed5da6d8118,
     0xd807aa98a3030242, 0x12835b0145706fbe, 0x243185be4ee4b28c, 0x550c7dc3d5ffb4e2,
@@ -66,23 +66,25 @@ uint64_t sha2_k[80] = {
 
 
 
+
+
 int SHA_384512_process(SHA_Context *ctx)
 {
     uint8_t *block = (uint8_t*)(ctx->blockP);
     uint64_t *H = (uint64_t*)(ctx->HP);
 
     /* Using non circular queue this time */
-    uint64_t W[SHA2_ROUNDS];
+    uint64_t W[SHA384512_ROUNDS];
 
     /* Step 1: setup the message schedule */
-    for(int i = 0; i < SHA2_NUM_WORDS; i++)
+    for(int i = 0; i < SHA384512_NUM_WORDS; i++)
         for(int j = 0; j < sizeof(uint64_t); j++)
         {
             W[i] <<= 8;
             W[i] |= block[i * sizeof(uint64_t) + j];
         }
 
-    for(int i = 16; i < SHA2_ROUNDS; i++)
+    for(int i = 16; i < SHA384512_ROUNDS; i++)
     {
         W[i] =  sigma1_512(W[i-2])+
                 W[i-7] +
@@ -103,9 +105,9 @@ int SHA_384512_process(SHA_Context *ctx)
     uint64_t tmp2 = 0;
 
     /* Step 3 loop */
-    for(int t = 0; t < SHA2_ROUNDS; t++)
+    for(int t = 0; t < SHA384512_ROUNDS; t++)
     {
-        tmp1 = h + summat1_512(e)+Ch(e, f, g)+sha2_k[t]+W[t];
+        tmp1 = h + summat1_512(e)+Ch(e, f, g)+sha384512_k[t]+W[t];
         tmp2 = summat0_512(a) + Maj(a,b,c);
         h = g;
         g = f;

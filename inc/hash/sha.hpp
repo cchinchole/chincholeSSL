@@ -3,12 +3,14 @@
 #include <memory.h>
 
 #define SHA1_BLOCK_SIZE_BYTES 64
+#define SHA256_BLOCK_SIZE_BYTES 64
 #define SHA2_384512_BLOCK_SIZE_BYTES 128
 #define SHA3_WORDS 25 /* 1600/8 / sizeof(uint64_t) */
 #define SHA3_SPONGE_ARR 5 /* 25 / 5*/
 
 enum SHA_MODE {
     SHA_1,
+    SHA_224,
     SHA_256,
     SHA_384,
     SHA_512,
@@ -61,6 +63,46 @@ class SHA_1_Context : public SHA_Context {
      void clear();
 };
 
+class SHA_224_Context : public SHA_Context {
+    private:
+        uint64_t bMsg_len = 0;
+        uint32_t H[8] = {
+                0xc1059ed8,
+                0x367cd507,
+                0x3070dd17,
+                0xf70e5939,
+                0xffc00b31,
+                0x68581511,
+                0x64f98fa7,
+                0xbefa4fa4
+        };
+        uint8_t block[SHA256_BLOCK_SIZE_BYTES];
+    public:
+     SHA_224_Context();
+
+     void clear();
+};
+
+class SHA_256_Context : public SHA_Context {
+    private:
+        uint64_t bMsg_len = 0;
+        uint32_t H[8] = {
+                0x6a09e667,
+                0xbb67ae85,
+                0x3c6ef372,
+                0xa54ff53a,
+                0x510e527f,
+                0x9b05688c,
+                0x1f83d9ab,
+                0x5be0cd19
+        };
+        uint8_t block[SHA256_BLOCK_SIZE_BYTES];
+    public:
+     SHA_256_Context();
+
+     void clear();
+};
+
 class SHA_512_Context : public SHA_Context {
     private:
      uint64_t bMsg_len[2] = {0, 0};
@@ -106,6 +148,10 @@ int SHA_384512_digest(uint8_t *digest_out, SHA_Context *ctx);
 
 int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_1_digest(uint8_t *digest_out, SHA_Context *ctx);
+
+
+int SHA_224256_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
+int SHA_224256_digest(uint8_t *digest_out, SHA_Context *ctx);
 
 int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx);
 int SHA_3_digest(uint8_t *digest_out, SHA_3_Context *ctx);

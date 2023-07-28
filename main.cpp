@@ -135,7 +135,10 @@ int main(int argc, char *argv[]) {
   
   */
 
-  ec_sign_message("helloworld");
+
+    
+
+  ec_sign_message(NULL, NULL, "helloworld");
   
 
 
@@ -144,14 +147,14 @@ int main(int argc, char *argv[]) {
   SHATestCase *failedCases[50];
   int osslTime = 0;
   int myTime = 0;
-  for(int i = 1000; i < 55000; i++)
+  for(int i = 0; i < 50000; i++)
   {
     unsigned char buff[i];
     syscall(SYS_getrandom, buff, i, GRND_NONBLOCK);
     Timer t;
 
     t.start();
-    SHA_Context *ctx = SHA_Context_new(SHA_MODE(SHA_512));
+    SHA_Context *ctx = SHA_Context_new(SHA_MODE(SHA_224));
     unsigned char rawDigest[getSHAReturnLengthByMode(ctx->mode)];
     sha_update( (uint8_t*)buff, i, ctx);
     sha_digest(rawDigest, ctx);
@@ -161,12 +164,12 @@ int main(int argc, char *argv[]) {
 
     t.start();
     unsigned char osslHash[getSHAReturnLengthByMode(ctx->mode)];
-    SHA512( (unsigned char*)buff, i, osslHash);
+    SHA224( (unsigned char*)buff, i, osslHash);
     unsigned char *hexStringOSSL = byteArrToHexArr(osslHash, getSHAReturnLengthByMode(ctx->mode));
     t.stop();
     osslTime = t.getElapsed();
 
-    printf("Test [ %d ]: Time difference from mine to ossl %dms\n", i, myTime - osslTime);
+    //printf("Test [ %d ]: Time difference from mine to ossl %dms\n", i, myTime - osslTime);
 
     if(strcasecmp((char*)hexStringMINE, (char*)hexStringOSSL) != 0)
     {

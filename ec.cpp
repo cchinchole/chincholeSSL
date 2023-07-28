@@ -30,11 +30,52 @@ TODO:
 */
 
 /* Prime256v1 */
+
 BIGNUM *zero = BN_new();
 BIGNUM *BN_value_zero()
 {
     BN_set_word(zero, 0);
     return zero;
+}
+
+Prime256v1::Prime256v1()
+{
+        char *p = (char*)"ffffffff00000001000000000000000000000000ffffffffffffffffffffffff";
+        char *a = (char*)"ffffffff00000001000000000000000000000000fffffffffffffffffffffffc";
+        char *b = (char*)"5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b";
+        char *Gx =(char*)"6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296";
+        char *Gy =(char*)"4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5";
+        char *n =(char*)"ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551";
+
+        BN_hex2bn(&this->p, p);
+        BN_hex2bn(&this->a, a);
+        BN_hex2bn(&this->b, b);
+        BN_hex2bn(&this->n, n);
+        BN_hex2bn(&(this->G->x), Gx);
+        BN_hex2bn(&(this->G->y), Gy);
+}
+
+PrimeTestField::PrimeTestField()
+ {
+        char *p = (char*)"11";
+        char *a = (char*)"1";
+        char *b = (char*)"7";
+        char *Gx = (char*)"1";
+        char *Gy = (char*)"3";
+        char *n = (char*)"0";
+
+        BN_hex2bn(&this->p, p);
+        BN_hex2bn(&this->a, a);
+        BN_hex2bn(&this->b, b);
+        BN_hex2bn(&this->n, n);
+        BN_hex2bn(&(this->G->x), Gx);
+        BN_hex2bn(&(this->G->y), Gy);
+}
+
+cECSignature::cECSignature()
+{
+    R = BN_new();
+    S = BN_new();
 }
 
 bool isPointAtInfinity(cECPoint *p)
@@ -241,7 +282,7 @@ int test_math()
 }
 
 /* FIPS 186-5 6.3.1 */
-int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key, char *KSecret = NULL)
+int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key, char *KSecret)
 {
     int retCode = -1;
     BN_CTX *ctx = BN_CTX_new();
@@ -401,13 +442,22 @@ int ec_generate_key( cECKey *ret )
     return 0;
 }
 
-int ec_sign_message(char *msg)
+int ec_sign_message(cECSignature *sig, cECKey *key, char *msg)
 {
-    cECKey *myKey = new cECKey();
     cECKey *myKey2 = new cECKey();
-    cECSignature *mySig = new cECSignature();
     cECSignature *mySig2 = new cECSignature();
-    ec_generate_key(myKey);
+    if(key == NULL)
+    {
+        key = new cECKey();
+        ec_generate_key(key);
+    }
+
+    if(sig == NULL)
+    {
+        sig = new cECSignature();
+        if(ec_generate_signature(sig, msg, key) != 0)
+            printf("Failed to generate signature\n");
+    }
     ec_generate_key(myKey2);
 
     //printf("D:  %s\n", BN_bn2hex(myKey->priv));
@@ -415,19 +465,15 @@ int ec_sign_message(char *msg)
     //printf("Qy: %s\n", BN_bn2hex(myKey->pub->y));
 
     
-    if(ec_generate_signature(mySig, msg, myKey) != 0)
-    {
-        printf("Failed to generate signature\n");
-    }
+   
 
     if(ec_generate_signature(mySig2, msg, myKey2) != 0)
-    {
         printf("Failed to generate signature\n");
-    }
 
-    printf("Verifying against correct signature: %s\n", ec_verify_signature(mySig, msg, myKey->group, myKey->pub)==0 ? "Passed!" : "Failed!");
-    printf("Verifying against wrong signature: %s\n", ec_verify_signature(mySig2, msg, myKey->group, myKey->pub)==-1 ? "Passed!" : "Failed!");
-    printf("Verifying against wrong message: %s\n", ec_verify_signature(mySig, "sdfsdfsdfsdfsd0xx00x0z98z8882828kzzkzkzku2228828", myKey->group, myKey->pub)==-1 ? "Passed!" : "Failed!");
+    printf("Verifying against correct signature: %s\n", ec_verify_signature(sig, msg, key->group, key->pub)==0 ? "Passed!" : "Failed!");
+    printf("Verifying against wrong signature: %s\n", ec_verify_signature(mySig2, msg, key->group, key->pub)==-1 ? "Passed!" : "Failed!");
+    printf("Verifying against wrong key: %s\n", ec_verify_signature(sig, msg, myKey2->group, myKey2->pub)==-1 ? "Passed!" : "Failed!");
+    printf("Verifying against wrong message: %s\n", ec_verify_signature(sig, "sdfsdfsdfsdfsd0xx00x0z98z8882828kzzkzkzku2228828", key->group, key->pub)==-1 ? "Passed!" : "Failed!");
      
 
 
