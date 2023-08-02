@@ -27,6 +27,8 @@ class SHATestCase {
 void testFunction();
 void readParameters();
 int testPrimesBetweenFuncs();
+int shake_xof(SHA_3_Context *ctx);
 int testHMAC(char *msg, size_t msg_len, char *key, size_t key_len, char *KAT, int mode);
+int testSHA_Shake(char *msg, size_t msg_len, char *KAT, int mode, size_t digestSize, bool quiet = false);
 int testSHA(char *msg, size_t msg_len, char *KAT, int mode, bool quiet = false);
 unsigned char *byteArrToHexArr(unsigned char *bytes, size_t byte_len);

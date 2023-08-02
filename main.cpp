@@ -78,6 +78,20 @@ char *sha3_512(char *input, size_t input_len)
     OPENSSL_free(digest);
     return output;
 }
+char *sha3_shake(char *input, const EVP_MD *alg, size_t input_len, size_t digest_len)
+{
+    uint32_t digest_length = digest_len;
+    const EVP_MD* algorithm = alg;
+    uint8_t* digest = static_cast<uint8_t*>(OPENSSL_malloc(digest_length));
+    EVP_MD_CTX* context = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(context, algorithm, nullptr);
+    EVP_DigestUpdate(context, input, input_len);
+    EVP_DigestFinal_ex(context, digest, &digest_length);
+    EVP_MD_CTX_destroy(context);
+    char* output = (char*)byteArrToHexArr( (unsigned char*)digest, digest_length);
+    OPENSSL_free(digest);
+    return output;
+}
 
 int main(int argc, char *argv[]) {
   BIGNUM* myE = BN_new();
@@ -100,6 +114,7 @@ int main(int argc, char *argv[]) {
   BN_rand_ex(bnLongRand, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, BN_CTX_secure_new());
   unsigned char* testBytes = (unsigned char*)malloc(32*sizeof(char));
   RAND_bytes(testBytes, 32);
+
 /*
 
   roundTrip(myRsa, (char*)"Test string HeRe! HelLO WoRLd!@#$^&*()_+ 1   2 34    567  89\nTest!");
@@ -135,12 +150,9 @@ int main(int argc, char *argv[]) {
   
   */
 
-
-    
-
-  ec_sign_message(NULL, NULL, "helloworld");
+  //ec_sign_message(NULL, NULL, "helloworld");
   
-
+  testSHA_Shake("abc", strlen("abc"), "abc", SHA_3_SHAKE_256, 512, false);
 
   /*
   int failed = 0, passed = 0;

@@ -17,7 +17,9 @@ enum SHA_MODE {
     SHA_3_224,
     SHA_3_256,
     SHA_3_384,
-    SHA_3_512
+    SHA_3_512,
+    SHA_3_SHAKE_128,
+    SHA_3_SHAKE_256
 };
 
 class SHA_Context {
@@ -155,6 +157,8 @@ int SHA_224256_digest(uint8_t *digest_out, SHA_Context *ctx);
 
 int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx);
 int SHA_3_digest(uint8_t *digest_out, SHA_3_Context *ctx);
+
+int SHA_3_shake_out(uint8_t *digestOut, size_t digestLen, SHA_3_Context *ctx);
 
 int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int sha_digest(uint8_t *digest_out, SHA_Context *ctx);
