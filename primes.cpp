@@ -13,6 +13,7 @@
 #include "inc/defs.hpp"
 #include "inc/math/primes.hpp"
 #include <openssl/types.h>
+#include "inc/hash/sha.hpp"
 
 #define RSA_FIPS1864_MIN_KEYGEN_KEYSIZE 2048
 #define RSA_FIPS1864_MIN_KEYGEN_STRENGTH 112
@@ -231,7 +232,20 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR)
     return 0;
 }
 
+/* Not finished */
+int SP800_186_Generate_Curve(int l, uint8_t* s, SHA_MODE mode)
+{
+    SHA_Context *ctx = SHA_Context_new(mode);
+    int hexDigestLength = getSHAReturnLengthByMode(mode)*8;
 
+    int v = (l-1)/hexDigestLength;
+    int w = (l-(hexDigestLength*v))-1;
+
+    uint8_t H[hexDigestLength];
+    sha_update(s, hexDigestLength, ctx);
+    sha_digest(H, ctx);
+    return 0;
+}
 
 /* FIPS 186-4-C.9 */
 int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X, BIGNUM *Xin, BIGNUM *r1, BIGNUM *r2, int nLen, BIGNUM *e, BN_CTX *ctx)

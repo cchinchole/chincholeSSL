@@ -32,7 +32,6 @@ int rsa_sp800_56b_pairwise_test(RSA_Params* rsa, BN_CTX* ctx)
   return ret;
 }
 
-
  /*
   * Key Pair:
   * <d, n>: Form the private decryption key.
@@ -298,11 +297,6 @@ int roundTrip(cRSAKey* rsa, char* str)
   #endif
   return 0;
 }
-
-
-
-
-
 
 /*  BN_CTX:
  *    Description:

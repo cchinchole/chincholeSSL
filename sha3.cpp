@@ -150,3 +150,28 @@ int SHA_3_digest(uint8_t *digestOut, SHA_3_Context *ctx)
 
     return 0;
 }
+
+int shake_xof(SHA_3_Context *ctx)
+{
+    ctx->sponge.bytes[ctx->blockCur] ^= 0x1F;
+    ctx->sponge.bytes[ctx->r - 1] ^= 0x80;
+    SHA3_keccakf(ctx->sponge.words);
+    ctx->blockCur = 0;
+    return 0;
+}
+
+int SHA_3_shake_out(uint8_t *digestOut, size_t digestLen, SHA_3_Context *ctx)
+{ 
+    int j = ctx->blockCur;
+    for (int i = 0; i < digestLen; i++) {
+        if( j >= ctx->r )
+        {
+            SHA3_keccakf(ctx->sponge.words);
+            j = 0;
+        }
+        ((uint8_t *) digestOut)[i] = ctx->sponge.bytes[j++];
+    }
+
+    ctx->blockCur = j;
+    return 0;
+}

@@ -9,14 +9,14 @@ uint32_t SHA_1_H0[5] = {
 };
 
 uint32_t SHA_224_H0[8] = {
-                0xc1059ed8,
-                0x367cd507,
-                0x3070dd17,
-                0xf70e5939,
-                0xffc00b31,
-                0x68581511,
-                0x64f98fa7,
-                0xbefa4fa4
+        0xc1059ed8,
+        0x367cd507,
+        0x3070dd17,
+        0xf70e5939,
+        0xffc00b31,
+        0x68581511,
+        0x64f98fa7,
+        0xbefa4fa4
 };
 
 uint32_t SHA_256_H0[8] = {
@@ -57,10 +57,14 @@ SHA_3_Context::SHA_3_Context(SHA_MODE mode)
          this->mode = mode;
          switch(mode)
          {
+            case SHA_3_SHAKE_128:
+               this->digestBytes = 128/8;
+            break;
             case SHA_3_224:
                this->digestBytes = 224/8;
             break;
             case SHA_3_256:
+            case SHA_3_SHAKE_256:
                this->digestBytes = 256/8;
             break;
             case SHA_3_384:
@@ -147,7 +151,6 @@ void SHA_256_Context::clear()
         }
 }
 
-
 SHA_512_Context::SHA_512_Context()
 {
         /* Set the pointers */
@@ -189,16 +192,16 @@ SHA_384_Context::SHA_384_Context()
         memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
 }
 void SHA_384_Context::clear()
-     {
-        bMsg_len[0] = 0;
-        bMsg_len[1] = 0;
-        blockCur = 0;
-        memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
-        for(int i = 0; i < 8; i++)
-        {
-            H[i] = SHA_384_H0[i];
-        }
-     }
+{
+    bMsg_len[0] = 0;
+    bMsg_len[1] = 0;
+    blockCur = 0;
+    memset(block, 0, SHA2_384512_BLOCK_SIZE_BYTES);
+    for(int i = 0; i < 8; i++)
+    {
+        H[i] = SHA_384_H0[i];
+    }
+}
 
 int getSHABlockLengthByMode(SHA_MODE mode)
 {
@@ -317,6 +320,8 @@ int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
         case SHA_3_256:
         case SHA_3_384:
         case SHA_3_512:
+        case SHA_3_SHAKE_128:
+        case SHA_3_SHAKE_256:
             SHA_3_update(msg, byMsg_len, (SHA_3_Context*)ctx);
             break;        
         default:
@@ -379,6 +384,8 @@ SHA_Context *SHA_Context_new(SHA_MODE mode)
     case SHA_3_256:
     case SHA_3_384:
     case SHA_3_512:
+    case SHA_3_SHAKE_128:
+    case SHA_3_SHAKE_256:
       ctx = new SHA_3_Context(mode);
       break;
     default:
