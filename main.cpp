@@ -27,6 +27,8 @@
 #include "inc/hash/hmac.hpp"
 #include "inc/crypto/ec.hpp"
 #include "inc/utils/time.hpp"
+#include "inc/crypto/aes.hpp"
+#include "inc/utils/bytes.hpp"
 #include <cstdio>
 #include <stdexcept>
 #include <memory>
@@ -93,10 +95,12 @@ char *sha3_shake(char *input, const EVP_MD *alg, size_t input_len, size_t digest
     return output;
 }
 
+
 int main(int argc, char *argv[]) {
   BIGNUM* myE = BN_new();
   BN_set_word(myE, 0x100000001);
 
+  
   /* Set the OPENSSL Rng to use our own method. */
   /* This is deprecated needs updated */
  // RAND_set_rand_method(RAND_stdlib());
@@ -114,6 +118,19 @@ int main(int argc, char *argv[]) {
   BN_rand_ex(bnLongRand, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, BN_CTX_secure_new());
   unsigned char* testBytes = (unsigned char*)malloc(32*sizeof(char));
   RAND_bytes(testBytes, 32);
+  uint8_t *msg = scanHex("3243f6a8885a308d313198a2e0370734", 16);
+
+  AES_CTX *ctx = new AES_CTX();
+  ctx->mode = AES_CBC_128;
+  
+  FIPS_197_5_2_KeyExpansion(ctx, scanHex("2b7e151628aed2a6abf7158809cf4f3c", 128/8));
+
+  for(int i = 0; i < 4; i++)
+    for(int j = 0; j < 4; j++)
+        ctx->state[i][j] = msg[ (4*i) + j];
+
+  FIPS_197_5_1_Cipher( ctx );
+
 
 /*
 
@@ -150,7 +167,7 @@ int main(int argc, char *argv[]) {
   
   */
 
-  //ec_sign_message(NULL, NULL, "helloworld");
+  ec_sign_message_and_test(NULL, NULL, "helloworld");
   
   testSHA_Shake("abc", strlen("abc"), "abc", SHA_3_SHAKE_256, 512, false);
 

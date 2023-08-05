@@ -6,30 +6,7 @@
 #include <math.h>
 #include "inc/hash/sha.hpp"
 #include "inc/tests/test.hpp"
-
-
-/* FIPS 186-4 */
-/* 1. Curve over prime field, identified by P-xxx */
-/* E: y^2 = x^3-3x+b (mod p) */
-
-
-
-/* SP 800-186 */
-
-
-/*
-
-SP 800-56 5.6.1.2 ECC Key-Pair Generation
-
-TODO:
-    Define a structure to hold the key
-    Define a structure to hold a point
-
-
-    Generate the private key within the range of 0, order
-    From the private key define it as a new point within the group
-    Then multiply 
-*/
+/* SP 800-186: Domain parameters are from */
 
 /* Prime256v1 */
 
@@ -283,8 +260,8 @@ int test_math()
     return 0;
 }
 
-/* FIPS 186-5 6.3.1 */
-int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key, char *KSecret)
+/* FIPS 186-5 6.4.1 */
+int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, char *msg, cECKey *key, char *KSecret)
 {
     int retCode = -1;
     BN_CTX *ctx = BN_CTX_new();
@@ -352,7 +329,7 @@ int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key, char *KSecr
 }
 
 /* FIPS 186-5 6.4.2 */
-int ec_verify_signature( cECSignature *sig, char *msg, cECPrimeField *D, cECPoint *Q )
+int FIPS_186_5_6_4_2_VerifySignature( cECSignature *sig, char *msg, cECPrimeField *D, cECPoint *Q )
 {
     int retCode = -1;
 
@@ -414,7 +391,7 @@ int ec_verify_signature( cECSignature *sig, char *msg, cECPrimeField *D, cECPoin
 }
 
 /* FIPS 186-4 B.4.2 */
-int ec_generate_key( cECKey *ret )
+int FIPS_186_4_B_4_2_KeyPairGeneration( cECKey *ret )
 {
     
     BN_CTX *ctx = BN_CTX_new();
@@ -444,23 +421,23 @@ int ec_generate_key( cECKey *ret )
     return 0;
 }
 
-int ec_sign_message(cECSignature *sig, cECKey *key, char *msg)
+int ec_sign_message_and_test(cECSignature *sig, cECKey *key, char *msg)
 {
     cECKey *myKey2 = new cECKey();
     cECSignature *mySig2 = new cECSignature();
     if(key == NULL)
     {
         key = new cECKey();
-        ec_generate_key(key);
+        FIPS_186_4_B_4_2_KeyPairGeneration(key);
     }
 
     if(sig == NULL)
     {
         sig = new cECSignature();
-        if(ec_generate_signature(sig, msg, key) != 0)
+        if(FIPS_186_5_6_4_1_GenerateSignature(sig, msg, key) != 0)
             printf("Failed to generate signature\n");
     }
-    ec_generate_key(myKey2);
+    FIPS_186_4_B_4_2_KeyPairGeneration(myKey2);
 
     //printf("D:  %s\n", BN_bn2hex(myKey->priv));
     //printf("Qx: %s\n", BN_bn2hex(myKey->pub->x));
@@ -469,13 +446,13 @@ int ec_sign_message(cECSignature *sig, cECKey *key, char *msg)
     
    
 
-    if(ec_generate_signature(mySig2, msg, myKey2) != 0)
+    if(FIPS_186_5_6_4_1_GenerateSignature(mySig2, msg, myKey2) != 0)
         printf("Failed to generate signature\n");
 
-    printf("Verifying against correct signature: %s\n", ec_verify_signature(sig, msg, key->group, key->pub)==0 ? "Passed!" : "Failed!");
-    printf("Verifying against wrong signature: %s\n", ec_verify_signature(mySig2, msg, key->group, key->pub)==-1 ? "Passed!" : "Failed!");
-    printf("Verifying against wrong key: %s\n", ec_verify_signature(sig, msg, myKey2->group, myKey2->pub)==-1 ? "Passed!" : "Failed!");
-    printf("Verifying against wrong message: %s\n", ec_verify_signature(sig, "sdfsdfsdfsdfsd0xx00x0z98z8882828kzzkzkzku2228828", key->group, key->pub)==-1 ? "Passed!" : "Failed!");
+    printf("Verifying against correct signature: %s\n", FIPS_186_5_6_4_2_VerifySignature(sig, msg, key->group, key->pub)==0 ? "Passed!" : "Failed!");
+    printf("Verifying against wrong signature: %s\n", FIPS_186_5_6_4_2_VerifySignature(mySig2, msg, key->group, key->pub)==-1 ? "Passed!" : "Failed!");
+    printf("Verifying against wrong key: %s\n", FIPS_186_5_6_4_2_VerifySignature(sig, msg, myKey2->group, myKey2->pub)==-1 ? "Passed!" : "Failed!");
+    printf("Verifying against wrong message: %s\n", FIPS_186_5_6_4_2_VerifySignature(sig, "sdfsdfsdfsdfsd0xx00x0z98z8882828kzzkzkzku2228828", key->group, key->pub)==-1 ? "Passed!" : "Failed!");
      
 
 
