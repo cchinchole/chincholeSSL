@@ -38,6 +38,7 @@ class cECSignature {
     cECSignature();
 };
 
-int ec_generate_key( cECKey *ret );
-int ec_generate_signature(cECSignature *sig, char *msg, cECKey *key, char *KSecret = NULL);
-int ec_sign_message(cECSignature *sig, cECKey *key, char *msg);
+int FIPS_186_4_B_4_2_KeyPairGeneration( cECKey *ret );
+int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, char *msg, cECKey *key, char *KSecret = NULL);
+int FIPS_186_5_6_4_2_VerifySignature( cECSignature *sig, char *msg, cECPrimeField *D, cECPoint *Q );
+int ec_sign_message_and_test(cECSignature *sig, cECKey *key, char *msg);
