@@ -43,6 +43,17 @@ class Logger{
             return 0;
         }
 
+        int aes_printf(const char *format, ...)
+        {
+            #ifdef LOG_AES
+                va_list args;
+                va_start(args, format);
+                BIO_vprintf(bio_stdout, format, args);
+                va_end(args);
+            #endif
+            return 0;
+        }
+
         int printf(const char *format, ...)
         {
             va_list args;

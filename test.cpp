@@ -90,8 +90,8 @@ int testSHA_Shake(char *msg, size_t msg_len, char *KAT, int mode, size_t digestS
   SHA_3_Context *ctx = (SHA_3_Context*)SHA_Context_new(SHA_MODE(mode));
   unsigned char rawDigest[digestSize/8];
   sha_update( (uint8_t*)msg, msg_len, ctx);
-  shake_xof(ctx);
-  SHA_3_shake_out(rawDigest, digestSize/8, ctx);
+  SHA_3_xof(ctx);
+  SHA_3_shake_digest(rawDigest, digestSize/8, ctx);
   unsigned char *hexString = byteArrToHexArr(rawDigest, digestSize/8);
 
   printf("HASH Returned: %s\n", hexString);
