@@ -12,20 +12,20 @@ int hmac_sha(SHA_Context *ctx, uint8_t *hmac_out, uint8_t *msg, size_t msg_len, 
     int retLen = getSHAReturnLengthByMode(ctx->mode);
 
     /* Init and clear the keys */
-    uint8_t *outerKey = (uint8_t*)malloc( blockLen + retLen );
-    uint8_t *innerKey = (uint8_t*)malloc( blockLen + msg_len );
-    uint8_t *tmp = (uint8_t*)malloc(getSHAReturnLengthByMode(ctx->mode));
+    uint8_t *outerKey = (uint8_t *)malloc(blockLen + retLen);
+    uint8_t *innerKey = (uint8_t *)malloc(blockLen + msg_len);
+    uint8_t *tmp = (uint8_t *)malloc(getSHAReturnLengthByMode(ctx->mode));
 
     memset(outerKey, 0, blockLen + retLen);
     memset(innerKey, 0, blockLen + msg_len);
-    
+
     /* If our key takes more than one block then we need to digest this into it's own message */
-    if(key_len > blockLen)
+    if (key_len > blockLen)
     {
         sha_update(key, key_len, ctx);
         sha_digest(tmp, ctx);
         /* Find the minimum length for the key to be copied with */
-        if(blockLen < retLen)
+        if (blockLen < retLen)
         {
             memcpy(outerKey, tmp, blockLen);
             memcpy(innerKey, tmp, blockLen);
@@ -43,7 +43,7 @@ int hmac_sha(SHA_Context *ctx, uint8_t *hmac_out, uint8_t *msg, size_t msg_len, 
         memcpy(innerKey, key, key_len);
     }
 
-    for(int i = 0; i < blockLen; i++)
+    for (int i = 0; i < blockLen; i++)
     {
         outerKey[i] ^= 0x5c;
         innerKey[i] ^= 0x36;

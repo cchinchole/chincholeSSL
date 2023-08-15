@@ -10,19 +10,18 @@
 #include <vector>
 #include <iostream>
 
+class SHATestCase
+{
+public:
+  size_t data_len;
+  bool failed = true; /* Assume failed until set */
+  uint8_t *msg_bytes;
+  uint8_t *KAT_hash;
+  uint8_t *TEST_hash;
 
-class SHATestCase {
-    public:
-    size_t data_len;
-    bool failed = true; /* Assume failed until set */
-    uint8_t *msg_bytes;
-    uint8_t *KAT_hash;
-    uint8_t *TEST_hash;
-
-    SHATestCase(size_t msg_len, int digest, uint8_t *msg, uint8_t *KAT, uint8_t *Test);
-    void setCaseState(bool state);
-  };
-
+  SHATestCase(size_t msg_len, int digest, uint8_t *msg, uint8_t *KAT, uint8_t *Test);
+  void setCaseState(bool state);
+};
 
 void testFunction();
 void readParameters();
