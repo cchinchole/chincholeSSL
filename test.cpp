@@ -61,10 +61,15 @@ void testFunction()
   o << j << std::endl;
 }
 
+/* Returns the discrepancies between the functions */
 int testPrimesBetweenFuncs()
 {
+<<<<<<< HEAD
 
   BIGNUM *testPrime = BN_secure_new();
+=======
+  BIGNUM* testPrime = BN_secure_new();
+>>>>>>> 1327b74 (Added some return codes)
   int s = 0, j = 0;
   for (int i = 4; i < 17863; i++)
   {
@@ -79,10 +84,18 @@ int testPrimesBetweenFuncs()
   }
   printf("Primes found: %d Discrepancies between other func: %d\n", s, j);
   BN_free(testPrime);
+<<<<<<< HEAD
 
   return 0;
 }
 
+=======
+  
+  return j;
+}
+
+/* Returns 0 on success */
+>>>>>>> 1327b74 (Added some return codes)
 int testSHA_Shake(char *msg, size_t msg_len, char *KAT, int mode, size_t digestSize, bool quiet)
 {
   SHA_3_Context *ctx = (SHA_3_Context *)SHA_Context_new(SHA_MODE(mode));
@@ -92,10 +105,14 @@ int testSHA_Shake(char *msg, size_t msg_len, char *KAT, int mode, size_t digestS
   SHA_3_shake_digest(rawDigest, digestSize / 8, ctx);
   unsigned char *hexString = byteArrToHexArr(rawDigest, digestSize / 8);
 
-  printf("HASH Returned: %s\n", hexString);
-  return 0;
+ int res = strcasecmp((char*)hexString, KAT);
+  if(!quiet)
+    res==0 ? printf("(%s Test) HASH Returned: %s PASSED!\n", SHA_MODE_NAME(SHA_MODE(mode)), hexString) : printf("(%s Test) HASH Returned: %s FAILED!\n", SHA_MODE_NAME(SHA_MODE(mode)), hexString);
+  
+  return res;
 }
 
+/* Returns 0 on success */
 int testSHA(char *msg, size_t msg_len, char *KAT, int mode, bool quiet)
 {
   SHA_Context *ctx = SHA_Context_new(SHA_MODE(mode));
@@ -111,6 +128,10 @@ int testSHA(char *msg, size_t msg_len, char *KAT, int mode, bool quiet)
   return res;
 }
 
+<<<<<<< HEAD
+=======
+/* Returns 0 on success */
+>>>>>>> 1327b74 (Added some return codes)
 int testHMAC(char *msg, size_t msg_len, char *key, size_t key_len, char *KAT, int mode)
 {
   unsigned char rawDigest[getSHAReturnLengthByMode(SHA_MODE(mode))];
