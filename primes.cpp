@@ -22,6 +22,12 @@ int FIPS186_5_MR_ROUNDS_PRIME(int nLen);
 int FIPS186_5_MIN_AUX(int nLen);
 int FIPS186_5_MAX_PROB_LEN(int nLen);
 
+
+/* Return codes */
+#define RET_NOSTATUS -99999
+#define RET_FAILURE -1
+#define RET_SUCCESS 0
+
 /* 1 / sqrt(2) * 2^256, rounded up */
 static const BN_ULONG inv_sqrt_2_val[] = {
     BN_DEF(0x83339916UL, 0xED17AC85UL), BN_DEF(0x893BA84CUL, 0x1D6F60BAUL),
@@ -226,6 +232,7 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR)
     return 0;
 }
 
+<<<<<<< HEAD
 /* Not finished */
 int SP800_186_Generate_Curve(int l, uint8_t *s, SHA_MODE mode)
 {
@@ -241,11 +248,14 @@ int SP800_186_Generate_Curve(int l, uint8_t *s, SHA_MODE mode)
     return 0;
 }
 
+=======
+>>>>>>> 1327b74 (Added some return codes)
 /* FIPS 186-4-C.9 */
 int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X, BIGNUM *Xin, BIGNUM *r1, BIGNUM *r2, int nLen, BIGNUM *e, BN_CTX *ctx)
 {
     BIGNUM *R, *r1mul2, *r1_mul2_r2, *temp, *tempPrivFactor, *range, *base;
     int bits = nLen >> 1;
+    int status = RET_NOSTATUS;
 
     BN_CTX_start(ctx);
     R = BN_CTX_get(ctx);
@@ -265,7 +275,8 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X, 
     if (BN_cmp(temp, r1mul2) != 0 && BN_cmp(temp, r2) != 0 && !BN_is_one(temp))
     {
         _Logger->error(__func__, "GCD was not = 1 between the two auxiliary primes");
-        goto error;
+        status = RET_FAILURE;
+        goto ending;
     }
 
     /* Step 2*/
@@ -301,7 +312,8 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X, 
         if (bits < BN_num_bits(temp))
         {
             _Logger->error(__func__, "Bits was less than the temp");
-            goto error;
+            status = RET_FAILURE;
+            goto ending;
         }
 
         BN_lshift(base, temp, bits - BN_num_bits(temp));
@@ -329,7 +341,12 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X, 
                 else
                 {
                     _Logger->error(__func__, "X was already declared.");
+<<<<<<< HEAD
                     goto error;
+=======
+                    status = RET_FAILURE;
+                    goto ending;
+>>>>>>> 1327b74 (Added some return codes)
                     /* X was inputted if we make it here. */
                 }
 
@@ -338,19 +355,28 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X, 
 
             if (BN_are_coprime(tempPrivFactor, e, ctx)) /* Step 7 */
             {
+<<<<<<< HEAD
                 if (miller_rabin_is_prime(PRIV_PRIME_FACTOR, FIPS186_5_MR_ROUNDS_PRIME(nLen)))
+=======
+                if(miller_rabin_is_prime(PRIV_PRIME_FACTOR, FIPS186_5_MR_ROUNDS_PRIME(nLen)))
+                {
+                    status = RET_SUCCESS;
+>>>>>>> 1327b74 (Added some return codes)
                     goto ending;
+                }
             }
 
             i++;                   /* Step 8 */
             if (i >= 5 * nLen / 2) /* Step 9 */
             {
                 _Logger->error(__func__, "I was >= 5*nlen/2");
-                goto error;
+                status = RET_FAILURE;
+                goto ending;
             }
             BN_add(PRIV_PRIME_FACTOR, PRIV_PRIME_FACTOR, r1_mul2_r2); /* Step 10 */
         }
     }
+<<<<<<< HEAD
 ending:
     BN_CTX_end(ctx);
     return 0;
@@ -358,34 +384,58 @@ error:
     BN_clear(PRIV_PRIME_FACTOR);
     BN_CTX_end(ctx);
     return -1;
+=======
+    ending:
+        BN_CTX_end(ctx);
+        return status;
+>>>>>>> 1327b74 (Added some return codes)
 }
 
 /* FIPS 186-4-B.3.6 */
 int FIPS186_4_FIND_AUX_PRIME(const BIGNUM *Xn1, BIGNUM *n1, int kbits, BN_CTX *ctx)
 {
+    int status = RET_NOSTATUS;
     /* Start from Xn1 and find the FIRST integer that is a probable prime then return it. */
     BN_copy(n1, Xn1); /* Changed to copy to prevent mem leak */
 
     BN_set_flags(n1, BN_FLG_CONSTTIME);
     for (;;)
     {
+<<<<<<< HEAD
 
         if (miller_rabin_is_prime(n1, FIPS186_5_MR_ROUNDS_AUX(kbits)))
             break;
+=======
+        
+        if(miller_rabin_is_prime(n1, FIPS186_5_MR_ROUNDS_AUX(kbits)))
+        {
+                status = RET_SUCCESS;
+                break;
+        }
+>>>>>>> 1327b74 (Added some return codes)
         else
             BN_add_word(n1, 2);
     }
-    return 0;
+    return status;
 }
 
 /* FIPS 186-4-B.3.6 */
 int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2, BIGNUM *Xp, BIGNUM *Xp1, BIGNUM *Xp2, BIGNUM *e, int nlen, bool testParamsFilled, BN_CTX *ctx)
+<<<<<<< HEAD
 {
+=======
+{   
+    int status = RET_NOSTATUS;
+>>>>>>> 1327b74 (Added some return codes)
     BIGNUM *p1i = NULL, *p2i = NULL, *xp1i = NULL, *xp2i = NULL;
 
     BN_CTX_start(ctx);
 
+<<<<<<< HEAD
     if (p1 == NULL)
+=======
+    if(p1 == NULL)
+>>>>>>> 1327b74 (Added some return codes)
         p1i = BN_CTX_get(ctx);
     else
         p1i = p1;
@@ -424,15 +474,27 @@ int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2, B
     if ((BN_num_bits(p1i) + BN_num_bits(p2i)) >= FIPS186_5_MAX_PROB_LEN(nlen))
     {
         _Logger->error(__func__, "Auxiliary primes sum was not within the maximum length.");
-        return -1;
+        status = RET_FAILURE;
+        goto ending;
     }
 
     /* Finally generate the prime using the auxilary primes */
+<<<<<<< HEAD
     if (FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(p, Xpout, Xp, p1i, p2i, nlen, e, ctx))
         ;
 
     BN_CTX_end(ctx);
     return 0;
+=======
+    if(RET_SUCCESS == FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(p, Xpout, Xp, p1i, p2i, nlen, e, ctx))
+        status = RET_SUCCESS;
+    else
+        status = RET_FAILURE;
+
+    ending:
+        BN_CTX_end(ctx);
+        return status;
+>>>>>>> 1327b74 (Added some return codes)
 }
 
 /* FIPS 186-4-B.3.6 */
