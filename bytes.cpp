@@ -45,7 +45,6 @@ uint8_t *scanHex(char *str, int bytes)
             }
         }
     }
-
     return ret;
 }
 

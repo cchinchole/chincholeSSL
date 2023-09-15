@@ -377,35 +377,35 @@ int FIPS_197_5_1_4_AddRoundKey(int round, uint8_t state[4][4], const uint8_t *w)
 int FIPS_197_5_1_Cipher(AES_CTX *ctx)
 {
     int retcode = 0;
-    //    _Logger->aes_printf("start state: %s\n", stateToString(ctx->state));
+    _Logger->aes_printf("start state: %s\n", stateToString(ctx->state));
 
     FIPS_197_5_1_4_AddRoundKey(0, ctx->state, ctx->w);
 
     for (int round = 1; round <= getNR(ctx->mode) - 1; round++)
     {
-        //      _Logger->aes_printf("Cipher Round [ %d ]: ", round);
-        //     _Logger->aes_printf("start rnd: %s ", stateToString(ctx->state));
+        _Logger->aes_printf("Cipher Round [ %d ]: ", round);
+        _Logger->aes_printf("start rnd: %s ", stateToString(ctx->state));
         SubWord(ctx->state);
 
-        //        _Logger->aes_printf("after sub: %s ", stateToString(ctx->state));
+        _Logger->aes_printf("after sub: %s ", stateToString(ctx->state));
 
         ShiftRows(ctx->state);
-        //      _Logger->aes_printf("after shift: %s ", stateToString(ctx->state));
+        _Logger->aes_printf("after shift: %s ", stateToString(ctx->state));
 
         MixColumns(ctx->state);
-        //    _Logger->aes_printf("after mix: %s", stateToString(ctx->state));
+        _Logger->aes_printf("after mix: %s", stateToString(ctx->state));
 
         FIPS_197_5_1_4_AddRoundKey(round, ctx->state, ctx->w);
-        //  _Logger->aes_printf("\n");
+        _Logger->aes_printf("\n");
     }
-    //_Logger->aes_printf("Cipher Round [ %d ]: ", getNR(ctx->mode));
-    //_Logger->aes_printf("start rnd: %s ", stateToString(ctx->state));
+    _Logger->aes_printf("Cipher Round [ %d ]: ", getNR(ctx->mode));
+    _Logger->aes_printf("start rnd: %s ", stateToString(ctx->state));
     SubWord(ctx->state);
-    //_Logger->aes_printf("after sub: %s ", stateToString(ctx->state));
+    _Logger->aes_printf("after sub: %s ", stateToString(ctx->state));
     ShiftRows(ctx->state);
-    //_Logger->aes_printf("after shift: %s\n", stateToString(ctx->state));
+    _Logger->aes_printf("after shift: %s\n", stateToString(ctx->state));
     FIPS_197_5_1_4_AddRoundKey(getNR(ctx->mode), ctx->state, ctx->w);
-    //_Logger->aes_printf("output state: %s\n", stateToString(ctx->state));
+    _Logger->aes_printf("output state: %s\n", stateToString(ctx->state));
 
     return retcode;
 }

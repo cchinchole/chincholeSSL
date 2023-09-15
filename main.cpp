@@ -43,7 +43,6 @@ int main(int argc, char *argv[])
     uint8_t *outB = (uint8_t *)malloc(64);
 
     CBC_Encrypt(ctx, outA, scanHex("6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710", 64), 64);
-
     printf("CBC Encrypt: %s\n", printWord(outA, 64, 16));
     CBC_Decrypt(ctx, outB, outA, 64);
     printf("CBC Decrypt: %s\n", printWord(outB, 64, 16));
