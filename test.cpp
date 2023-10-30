@@ -64,12 +64,7 @@ void testFunction()
 /* Returns the discrepancies between the functions */
 int testPrimesBetweenFuncs()
 {
-<<<<<<< HEAD
-
-  BIGNUM *testPrime = BN_secure_new();
-=======
   BIGNUM* testPrime = BN_secure_new();
->>>>>>> 1327b74 (Added some return codes)
   int s = 0, j = 0;
   for (int i = 4; i < 17863; i++)
   {
@@ -84,18 +79,11 @@ int testPrimesBetweenFuncs()
   }
   printf("Primes found: %d Discrepancies between other func: %d\n", s, j);
   BN_free(testPrime);
-<<<<<<< HEAD
-
-  return 0;
-}
-
-=======
   
   return j;
 }
 
 /* Returns 0 on success */
->>>>>>> 1327b74 (Added some return codes)
 int testSHA_Shake(char *msg, size_t msg_len, char *KAT, int mode, size_t digestSize, bool quiet)
 {
   SHA_3_Context *ctx = (SHA_3_Context *)SHA_Context_new(SHA_MODE(mode));
@@ -128,10 +116,7 @@ int testSHA(char *msg, size_t msg_len, char *KAT, int mode, bool quiet)
   return res;
 }
 
-<<<<<<< HEAD
-=======
 /* Returns 0 on success */
->>>>>>> 1327b74 (Added some return codes)
 int testHMAC(char *msg, size_t msg_len, char *key, size_t key_len, char *KAT, int mode)
 {
   unsigned char rawDigest[getSHAReturnLengthByMode(SHA_MODE(mode))];
