@@ -1,0 +1,18 @@
+## Settings up OpenSSL Environment
+
+git clone https://github.com/openssl/openssl.git
+cd openssl/
+./Configure --openssldir=/home/christian/src/openssl/build/ --prefix=/home/christian/src/openssl/build/ -Wl,-rpath=/home/christian/src/openssl/build/lib64/
+make test
+make install
+
+## Debugging
+
+# GCC
+1. Use the -g flag in the CC args to produce a debuggable executable.
+
+# GDB / Valgrind
+1. Can use valgrind to check for the memory allocated and freed to ensure no memory leaks can occur.
+2. execute valgrind with valgrind ./executable_name
+3. then run gdb executable_name
+4. target the valgrind as a remote using target remote | (insert valgrind cmd here)
