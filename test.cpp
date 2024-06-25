@@ -6,8 +6,6 @@
 #include <openssl/bn.h>
 #include <openssl/evp.h>
 #include <openssl/core_names.h>
-#include <chrono>
-#include <vector>
 #include <iostream>
 #include <fstream>
 #include <math.h>
