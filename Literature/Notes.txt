@@ -2,7 +2,7 @@
 
 git clone https://github.com/openssl/openssl.git
 cd openssl/
-./Configure --openssldir=/home/christian/src/openssl/build/ --prefix=/home/christian/src/openssl/build/ -Wl,-rpath=/home/christian/src/openssl/build/lib64/
+./Configure --openssldir=/home/kafka/src/openssl/build/ --prefix=/home/kafka/src/openssl/build/ -Wl,-rpath=/home/kafka/src/openssl/build/lib64/
 make test
 make install
 
