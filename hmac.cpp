@@ -1,4 +1,3 @@
-
 #include "inc/hash/sha.hpp"
 #include "inc/hash/hmac.hpp"
 #include "inc/utils/logger.hpp"

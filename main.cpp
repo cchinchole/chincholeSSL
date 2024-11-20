@@ -6,10 +6,6 @@
 #include <openssl/bn.h>
 #include <openssl/evp.h>
 #include <openssl/core_names.h>
-#include <chrono>
-#include <vector>
-#include <iostream>
-#include <fstream>
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
@@ -30,8 +26,6 @@
 #include "inc/crypto/aes.hpp"
 #include "inc/utils/bytes.hpp"
 #include <cstdio>
-#include <stdexcept>
-#include <memory>
 
 int main(int argc, char *argv[])
 {

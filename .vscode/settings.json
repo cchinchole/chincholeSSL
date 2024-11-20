@@ -70,8 +70,8 @@
     "cmake.configureOnOpen": true,
     "makefile.launchConfigurations": [
         {
-            "cwd": "/home/christian/src/chincholeSSL",
-            "binaryPath": "/home/christian/src/chincholeSSL/main",
+            "cwd": "/home/kafka/src/chincholeSSL",
+            "binaryPath": "/home/kafka/src/chincholeSSL/main",
             "binaryArgs": []
         }
     ],
