@@ -1,3 +1,4 @@
 # chincholeSSL
 This is my thesis project. 
-Using OpenSSL for BigNum and implementing methods in accordance to FIPS standard by NIST.
+Uses OpenSSL for their BigNum type.
+Implementing methods in accordance to FIPS standard by NIST.
