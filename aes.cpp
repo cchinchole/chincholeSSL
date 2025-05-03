@@ -3,6 +3,7 @@
 #include "inc/utils/bytes.hpp"
 #include "cstring"
 #include "inc/utils/logger.hpp"
+#include <cstdint>
 
 /* FIPS 197 5.1.1 table 4 */
 const uint8_t sbox[256] = {
