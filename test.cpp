@@ -9,13 +9,12 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>
-#include "inc/utils/json.hpp"
 #include "inc/hash/sha.hpp"
 #include "inc/hash/hmac.hpp"
 #include "inc/math/primes.hpp"
 #include "inc/tests/test.hpp"
 #include "inc/utils/bytes.hpp"
-
+/*
 void readParameters()
 {
   std::ifstream f("test.json");
@@ -30,7 +29,7 @@ void readParameters()
     printf("\n%s\n", BN_bn2dec(p));
   }
 }
-
+*/
 SHATestCase::SHATestCase(size_t msg_len, int digest, uint8_t *msg, uint8_t *KAT, uint8_t *Test)
 {
   this->data_len = msg_len;
@@ -49,6 +48,7 @@ void SHATestCase::setCaseState(bool state)
   this->failed = state;
 }
 
+/*
 void testFunction()
 {
   nlohmann::json j;
@@ -58,6 +58,7 @@ void testFunction()
   std::ofstream o("test.json");
   o << j << std::endl;
 }
+*/
 
 /* Returns the discrepancies between the functions */
 int testPrimesBetweenFuncs()

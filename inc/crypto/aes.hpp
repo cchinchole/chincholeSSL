@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <memory>
+#include <cstdint>
 
 /* using a byte array[4] to act as a word to make shifting data easier */
 

@@ -445,7 +445,8 @@ int ec_sign_message_and_test(cECSignature *sig, cECKey *key, char *msg)
     printf("Verifying against correct signature: %s\n", FIPS_186_5_6_4_2_VerifySignature(sig, msg, key->group, key->pub) == 0 ? "Passed!" : "Failed!");
     printf("Verifying against wrong signature: %s\n", FIPS_186_5_6_4_2_VerifySignature(mySig2, msg, key->group, key->pub) == -1 ? "Passed!" : "Failed!");
     printf("Verifying against wrong key: %s\n", FIPS_186_5_6_4_2_VerifySignature(sig, msg, myKey2->group, myKey2->pub) == -1 ? "Passed!" : "Failed!");
-    printf("Verifying against wrong message: %s\n", FIPS_186_5_6_4_2_VerifySignature(sig, "sdfsdfsdfsdfsd0xx00x0z98z8882828kzzkzkzku2228828", key->group, key->pub) == -1 ? "Passed!" : "Failed!");
+    char foobar[] = "sdfsdfsdfsdfsd0xx00x0z98z8882828kzzkzkzku2228828";
+    printf("Verifying against wrong message: %s\n", FIPS_186_5_6_4_2_VerifySignature(sig, foobar, key->group, key->pub) == -1 ? "Passed!" : "Failed!");
 
     return 0;
 }
