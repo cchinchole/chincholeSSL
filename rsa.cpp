@@ -134,6 +134,15 @@ int gen_rsa_sp800_56b(RSA_Params *rsa, int nBits, BN_CTX *ctx, bool constTime)
   return 0;
 }
 
+/*
+ * TODO:
+ * Allow input for the Private (n, d) and Public (n, e) keys
+ * This should probably be renamed, its rather odd to have the key also handle
+ * the encryption and decryption methods.
+ * 
+ * Likely to move to keeping key the way it is, but move the functions as just RSA functions
+ */
+
 cRSAKey::cRSAKey(int bits, BIGNUM *eGiven, bool auxMode, BN_CTX *ctx)
 {
   params = new RSA_Params();

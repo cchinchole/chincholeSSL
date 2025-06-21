@@ -6,8 +6,6 @@
 #include <openssl/bn.h>
 #include <openssl/evp.h>
 #include <openssl/core_names.h>
-#include <iostream>
-#include <fstream>
 #include <math.h>
 #include "inc/hash/sha.hpp"
 #include "inc/hash/hmac.hpp"
@@ -29,6 +27,16 @@ void readParameters()
     printf("\n%s\n", BN_bn2dec(p));
   }
 }
+
+void testFunction()
+{
+  nlohmann::json j;
+  j["pi"] = 3.14159;
+  j["happy"] = true;
+  j["list"] = {1, 2, 3};
+  std::ofstream o("test.json");
+  o << j << std::endl;
+}
 */
 SHATestCase::SHATestCase(size_t msg_len, int digest, uint8_t *msg, uint8_t *KAT, uint8_t *Test)
 {
@@ -47,18 +55,6 @@ void SHATestCase::setCaseState(bool state)
 {
   this->failed = state;
 }
-
-/*
-void testFunction()
-{
-  nlohmann::json j;
-  j["pi"] = 3.14159;
-  j["happy"] = true;
-  j["list"] = {1, 2, 3};
-  std::ofstream o("test.json");
-  o << j << std::endl;
-}
-*/
 
 /* Returns the discrepancies between the functions */
 int testPrimesBetweenFuncs()
