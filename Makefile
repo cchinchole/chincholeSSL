@@ -1,5 +1,42 @@
-build:
-	g++ -o main -g -O0 -fdiagnostics-color=always -lssl -lcrypto global.cpp bytes.cpp sha1.cpp sha256.cpp sha384512.cpp sha3.cpp sha.cpp hmac.cpp aes.cpp rand.cpp time.cpp rsa.cpp ec.cpp primes.cpp test.cpp main.cpp
-build-lib:
-	g++ -fPIC -lssl -lcrypto -c global.cpp bytes.cpp sha1.cpp sha256.cpp sha384512.cpp sha3.cpp sha.cpp hmac.cpp aes.cpp rand.cpp time.cpp rsa.cpp ec.cpp primes.cpp test.cpp
-	g++ -shared -o libcsll.so *.o
+# Compiler and flags
+CXX = g++
+CXXFLAGS = -g -O0 -fdiagnostics-color=always
+LDFLAGS = -lssl -lcrypto
+
+# Directories
+SRC_DIR = .
+BUILD_DIR = build
+LIB_DIR = .
+EXAMPLES_DIR = examples
+
+# Source files and object files (excluding main.cpp)
+SRCS = $(filter-out $(SRC_DIR)/main.cpp,$(wildcard $(SRC_DIR)/*.cpp))
+OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
+LIB = $(LIB_DIR)/libcsll.so
+
+# Default target
+all: $(LIB) examples
+
+# Create build directory
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+# Build shared library
+$(LIB): $(OBJS)
+	$(CXX) -shared -o $(LIB) $(OBJS) $(LDFLAGS)
+
+# Compile source files to object files
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -fPIC -c $< -o $@
+
+# Build examples by invoking the Makefile in examples/
+examples:
+	$(MAKE) -C $(EXAMPLES_DIR)
+
+# Clean up
+clean:
+	rm -rf $(BUILD_DIR) $(LIB)
+	$(MAKE) -C $(EXAMPLES_DIR) clean
+
+# Phony targets
+.PHONY: all examples clean

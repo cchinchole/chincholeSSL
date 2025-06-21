@@ -1,4 +1,7 @@
-main
 *.tex
 *.txt
-Literature/*.txt
+*.json
+build/*.*
+Docs/*.txt
+.vscode/
+.cache/
