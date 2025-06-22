@@ -3,5 +3,6 @@
 *.json
 build/*.*
 Docs/*.txt
+tests/
 .vscode/
 .cache/
