@@ -1,3 +1,5 @@
+#ifndef SHA_HPP
+#define SHA_HPP
 #include <openssl/bn.h>
 #include <stdio.h>
 #include <memory.h>
@@ -174,3 +176,4 @@ int SHA_3_shake_digest(uint8_t *digestOut, size_t digestLen, SHA_3_Context *ctx)
 
 int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int sha_digest(uint8_t *digest_out, SHA_Context *ctx);
+#endif

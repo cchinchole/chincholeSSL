@@ -12,6 +12,8 @@
 #include "inc/math/primes.hpp"
 #include "inc/tests/test.hpp"
 #include "inc/utils/bytes.hpp"
+#include <string.h>
+#include <iomanip>
 /*
 void readParameters()
 {
@@ -100,6 +102,7 @@ int testSHA(char *msg, size_t msg_len, char *KAT, int mode, bool quiet)
 {
   SHA_Context *ctx = SHA_Context_new(SHA_MODE(mode));
   unsigned char rawDigest[getSHAReturnLengthByMode(ctx->mode)];
+
   sha_update((uint8_t *)msg, msg_len, ctx);
   sha_digest(rawDigest, ctx);
   unsigned char *hexString = byteArrToHexArr(rawDigest, getSHAReturnLengthByMode(ctx->mode));
