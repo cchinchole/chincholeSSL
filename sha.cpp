@@ -264,6 +264,9 @@ char *SHA_MODE_NAME(SHA_MODE mode)
     case SHA_1:
         return (char *)"SHA_1";
         break;
+    case SHA_224:
+        return (char *)"SHA_224";
+        break;
     case SHA_256:
         return (char *)"SHA_256";
         break;
@@ -304,11 +307,11 @@ int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
     case SHA_256:
         SHA_224256_update(msg, byMsg_len, (SHA_256_Context *)ctx);
         break;
-    case SHA_512:
-        SHA_384512_update(msg, byMsg_len, (SHA_512_Context *)ctx);
-        break;
     case SHA_384:
         SHA_384512_update(msg, byMsg_len, (SHA_384_Context *)ctx);
+        break;
+    case SHA_512:
+        SHA_384512_update(msg, byMsg_len, (SHA_512_Context *)ctx);
         break;
     case SHA_3_224:
     case SHA_3_256:
