@@ -1,7 +1,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -g -O0 -fdiagnostics-color=always -I../inc
-LDFLAGS = -I/usr/include/openssl -I/usr/include/openssl3 -lssl -lcrypto -L../ -lcsll
+LDFLAGS = -I/usr/include/openssl -I/usr/include/openssl3 -lssl -lcrypto -L/lib64/ -L../ -lcsll
 
 # Directories
 SRC_DIR = .
