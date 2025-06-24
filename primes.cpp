@@ -237,6 +237,7 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
   BIGNUM *R, *r1mul2, *r1_mul2_r2, *temp, *tempPrivFactor, *range, *base;
   int bits = nLen >> 1;
   int status = RET_NOSTATUS;
+  Logger *_Logger = new Logger();
 
   BN_CTX_start(ctx);
   R = BN_CTX_get(ctx);
@@ -346,6 +347,7 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
     }
   }
 ending:
+  delete _Logger;
   BN_CTX_end(ctx);
   return status;
 }
@@ -376,6 +378,7 @@ int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2,
                              int nlen, bool testParamsFilled, BN_CTX *ctx) {
   int status = RET_NOSTATUS;
   BIGNUM *p1i = NULL, *p2i = NULL, *xp1i = NULL, *xp2i = NULL;
+  Logger *_Logger = new Logger();
 
   BN_CTX_start(ctx);
 
@@ -431,6 +434,7 @@ int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2,
     status = RET_FAILURE;
 
 ending:
+    delete _Logger;
   BN_CTX_end(ctx);
   return status;
 }

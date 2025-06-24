@@ -52,6 +52,7 @@ int gen_rsa_sp800_56b(RSA_Params *rsa, int nBits, BN_CTX *ctx, bool constTime)
 
   Timer t;
   BIGNUM *p1, *q1, *lcm, *p1q1, *gcd;
+  Logger *_Logger = new Logger();
 
   BN_CTX_start(ctx);
   p1 = BN_CTX_get(ctx);
@@ -129,6 +130,7 @@ int gen_rsa_sp800_56b(RSA_Params *rsa, int nBits, BN_CTX *ctx, bool constTime)
   else
     printf("Pairwise failed!\n");
 
+  delete _Logger;
   BN_CTX_end(ctx);
   BN_CTX_free(ctx);
   return 0;

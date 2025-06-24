@@ -123,6 +123,8 @@ int SHA3_keccakf(uint64_t sponge[SHA3_SPONGE_ARR][SHA3_SPONGE_ARR])
 
 int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx)
 {
+    if(!msg || byMsg_len == 0)
+        return -1;
     for (int i = 0; i < byMsg_len; i++)
     {
         ctx->sponge.bytes[ctx->blockCur++] ^= ((const uint8_t *)msg)[i];

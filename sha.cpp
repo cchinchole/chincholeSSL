@@ -52,14 +52,10 @@ SHA_3_Context::SHA_3_Context(SHA_MODE mode)
     this->mode = mode;
     switch (mode)
     {
-    case SHA_3_SHAKE_128:
-        this->digestBytes = 128 / 8;
-        break;
     case SHA_3_224:
         this->digestBytes = 224 / 8;
         break;
     case SHA_3_256:
-    case SHA_3_SHAKE_256:
         this->digestBytes = 256 / 8;
         break;
     case SHA_3_384:
@@ -69,12 +65,20 @@ SHA_3_Context::SHA_3_Context(SHA_MODE mode)
         this->digestBytes = 512 / 8;
         break;
     default:
-        this->digestBytes = -1;
+        this->digestBytes = 0;
         break;
     }
-    memset(sponge.words, 0, SHA3_WORDS);
+    memset(&sponge, 0, sizeof(sponge));
     this->blockCur = 0;
     r = (SHA3_WORDS * 8) - (2 * (digestBytes));
+    this ->HP = nullptr;
+    this->bMsg_lenP = nullptr;
+    this->blockP = nullptr;
+}
+
+void SHA_3_Context::clear() {
+    memset(&sponge, 0, sizeof(sponge));
+    blockCur = 0;
 }
 
 SHA_1_Context::SHA_1_Context()
@@ -204,18 +208,16 @@ int getSHABlockLengthByMode(SHA_MODE mode)
     case SHA_1:
         return SHA1_BLOCK_SIZE_BYTES;
         break;
-    case SHA_256:
     case SHA_224:
+    case SHA_256:
         return SHA256_BLOCK_SIZE_BYTES;
         break;
     case SHA_384:
-        return SHA2_384512_BLOCK_SIZE_BYTES;
-        break;
     case SHA_512:
         return SHA2_384512_BLOCK_SIZE_BYTES;
         break;
     default:
-        return -1;
+        return 0;
         break;
     }
     return -1;

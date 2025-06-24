@@ -4,7 +4,7 @@
 #include <cstring>
 
 int main() {
-  SHA_MODE mode = SHA_MODE::SHA_512;
+  SHA_MODE mode = SHA_MODE::SHA_3_512;
   SHA_Context *ctx = SHA_Context_new(mode);
   unsigned char rawDigest[getSHAReturnLengthByMode(mode)];
   uint8_t *msg = (uint8_t *)"Hello World!";
@@ -13,10 +13,12 @@ int main() {
    * hash for any suitable sha mode */
   sha_update(msg, msg_len, ctx);
   sha_digest(rawDigest, ctx);
-  printf("SHA512: %s\n", byteArrToHexArr(rawDigest, getSHAReturnLengthByMode(mode)));
+  printf("SHA512: %s\n", bytesToHex( bytePtrToVector(rawDigest, getSHAReturnLengthByMode(ctx->mode))).c_str());
 
+  ctx->clear();
   /* For usage with hmac */
   hmac_sha(ctx, rawDigest, msg, msg_len, (uint8_t *)"hellokey", 8);
-  printf("HMAC SHA512 (KEY) 'hellokey': %s\n", byteArrToHexArr(rawDigest, getSHAReturnLengthByMode(mode)));
+  printf("HMAC SHA512 (KEY) 'hellokey': %s\n", bytesToHex( bytePtrToVector(rawDigest, getSHAReturnLengthByMode(ctx->mode))).c_str());
+  delete ctx;
   return 0;
 }

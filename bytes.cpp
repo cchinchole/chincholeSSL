@@ -1,51 +1,39 @@
 #include "inc/utils/bytes.hpp"
-unsigned char *byteArrToHexArr(unsigned char *bytes, size_t byte_len)
-{
+#include <stdexcept>
+#include <iomanip>
 
-    unsigned char *dest = (unsigned char *)malloc(2 * byte_len + 1);
-    if (!dest)
-        return NULL;
+std::string bytesToHex(const std::vector<uint8_t>& bytes, bool uppercase) {
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0') << (uppercase ? std::uppercase : std::nouppercase);
 
-    unsigned char *p = dest;
-    for (size_t i = 0; i < byte_len; ++i)
-    {
-        p += sprintf((char *)p, "%02hhX", bytes[i]);
-    }
-    return dest;
+    for (uint8_t byte : bytes)
+        oss << std::setw(2) << static_cast<int>(byte);
+
+    return oss.str();
 }
 
-uint8_t *scanHex(char *str, int bytes)
-{
-    uint8_t *ret = (uint8_t *)malloc(bytes);
-    memset(ret, 0, bytes);
+std::vector<uint8_t> hexToBytes(const std::string& hex) {
+    if (hex.size() % 2 != 0) throw std::invalid_argument("Invalid hex string");
 
-    for (int i = 0, i2 = 0; i < bytes; i++, i2 += 2)
-    {
-        // get value
-        for (int j = 0; j < 2; j++)
-        {
-            ret[i] <<= 4;
-            uint8_t c = str[i2 + j];
-            if (c >= '0' && c <= '9')
-            {
-                ret[i] += c - '0';
-            }
-            else if (c >= 'a' && c <= 'f')
-            {
-                ret[i] += c - 'a' + 10;
-            }
-            else if (c >= 'A' && c <= 'F')
-            {
-                ret[i] += c - 'A' + 10;
-            }
-            else
-            {
-                free(ret);
-                return NULL;
-            }
-        }
+    std::vector<uint8_t> bytes;
+    bytes.reserve(hex.size() / 2);
+
+    for (size_t i = 0; i < hex.size(); i += 2) {
+        std::string byteStr = hex.substr(i, 2);
+        uint8_t byte = static_cast<uint8_t>(std::stoul(byteStr, nullptr, 16));
+        bytes.push_back(byte);
     }
-    return ret;
+
+    return bytes;
+}
+
+std::vector<uint8_t> bytePtrToVector(uint8_t *from, size_t len)
+{
+    return std::vector<uint8_t>(from, from+len);
+}
+
+std::string asciiToHex(const std::string& ascii, bool uppercase) {
+    return bytesToHex(std::vector<uint8_t>(ascii.begin(), ascii.end()), uppercase);
 }
 
 char *printWord(uint8_t *input, size_t length, size_t blockSize)
@@ -55,7 +43,7 @@ char *printWord(uint8_t *input, size_t length, size_t blockSize)
     char *ptr = output;
     for (int i = 0; i < blocks; i++)
     {
-        ptr += sprintf(ptr, "%s", (char *)byteArrToHexArr(input + (i * blockSize), blockSize));
+        ptr += sprintf(ptr, "%s", bytesToHex(bytePtrToVector(input, blockSize)).c_str());
         ptr += sprintf(ptr, " ");
     }
     return output;

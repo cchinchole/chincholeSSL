@@ -7,6 +7,7 @@ class cECPoint
 {
 public:
     BIGNUM *x = BN_secure_new(), *y = BN_secure_new();
+     ~cECPoint();
 };
 
 class cECPrimeField
@@ -15,6 +16,7 @@ public:
     BIGNUM *p = BN_secure_new(), *a = BN_secure_new(), *b = BN_secure_new(), *n = BN_secure_new();
     int h;
     cECPoint *G = new cECPoint();
+    virtual ~cECPrimeField();
 };
 
 class Prime224 : public cECPrimeField
@@ -45,8 +47,9 @@ class cECKey
 {
 public:
     cECPrimeField *group;
-    BIGNUM *priv = BN_new(); /* d */
+    BIGNUM *priv = BN_secure_new(); /* d */
     cECPoint *pub = new cECPoint(); /* Q */
+    ~cECKey();
 };
 
 class cECSignature
@@ -55,6 +58,7 @@ public:
     BIGNUM *R;
     BIGNUM *S;
     cECSignature();
+     ~cECSignature();
 };
 
 int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret);

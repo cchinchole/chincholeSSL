@@ -66,4 +66,4 @@ public:
     }
 };
 #endif
-extern Logger *_Logger;
+//extern Logger *_Logger;

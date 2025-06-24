@@ -12,12 +12,6 @@
 
 /* Prime256v1 */
 
-BIGNUM *zero = BN_new();
-BIGNUM *BN_value_zero() {
-  BN_set_word(zero, 0);
-  return zero;
-}
-
 Prime224::Prime224() {
   char *p = (char *)"ffffffffffffffffffffffffffffffff000000000000000000000001";
   char *a = (char *)"fffffffffffffffffffffffffffffffefffffffffffffffffffffffe";
@@ -33,6 +27,36 @@ Prime224::Prime224() {
   BN_hex2bn(&(this->G->x), Gx);
   BN_hex2bn(&(this->G->y), Gy);
 }
+
+
+cECPoint::~cECPoint()
+{
+    BN_clear_free(this->x);
+    BN_clear_free(this->y);
+}
+
+cECSignature::~cECSignature()
+{
+    BN_clear_free(this->R);
+    BN_clear_free(this->S);
+}
+
+cECKey::~cECKey()
+{
+    delete this->group;
+    delete this->pub;
+    BN_clear_free(this->priv);
+}
+
+cECPrimeField::~cECPrimeField()
+{
+    BN_clear_free(this->p);
+    BN_clear_free(this->a);
+    BN_clear_free(this->b);
+    BN_clear_free(this->n);
+    delete this->G;
+}
+
 
 Prime256v1::Prime256v1() {
   char *p =
@@ -131,6 +155,23 @@ void ECCopyPoint(cECPoint *to, cECPoint *from) {
   BN_copy(to->y, from->y);
 }
 
+void ECCopyGroup(cECPrimeField *to, cECPrimeField *from)
+{
+    BN_copy(to->p, from->p);
+    BN_copy(to->a, from->a);
+    BN_copy(to->b, from->b);
+    BN_copy(to->n, from->n);
+    ECCopyPoint(to->G, from->G);
+}
+
+void ECCopyKey(cECKey *to, cECKey *from)
+{
+    
+    ECCopyGroup(to->group, from->group);
+    ECCopyPoint(to->pub, from->pub);
+    BN_copy(to->priv, from->priv);
+}
+
 void ECdouble(cECPrimeField *g, cECPoint *final_ret, cECPoint *a,
               BN_CTX *ctx = BN_CTX_new()) {
   BN_CTX_start(ctx);
@@ -143,6 +184,8 @@ void ECdouble(cECPrimeField *g, cECPoint *final_ret, cECPoint *a,
   BIGNUM *x3 = BN_CTX_get(ctx);
   BIGNUM *x2 = BN_CTX_get(ctx);
   BIGNUM *y2 = BN_CTX_get(ctx);
+  BIGNUM *zero = BN_CTX_get(ctx);
+  BN_set_word(zero, 0);
 
   BN_copy(x3, ret->x);
   BN_copy(x2, ret->x);
@@ -168,14 +211,15 @@ void ECdouble(cECPrimeField *g, cECPoint *final_ret, cECPoint *a,
   BN_mod(ret->y, tmp, g->p,
          ctx); /* ret->y now holds ( lambda * (X - ret.x) - Y ) mod P */
 
-  if (BN_cmp(ret->x, BN_value_zero()) == -1)
+  if (BN_cmp(ret->x, zero) == -1)
     BN_add(ret->x, ret->x, g->p);
 
-  if (BN_cmp(ret->y, BN_value_zero()) == -1)
+  if (BN_cmp(ret->y, zero) == -1)
     BN_add(ret->y, ret->y, g->p);
+  ECCopyPoint(final_ret, ret);
   BN_CTX_end(ctx);
   BN_CTX_free(ctx);
-  ECCopyPoint(final_ret, ret);
+  delete ret;
 }
 
 void ECadd(cECPrimeField *g, cECPoint *final_out, cECPoint *a, cECPoint *b,
@@ -212,6 +256,8 @@ void ECadd(cECPrimeField *g, cECPoint *final_out, cECPoint *a, cECPoint *b,
     BIGNUM *tmpAddSub = BN_CTX_get(ctx);
     BIGNUM *tmpInv = BN_CTX_get(ctx);
     BIGNUM *tmpMul = BN_CTX_get(ctx);
+    BIGNUM *zero = BN_CTX_get(ctx);
+    BN_set_word(zero, 0);
 
     BN_sub(tmpAddSub, b->x, a->x);
     BN_mod_inverse(tmpInv, tmpAddSub, g->p, ctx);
@@ -228,10 +274,10 @@ void ECadd(cECPrimeField *g, cECPoint *final_out, cECPoint *a, cECPoint *b,
     BN_sub(tmpAddSub, tmpMul, a->y);
     BN_mod(res->y, tmpAddSub, g->p, ctx);
 
-    if (BN_cmp(res->x, BN_value_zero()) == -1)
+    if (BN_cmp(res->x, zero) == -1)
       BN_add(res->x, res->x, g->p);
 
-    if (BN_cmp(res->y, BN_value_zero()) == -1)
+    if (BN_cmp(res->y, zero) == -1)
       BN_add(res->y, res->y, g->p);
 
     goto ending;
@@ -239,6 +285,8 @@ void ECadd(cECPrimeField *g, cECPoint *final_out, cECPoint *a, cECPoint *b,
 ending:
   ECCopyPoint(final_out, res);
   BN_CTX_end(ctx);
+  BN_CTX_free(ctx);
+  delete res;
 }
 
 void ECScalarMult(cECPrimeField *g, cECPoint *Q_output, BIGNUM *scalar,
@@ -263,8 +311,12 @@ void ECScalarMult(cECPrimeField *g, cECPoint *Q_output, BIGNUM *scalar,
     ECdouble(g, temp, PointCopy);
     ECCopyPoint(PointCopy, temp);
   }
-  BN_CTX_end(ctx);
   ECCopyPoint(Q_output, QRes);
+  BN_CTX_end(ctx);
+  BN_CTX_free(ctx);
+  delete temp;
+  delete PointCopy;
+  delete QRes;
 }
 
 int test_math() {
@@ -355,12 +407,13 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, char *msg,
 
   /* Step 11 */
   if (BN_is_zero(sig->S) || BN_is_zero(sig->R)) {
-    printf("%s\n%s\n", BN_bn2hex(sig->S), BN_bn2hex(sig->R));
     retCode = -1;
     goto ending;
   }
   retCode = 0;
 ending:
+  delete RPoint;
+  delete shaCtx;
   BN_CTX_end(ctx);
   BN_CTX_free(ctx);
   return retCode;
@@ -513,6 +566,10 @@ int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, char *msg,
   }
 
 ending:
+  delete addend1;
+  delete addend2;
+  delete RPoint;
+  delete shaCtx;
   BN_CTX_end(ctx);
   BN_CTX_free(ctx);
   return retCode;
@@ -523,24 +580,26 @@ int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret) {
 
   BN_CTX *ctx = BN_CTX_new();
   BN_CTX_start(ctx);
-  cECKey key;
-  key.group = new Prime256v1();
-  BIGNUM *tmp = BN_dup(key.group->n);
+  cECKey *key = new cECKey();
+  ret->group = new Prime256v1();
+  key->group = new Prime256v1();
+  BIGNUM *tmp = BN_dup(key->group->n);
   BN_sub(tmp, tmp, BN_value_one());
 
 Generate:
-  BN_priv_rand_range_ex(key.priv, tmp, 0, ctx);
+  BN_priv_rand_range_ex(key->priv, tmp, 0, ctx);
 
-  if (BN_cmp(key.priv, tmp) == 1) {
+  if (BN_cmp(key->priv, tmp) == 1) {
     goto Generate;
   }
-  ECScalarMult(key.group, key.pub, key.priv, key.group->G);
 
+  ECScalarMult(key->group, key->pub, key->priv, key->group->G);
+  ECCopyKey(ret, key);
+  delete key;
+  if(tmp)
+    BN_clear_free(tmp);
   BN_CTX_end(ctx);
   BN_CTX_free(ctx);
-  ret->group = key.group;
-  ret->priv = key.priv;
-  ret->pub = key.pub;
   return 0;
 }
 

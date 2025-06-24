@@ -7,6 +7,9 @@
 int hmac_sha(SHA_Context *ctx, uint8_t *hmac_out, uint8_t *msg, size_t msg_len, uint8_t *key, size_t key_len)
 {
 
+    if(ctx->mode != SHA_MODE::SHA_1 && ctx->mode != SHA_MODE::SHA_224 && ctx->mode != SHA_MODE::SHA_256 && ctx->mode != SHA_MODE::SHA_384 && ctx->mode != SHA_MODE::SHA_512)
+        return -1;
+
     int blockLen = getSHABlockLengthByMode(ctx->mode);
     int retLen = getSHAReturnLengthByMode(ctx->mode);
 
@@ -14,6 +17,9 @@ int hmac_sha(SHA_Context *ctx, uint8_t *hmac_out, uint8_t *msg, size_t msg_len, 
     uint8_t *outerKey = (uint8_t *)malloc(blockLen + retLen);
     uint8_t *innerKey = (uint8_t *)malloc(blockLen + msg_len);
     uint8_t *tmp = (uint8_t *)malloc(getSHAReturnLengthByMode(ctx->mode));
+
+    printf("SHA BLOCK LENGTH: %d\n", getSHABlockLengthByMode(SHA_3_512));
+    printf("SHA RETURN LENGTH: %d\n", getSHAReturnLengthByMode(SHA_3_512));
 
     memset(outerKey, 0, blockLen + retLen);
     memset(innerKey, 0, blockLen + msg_len);
@@ -58,5 +64,9 @@ int hmac_sha(SHA_Context *ctx, uint8_t *hmac_out, uint8_t *msg, size_t msg_len, 
     memcpy(outerKey + blockLen, tmp, retLen);
     sha_update(outerKey, blockLen + retLen, ctx);
     sha_digest(hmac_out, ctx);
+
+    free(outerKey);
+    free(innerKey);
+    free(tmp);
     return 0;
 }

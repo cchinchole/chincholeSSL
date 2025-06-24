@@ -54,5 +54,9 @@ int main() {
              ? "Passed!"
              : "Failed!");
 
+  delete key;
+  delete sig;
+  delete myKey2;
+  delete mySig2;
   return 0;
 }
