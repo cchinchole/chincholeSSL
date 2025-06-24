@@ -3,13 +3,15 @@ This is a project I did to learn about the mathematics behind cryptography durin
 To see more details on which FIPS documents were used, refer to docs/Crypto.pdf where I break down the documents into a more readable format while citing which document they are within.
 
 ## Dependencies ##
-OpenSSL - Used for bignum operations and some function verification (the verification is not necessary and will *later* have a flag to remove).
+make
+openssl-devel (Atleast version 3) - Used for bignum operations and some function verification (the verification is not necessary and will *later* have a flag to remove).
+G++
 
 ## Flags ##
 LOG_PARAMS : Thiss will log parameters used in key operations.
 
 ## Building ##
-1. Ensure OpenSSL is installed and the libraries are accessible
+1. Ensure the dependencies is installed and the libraries are accessible
 2. make all - This will build both the lib and examples
 
 ## Examples ##
