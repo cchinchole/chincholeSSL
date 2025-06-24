@@ -1,7 +1,26 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -g -O0 -fdiagnostics-color=always
-LDFLAGS = -I/usr/include/openssl -I/usr/include/openssl3 -I/usr/include/openssl/openssl -I/usr/include/openssl3/openssl -L/lib64/ -lssl -lcrypto
+LDFLAGS =
+
+# Use pkg-config to get OpenSSL flags
+OPENSSL_PKG = libssl3
+OPENSSL_CFLAGS := $(shell pkg-config --cflags $(OPENSSL_PKG) 2>/dev/null || pkg-config --cflags openssl 2>/dev/null)
+OPENSSL_LIBS := $(shell pkg-config --libs $(OPENSSL_PKG) 2>/dev/null || pkg-config --libs openssl 2>/dev/null)
+
+# Fallback if pkg-config fails
+ifeq ($(OPENSSL_CFLAGS),)
+    OPENSSL_CFLAGS := -I/usr/include/openssl3 -I/usr/include/openssl
+    OPENSSL_LIBS := -L/usr/lib64 -L/lib64 -lssl -lcrypto
+endif
+
+# Allow user overrides via environment variables
+OPENSSL_CFLAGS ?= $(OPENSSL_CFLAGS)
+OPENSSL_LIBS ?= $(OPENSSL_LIBS)
+
+# Add OpenSSL flags to compiler and linker flags
+CXXFLAGS += $(OPENSSL_CFLAGS)
+LDFLAGS += $(OPENSSL_LIBS)
 
 # Directories
 SRC_DIR = .
