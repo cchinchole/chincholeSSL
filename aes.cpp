@@ -297,6 +297,7 @@ char *roundkeyToString(const uint8_t *w)
 
 int FIPS_197_5_2_KeyExpansion(AES_CTX *ctx, uint8_t *key)
 {
+    Logger *_Logger = new Logger();
 
     int retCode = 0;
     uint8_t temp[4];
@@ -359,6 +360,8 @@ int FIPS_197_5_2_KeyExpansion(AES_CTX *ctx, uint8_t *key)
         _Logger->aes_printf("\n");
     }
 
+    delete _Logger;
+
     return retCode;
 }
 
@@ -374,6 +377,7 @@ int FIPS_197_5_1_4_AddRoundKey(int round, uint8_t state[4][4], const uint8_t *w)
 
 int FIPS_197_5_1_Cipher(AES_CTX *ctx)
 {
+    Logger *_Logger = new Logger();
     int retcode = 0;
     _Logger->aes_printf("start state: %s\n", stateToString(ctx->state));
 
@@ -405,11 +409,13 @@ int FIPS_197_5_1_Cipher(AES_CTX *ctx)
     FIPS_197_5_1_4_AddRoundKey(getNR(ctx->mode), ctx->state, ctx->w);
     _Logger->aes_printf("output state: %s\n", stateToString(ctx->state));
 
+    delete _Logger;
     return retcode;
 }
 
 int FIPS_197_5_3_InvCipher(AES_CTX *ctx)
 {
+    Logger *_Logger = new Logger();
     int retcode = 0;
     _Logger->aes_printf("start state: %s\n", stateToString(ctx->state));
 
@@ -444,6 +450,8 @@ int FIPS_197_5_3_InvCipher(AES_CTX *ctx)
 
     FIPS_197_5_1_4_AddRoundKey(0, ctx->state, ctx->w);
     _Logger->aes_printf("output state: %s\n", stateToString(ctx->state));
+
+    delete _Logger;
 
     return retcode;
 }

@@ -52,6 +52,7 @@ public:
     } sponge;
 
     SHA_3_Context(SHA_MODE mode);
+    void clear();
 };
 
 class SHA_1_Context : public SHA_Context
