@@ -5,7 +5,6 @@
 
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
-
 #define PARAM_BN 0
 #define PARAM_INT 0
 
@@ -13,11 +12,14 @@ class Logger
 {
 private:
     BIO *bio_stdout;
-
 public:
     Logger()
     {
         bio_stdout = BIO_new_fp(stdout, BIO_NOCLOSE);
+    }
+    ~Logger()
+    {
+        BIO_free(bio_stdout);
     }
     int error(const char *from, const char *message)
     {
@@ -66,4 +68,3 @@ public:
     }
 };
 #endif
-//extern Logger *_Logger;

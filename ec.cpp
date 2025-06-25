@@ -355,7 +355,7 @@ int test_math() {
 }
 
 /* FIPS 186-5 6.4.1 */
-int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, char *msg,
+int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, uint8_t *msg,
                                        size_t msg_len, cECKey *key, SHA_MODE shaMode,
                                        char *KSecret) {
   int retCode = -1;
@@ -463,13 +463,13 @@ int compute_inverse_mod_order(cECPrimeField *group, BIGNUM *result,
   ret = 0;
 
 err:
-  BN_MONT_CTX_free(mont_ctx);
   BN_CTX_end(ctx);
+  BN_MONT_CTX_free(mont_ctx);
   return ret;
 }
 
 /* FIPS 186-5 6.4.2 */
-int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, char *msg,
+int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, uint8_t *msg,
                                      size_t msg_len, cECPrimeField *D,
                                      cECPoint *Q, SHA_MODE shaMode) {
   int retCode = -1;
@@ -603,8 +603,7 @@ Generate:
   return 0;
 }
 
-/* This will utilize an ascii message and test itself */
-int ec_sign_message_and_test(cECSignature *sig, cECKey *key, char *msg) {
+int ec_sign_message_and_test(cECSignature *sig, cECKey *key, uint8_t *msg, size_t msg_len) {
   cECKey *myKey2 = new cECKey();
   cECSignature *mySig2 = new cECSignature();
   if (key == NULL) {
@@ -614,32 +613,32 @@ int ec_sign_message_and_test(cECSignature *sig, cECKey *key, char *msg) {
 
   if (sig == NULL) {
     sig = new cECSignature();
-    if (FIPS_186_5_6_4_1_GenerateSignature(sig, msg, strlen(msg), key) != 0)
+    if (FIPS_186_5_6_4_1_GenerateSignature(sig, msg, msg_len, key) != 0)
       printf("Failed to generate signature\n");
   }
   FIPS_186_4_B_4_2_KeyPairGeneration(myKey2);
 
-  if (FIPS_186_5_6_4_1_GenerateSignature(mySig2, msg, strlen(msg), myKey2) != 0)
+  if (FIPS_186_5_6_4_1_GenerateSignature(mySig2, msg, msg_len, myKey2) != 0)
     printf("Failed to generate signature\n");
 
   printf("Verifying against correct signature: %s\n",
-         FIPS_186_5_6_4_2_VerifySignature(sig, msg, strlen(msg), key->group,
+         FIPS_186_5_6_4_2_VerifySignature(sig, msg, msg_len, key->group,
                                           key->pub) == 0
              ? "Passed!"
              : "Failed!");
   printf("Verifying against wrong signature: %s\n",
-         FIPS_186_5_6_4_2_VerifySignature(mySig2, msg, strlen(msg), key->group,
+         FIPS_186_5_6_4_2_VerifySignature(mySig2, msg, msg_len, key->group,
                                           key->pub) == -1
              ? "Passed!"
              : "Failed!");
   printf("Verifying against wrong key: %s\n",
-         FIPS_186_5_6_4_2_VerifySignature(sig, msg, strlen(msg), myKey2->group,
+         FIPS_186_5_6_4_2_VerifySignature(sig, msg, msg_len, myKey2->group,
                                           myKey2->pub) == -1
              ? "Passed!"
              : "Failed!");
-  char foobar[] = "sdfsdfsdfsdfsd0xx00x0z98z8882828kzzkzkzku2228828";
+    uint8_t foobar[] = "sdfsdfsdfsdfsd0xx00x0z98z8882828kzzkzkzku2228828";
   printf("Verifying against wrong message: %s\n",
-         FIPS_186_5_6_4_2_VerifySignature(sig, foobar, strlen(foobar),
+         FIPS_186_5_6_4_2_VerifySignature(sig, foobar, strlen((char*)foobar),
                                           key->group, key->pub) == -1
              ? "Passed!"
              : "Failed!");
