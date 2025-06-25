@@ -3,15 +3,16 @@ This is a project I did to learn about the mathematics behind cryptography durin
 To see more details on which FIPS documents were used, refer to docs/Crypto.pdf where I break down the documents into a more readable format while citing which document they are within.
 
 ## Dependencies ##
-make
-openssl-devel (Atleast version 3) - Used for bignum operations
-pkg-config
-G++
+1. make
+2. openssl-devel (Atleast version 3) - Used for bignum operations
+3. pkg-config
+4. G++
 
 ## Flags ##
-LOG_PARAMS : Thiss will log parameters used in key operations.
+1. LOG_PARAMS : Thiss will log parameters used in key operations.
+2. AES_LOG : Will log the state in the AES ctx for debugging.
 
-## Building ##
+## Building and installing ##
 1. Ensure the dependencies is installed and the libraries are accessible
 2. git clone https://github.com/cchinchole/chincholeSSL && cd chincholeSSL
 3. make all - This will build both the lib and examples
