@@ -169,6 +169,7 @@ void runTest(std::string path, std::string fileName, AES_MODE mode, int *passed,
 
 int main() {
 
+  int ret = 0;
   int tests_performed = 0;
   int passed = 0;
   int failed = 0;
@@ -206,6 +207,9 @@ int main() {
   std::cout << "Results: " << passed << " passed " << failed << " failed."
             << std::endl;
 
+  if(failed > 0)
+        ret = -1;
+
   OPENSSL_cleanup();
-  return 0;
+  return ret;
 }

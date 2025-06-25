@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Check OpenSSL version
+    - name: Check OpenSSL version
+      run: openssl version
+
+    # Install additional dependencies (if needed)
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y pkg-config
+
+    # Build project
+    - name: Build project
+      run: |
+        make
+
+    # Run tests
+    - name: Run NIST tests
+      run: make test
+
+    # Run examples
+    - name: Run examples
+      run: |
+          cd examples
+          make
+          cd bin
+          for exe in *; do
+            if [[ -x "$exe" ]]; then
+              echo "Running $exe"
+              ./"$exe"
+            fi
+          done

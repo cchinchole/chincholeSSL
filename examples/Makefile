@@ -1,7 +1,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -g -O0 -fdiagnostics-color=always -I../inc
-LDFLAGS = -L../ -lcsll
+LDFLAGS = -L../ -l:libcssl.a
 
 # Use pkg-config to get OpenSSL flags
 OPENSSL_PKG = libssl3

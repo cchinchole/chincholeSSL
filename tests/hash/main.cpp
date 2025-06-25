@@ -108,6 +108,7 @@ SHA_MODE haveSHA(std::string name) {
 }
 
 int main() {
+  int ret = 0;
   int tests_performed = 0;
   int passed = 0;
   int failed = 0;
@@ -142,4 +143,7 @@ int main() {
 
   std::cout << "Results: " << passed << " passed " << failed << " failed."
             << std::endl;
+  if(failed > 0)
+        ret = -1;
+    return ret;
 }
