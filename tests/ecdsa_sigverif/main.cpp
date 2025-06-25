@@ -1,10 +1,9 @@
-#include "../../../inc/crypto/ec.hpp"
+#include "../../inc/crypto/ec.hpp"
+#include "../../inc/utils/bytes.hpp"
 #include <fstream>
 #include <iostream>
 #include <openssl/bn.h>
-#include <sstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 struct SiggenTest {
@@ -108,16 +107,6 @@ SiggenRsp parseSigGen(const std::string &filename) {
   return rsp;
 }
 
-std::string hexToAscii(const std::string &hex) {
-  std::string ascii;
-  for (size_t i = 0; i < hex.length(); i += 2) {
-    std::string byteString = hex.substr(i, 2);
-    char byte = static_cast<char>(strtol(byteString.c_str(), nullptr, 16));
-    ascii += byte;
-  }
-  return ascii;
-}
-
 int didTestSucceed(std::string s) {
   if (s == "P")
     return 0;
@@ -163,32 +152,9 @@ cECPrimeField *haveCurve(std::string curve)
    return nullptr; 
 }
 
-char* hex_to_bytes(const std::string& hex, size_t* out_size) {
-    if (hex.length() % 2 != 0) {
-        return nullptr; // Invalid hex string (odd length)
-    }
-
-    size_t byte_count = hex.length() / 2;
-    char* bytes = new char[byte_count];
-
-    for (size_t i = 0; i < hex.length(); i += 2) {
-        std::string byte_str = hex.substr(i, 2);
-        try {
-            int byte = std::stoi(byte_str, nullptr, 16);
-            bytes[i / 2] = static_cast<char>(byte);
-        } catch (...) {
-            delete[] bytes;
-            return nullptr; // Invalid hex characters
-        }
-    }
-
-    if (out_size) {
-        *out_size = byte_count;
-    }
-    return bytes;
-}
 
 int main() {
+  int ret = 0;
   auto rsp = parseSigGen("SigVer.rsp");
    int passed =0, failed =0; 
   for (const auto &ch : rsp.curve_hash_tests) {
@@ -199,13 +165,16 @@ int main() {
     {
     std::cout << "\033[34mCurve: " << ch.curve << "\n";
     std::cout << "Hash: " << ch.hash << "\033[0m\n";
+    int p = 0, f = 0;
     for (const auto &t : ch.tests) {
+     /*
       std::cout << "Msg: " << t.msg_hex << "\n";
       std::cout << "Qx = (" << t.Qx << ")\n";
       std::cout << "Qy = (" << t.Qy << ")\n";
       std::cout << "Signature (R) = (" << t.R << ")\n";
       std::cout << "Signature (S) = (" << t.S << ")\n";
       std::cout << "Expected Result =(" << t.Result << ")\n";
+    */
       
       cECPoint *pub = new cECPoint();
       BN_hex2bn(&pub->x, t.Qx.c_str());
@@ -215,31 +184,33 @@ int main() {
       BN_hex2bn(&sig->R, t.R.c_str());
       BN_hex2bn(&sig->S, t.S.c_str());
 
-      size_t size;
-
-      char *strinz = hex_to_bytes(t.msg_hex, &size);
-            
-      if (FIPS_186_5_6_4_2_VerifySignature(sig, strinz,  size,
+      std::vector<uint8_t> msgBytes = hexToBytes(t.msg_hex);
+      if (FIPS_186_5_6_4_2_VerifySignature(sig, msgBytes.data(),  msgBytes.size(),
                                            group, pub, shaMode) == didTestSucceed(t.Result)) {
-        printf("\033[1;32m Test Succeeded!\n");
-        passed++;
-        std::cout << "\033[0m";
+       // printf("\033[1;32m Test Succeeded!\n");
+        p++;
+       // std::cout << "\033[0m";
       } else {
-        failed++;
-        printf("\033[31m Test Failed!\n");
-        std::cout << "\033[0m";
+        f++;
+       // printf("\033[31m Test Failed!\n");
+       // std::cout << "\033[0m";
       }
       
-      printf("\n\n");
+      //printf("\n\n");
 
       // Clean up allocated memory
-      delete []strinz;
       delete pub;
       delete sig;
     }
+      std::cout << "Results: " << p << " passed " << f << " failed." << std::endl << std::endl; 
+      passed += p;
+      failed += f;
       delete group;
     }
   }
   std::cout << "Passed: " << passed << std::endl << "Failed: " << failed << std::endl;
+  if(failed >0)
+        ret = -1;
+    return ret;
   return 0;
 }

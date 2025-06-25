@@ -1,5 +1,5 @@
-#include "../../../inc/crypto/ec.hpp"
-#include "../../../inc/utils/bytes.hpp"
+#include "../../inc/crypto/ec.hpp"
+#include "../../inc/utils/bytes.hpp"
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -7,7 +7,6 @@
 #include <openssl/crypto.h>
 #include <string>
 #include <vector>
-
 
 struct SiggenTest {
   std::string msg_hex; // "Msg" or "MD"
@@ -155,16 +154,18 @@ cECPrimeField *haveCurve(std::string curve) {
 }
 
 int main() {
+  int ret = 0;
   auto rsp = parseSigGen("SigGen.txt");
   int passed = 0, failed = 0;
   for (const auto &ch : rsp.curve_hash_tests) {
     SHA_MODE shaMode = haveSHA(ch.hash);
     cECPrimeField *group = haveCurve(ch.curve);
-
+    int p = 0, f = 0;
     if (shaMode != SHA_MODE::SHA_3_SHAKE_256 && group != nullptr) {
       std::cout << "\033[34mCurve: " << ch.curve << "\n";
       std::cout << "Hash: " << ch.hash << "\033[0m\n";
       for (const auto &t : ch.tests) {
+        /*
         std::cout << "Msg= " << t.msg_hex << "\n";
         std::cout << "d  = " << t.d << "\n";
         std::cout << "Qx = (" << t.Qx << ")\n";
@@ -172,6 +173,7 @@ int main() {
         std::cout << "k  = " << t.k << "\n";
         std::cout << "Signature (R) = (" << t.R << ")\n";
         std::cout << "Signature (S) = (" << t.S << ")\n";
+        */
 
         cECSignature *sig = new cECSignature();
         cECKey *key = new cECKey();
@@ -182,42 +184,52 @@ int main() {
         ECCopyGroup(key->group, group);
         std::vector<uint8_t> msg = hexToBytes(t.msg_hex);
 
-        FIPS_186_5_6_4_1_GenerateSignature(sig, msg.data(), msg.size(), key, shaMode);
+        FIPS_186_5_6_4_1_GenerateSignature(sig, msg.data(), msg.size(), key,
+                                           shaMode);
         char *bn1 = BN_bn2hex(sig->R);
         char *bn2 = BN_bn2hex(sig->S);
 
-        if (strcmp(bn1, t.R.c_str()) &&
-            strcmp(bn2, t.S.c_str())) {
-          printf("\033[1;33m Signature generated correctly, now verifying "
-                 "signature!\n");
-          std::cout << "\033[0m";
-          if (FIPS_186_5_6_4_2_VerifySignature(sig, msg.data(), msg.size(), key->group,
-                                               key->pub, shaMode) == 0) {
-            printf("\033[1;32m Test Succeeded!\n");
-            passed++;
-            std::cout << "\033[0m";
+        if (strcmp(bn1, t.R.c_str()) && strcmp(bn2, t.S.c_str())) {
+          // printf("\033[1;33m Signature generated correctly, now verifying "
+          //        "signature!\n");
+          // std::cout << "\033[0m";
+          if (FIPS_186_5_6_4_2_VerifySignature(sig, msg.data(), msg.size(),
+                                               key->group, key->pub,
+                                               shaMode) == 0) {
+            // printf("\033[1;32m Test Succeeded!\n");
+            p++;
+            // std::cout << "\033[0m";
           } else {
-            failed++;
-            printf("\033[31m Signature verification Failed!\n");
-            std::cout << "\033[0m";
+            f++;
+            // printf("\033[31m Signature verification Failed!\n");
+            // std::cout << "\033[0m";
           }
         } else {
-          printf("\033[31m Signature generation Failed!\n");
-          std::cout << "\033[0m";
-          failed++;
+          // printf("\033[31m Signature generation Failed!\n");
+          // std::cout << "\033[0m";
+          f++;
         }
 
-        printf("\n\n");
-        // Clean up allocated memory
+        // printf("\n\n");
+        //  Clean up allocated memory
         OPENSSL_free(bn1);
         OPENSSL_free(bn2);
         delete sig;
         delete key;
       }
     }
+
+    if (group != nullptr) {
+      std::cout << "Results: " << p << " passed " << f << " failed" << std::endl
+                << std::endl;
+      passed += p;
+      failed += f;
+    }
     delete group;
   }
   std::cout << "Passed: " << passed << std::endl
             << "Failed: " << failed << std::endl;
-  return 0;
+  if (failed > 0)
+    ret = -1;
+  return ret;
 }

@@ -230,6 +230,23 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR) {
   return 0;
 }
 
+int bn_coprime_test(BIGNUM *a, const BIGNUM *b, BN_CTX *ctx)
+{
+    int ret = 0;
+    BIGNUM *tmp;
+
+    BN_CTX_start(ctx);
+    tmp = BN_CTX_get(ctx);
+    if (tmp == NULL)
+        goto end;
+
+    BN_set_flags(a, BN_FLG_CONSTTIME);
+    ret = (BN_mod_inverse(tmp, a, b, ctx) != NULL);
+end:
+    BN_CTX_end(ctx);
+    return ret;
+}
+
 /* FIPS 186-4-C.9 */
 int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
                                           BIGNUM *Xin, BIGNUM *r1, BIGNUM *r2,
@@ -327,7 +344,7 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
       BN_copy(tempPrivFactor, PRIV_PRIME_FACTOR);
       BN_sub_word(tempPrivFactor, 1);
 
-      if (BN_are_coprime(tempPrivFactor, e, ctx)) /* Step 7 */
+      if (bn_coprime_test(tempPrivFactor, e, ctx)) /* Step 7 */
       {
         if (miller_rabin_is_prime(PRIV_PRIME_FACTOR,
                                   FIPS186_5_MR_ROUNDS_PRIME(nLen))) {

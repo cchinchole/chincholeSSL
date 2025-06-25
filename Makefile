@@ -3,6 +3,7 @@ CXX = g++
 CXXFLAGS = -g -O0 -fdiagnostics-color=always
 LDFLAGS =
 
+
 # Use pkg-config to get OpenSSL flags
 OPENSSL_PKG = libssl3
 OPENSSL_CFLAGS := $(shell pkg-config --cflags $(OPENSSL_PKG) 2>/dev/null || pkg-config --cflags openssl 2>/dev/null)
@@ -21,35 +22,56 @@ SRC_DIR = .
 BUILD_DIR = build
 LIB_DIR = .
 EXAMPLES_DIR = examples
+PREFIX ?= /usr/local
+INSTALLINCLUDEDIR = $(PREFIX)/include/cssl
+INSTALLLIBDIR = $(PREFIX)/lib
+TEST_DIRS = tests/aes tests/ecdsa_siggen tests/ecdsa_sigverif tests/hash
 
 # Source files and object files (excluding main.cpp)
 SRCS = $(filter-out $(SRC_DIR)/main.cpp,$(wildcard $(SRC_DIR)/*.cpp))
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
-LIB = $(LIB_DIR)/libcsll.so
 
-# Default target
-all: $(LIB) examples
+# Output objects
+SHARED_LIB = $(LIB_DIR)/libcssl.so
+STATIC_LIB = $(LIB_DIR)/libcssl.a
 
-# Create build directory
+all: $(SHARED_LIB) $(STATIC_LIB) examples
+
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
-# Build shared library
-$(LIB): $(OBJS)
-	$(CXX) -shared -o $(LIB) $(OBJS) $(LDFLAGS)
+$(SHARED_LIB): $(OBJS)
+	$(CXX) -shared -o $@ $(OBJS) $(LDFLAGS)
 
-# Compile source files to object files
+$(STATIC_LIB): $(OBJS)
+	ar rcs $@ $^
+
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -fPIC -c $< -o $@
 
-# Build examples by invoking the Makefile in examples/
 examples:
 	$(MAKE) -C $(EXAMPLES_DIR)
 
-# Clean up
 clean:
-	rm -rf $(BUILD_DIR) $(LIB)
+	rm -rf $(BUILD_DIR) $(SHARED_LIB) $(STATIC_LIB)
 	$(MAKE) -C $(EXAMPLES_DIR) clean
+	$(MAKE) -C tests/aes clean
+	$(MAKE) -C tests/ecdsa_siggen clean
+	$(MAKE) -C tests/ecdsa_sigverif clean
+	$(MAKE) -C tests/hash clean
+install: all
+	install -d $(INSTALLINCLUDEDIR)
+	cp -r ./inc/* $(INSTALLINCLUDEDIR)/
+	install -d $(INSTALLLIBDIR)
+	install -m 755 $(SHARED_LIB) $(INSTALLLIBDIR)
+	install -m 644 $(STATIC_LIB) $(INSTALLLIBDIR)
+uninstall:
+	rm -f $(INSTALLLIBDIR)/libcssl.so
+	rm -f $(INSTALLLIBDIR)/libcssl.a
+	rm -rf $(INSTALLINCLUDEDIR)
+test: all
+	@for dir in $(TEST_DIRS); do \
+		$(MAKE) -C $$dir run; \
+	done
 
-# Phony targets
-.PHONY: all examples clean
+PHONY: all examples clean install uninstall test
