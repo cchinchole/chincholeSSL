@@ -62,8 +62,8 @@ int testSHA(char *msg, size_t msg_len, char *KAT, int mode, bool quiet) {
   sha_update((uint8_t *)msg, msg_len, ctx);
   sha_digest(rawDigest, ctx);
 
-  std::vector<uint8_t> vec = bytePtrToVector(rawDigest, getSHAReturnLengthByMode(ctx->mode));
-  std::cout << "Vector Size: " << vec.size() << std::endl;
+  std::vector<uint8_t> vec =
+      bytePtrToVector(rawDigest, getSHAReturnLengthByMode(ctx->mode));
   std::string hexString = bytesToHex(vec);
   int res = strcasecmp((char *)hexString.c_str(), KAT);
   if (!quiet)
@@ -78,16 +78,19 @@ int testSHA(char *msg, size_t msg_len, char *KAT, int mode, bool quiet) {
 
 /* Returns 0 on success */
 int testHMAC(char *msg, size_t msg_len, char *key, size_t key_len, char *KAT,
-             int mode) {
+             int mode, bool quiet) {
   unsigned char rawDigest[getSHAReturnLengthByMode(SHA_MODE(mode))];
   SHA_Context *ctx = SHA_Context_new(SHA_MODE(mode));
   hmac_sha(ctx, rawDigest, (unsigned char *)msg, msg_len, (unsigned char *)key,
            key_len);
 
-  std::string hexString = bytesToHex(bytePtrToVector(rawDigest, getSHAReturnLengthByMode(ctx->mode)));
+  std::string hexString = bytesToHex(
+      bytePtrToVector(rawDigest, getSHAReturnLengthByMode(ctx->mode)));
   int res = strcasecmp(hexString.c_str(), KAT);
-  res == 0 ? printf("(HMAC [ %s ] Test) HASH Returned: %s PASSED!\n",
-                    SHA_MODE_NAME(SHA_MODE(mode)), hexString.c_str())
-           : printf("HASH Returned: %s FAILED!\n", hexString.c_str());
+  if (!quiet) {
+    res == 0 ? printf("(HMAC [ %s ] Test) HASH Returned: %s PASSED!\n",
+                      SHA_MODE_NAME(SHA_MODE(mode)), hexString.c_str())
+             : printf("HASH Returned: %s FAILED!\n", hexString.c_str());
+  }
   return res;
 }

@@ -1,8 +1,9 @@
 *.tex
-*.txt
 *.json
+*.so
+*.o
+*.out
 build/*.*
 Docs/*.txt
-tests/
 .vscode/
 .cache/
