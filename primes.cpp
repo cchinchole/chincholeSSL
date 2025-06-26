@@ -1,6 +1,5 @@
 #include "inc/math/primes.hpp"
 #include "inc/defs.hpp"
-#include "inc/hash/sha.hpp"
 #include "inc/utils/logger.hpp"
 #include <math.h>
 #include <openssl/bio.h>
@@ -85,7 +84,7 @@ bool miller_rabin_is_prime(BIGNUM *w, int iterations, BN_CTX *ctx) {
       BN_mod_sqr(z, x, w, ctx); /* x^2 mod n */
       if (BN_is_one(z) && !BN_is_one(x) && BN_cmp(x, w1) != 0)
         goto failure;
-      x = BN_dup(z);
+      BN_copy(x, z); // Previously used x = BN_dup(z) TODO: REMOVE
     }
     if (!BN_is_one(z))
       goto failure;
@@ -183,12 +182,13 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR) {
   int primes = 2, quo = 0, rmd = 0, bitsr[2];
   quo = bits / primes;
   rmd = bits % primes;
-  BIGNUM *results[primes], *r1 = BN_secure_new(), *r2 = BN_secure_new();
+  BN_CTX *ctx = BN_CTX_secure_new();
+  BIGNUM *results[primes], *r1 = BN_CTX_get(ctx), *r2 = BN_CTX_get(ctx);
   if (testingMR) {
     int failed = 0, success = 0;
     BIGNUM *rez[200];
     for (int z = 0; z < 200; z++) {
-      rez[z] = BN_secure_new();
+      rez[z] = BN_CTX_get(ctx);
       generate_prime(rez[z], 1024);
     }
 
@@ -207,7 +207,7 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR) {
      * (Only 2 in this case)*/
     for (int i = 0; i < primes; i++) {
       bitsr[i] = (i < rmd) ? quo + 1 : quo;
-      results[i] = BN_secure_new();
+      results[i] = BN_CTX_get(ctx);
       for (;;) {
         generate_prime(results[i], bitsr[i]);
 #ifdef LOG_PRIME_GEN_B_3_3
@@ -224,27 +224,32 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR) {
   printf("P found: %s\nQ found: %s\n", BN_bn2dec(results[0]),
          BN_bn2dec(results[1]));
 #endif
-  p = BN_dup(results[0]);
-  q = BN_dup(results[1]);
-
+  if (!p && !q) {
+    BN_copy(p, results[0]);
+    BN_copy(q, results[1]);
+  } else {
+    p = BN_dup(results[0]);
+    q = BN_dup(results[1]);
+  }
+  BN_CTX_end(ctx);
+  BN_CTX_free(ctx);
   return 0;
 }
 
-int bn_coprime_test(BIGNUM *a, const BIGNUM *b, BN_CTX *ctx)
-{
-    int ret = 0;
-    BIGNUM *tmp;
+int bn_coprime_test(BIGNUM *a, const BIGNUM *b, BN_CTX *ctx) {
+  int ret = 0;
+  BIGNUM *tmp;
 
-    BN_CTX_start(ctx);
-    tmp = BN_CTX_get(ctx);
-    if (tmp == NULL)
-        goto end;
+  BN_CTX_start(ctx);
+  tmp = BN_CTX_get(ctx);
+  if (tmp == NULL)
+    goto end;
 
-    BN_set_flags(a, BN_FLG_CONSTTIME);
-    ret = (BN_mod_inverse(tmp, a, b, ctx) != NULL);
+  BN_set_flags(a, BN_FLG_CONSTTIME);
+  ret = (BN_mod_inverse(tmp, a, b, ctx) != NULL);
 end:
-    BN_CTX_end(ctx);
-    return ret;
+  BN_CTX_end(ctx);
+  return ret;
 }
 
 /* FIPS 186-4-C.9 */
@@ -295,18 +300,21 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
     BN_copy(X, Xin);
   else {
     /* 1 / sqrt(2) * 2^256, rounded up */
-    BIGNUM *sqrt2 = BN_new();
-    BIGNUM *two = BN_new();
-    BIGNUM *twofiftysix = BN_new();
+    //BIGNUM *sqrt2 = BN_new();
+    //BIGNUM *two = BN_new();
+    //BIGNUM *twofiftysix = BN_new();
+    BIGNUM *sqrt2 = BN_CTX_get(ctx);
+    BIGNUM *two   = BN_CTX_get(ctx);
+    BIGNUM *twofiftysix = BN_CTX_get(ctx);
     BN_set_word(sqrt2, sqrt(2));
     BN_set_word(two, 2);
     BN_set_word(twofiftysix, 256);
     BN_exp(temp, two, twofiftysix, ctx);  /* 2^256 */
     BN_div(temp, NULL, temp, sqrt2, ctx); /* 2^256 / sqrt(2) */
 
-    BN_free(sqrt2);
-    BN_free(two);
-    BN_free(twofiftysix);
+    //BN_free(sqrt2);
+    //BN_free(two);
+    //BN_free(twofiftysix);
 
     if (bits < BN_num_bits(temp)) {
       _Logger->error(__func__, "Bits was less than the temp");
@@ -451,7 +459,7 @@ int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2,
     status = RET_FAILURE;
 
 ending:
-    delete _Logger;
+  delete _Logger;
   BN_CTX_end(ctx);
   return status;
 }
@@ -527,7 +535,10 @@ int FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP,
   }
 
 #ifdef LOG_PRIME_GEN_B_3_6
-  printf("Found:\nP: %s\nQ: %s\n", BN_bn2hex(p), BN_bn2hex(q));
+    //TODO FIX THIS
+  //std::string pHex = BN_bn2hex(p);
+  //std::string qHex = BN_bn2hex(q);
+  //printf("Found:\nP: %s\nQ: %s\n", pHex.c_str(), qHex.c_str());
 #endif
 
   BN_CTX_end(ctx);
