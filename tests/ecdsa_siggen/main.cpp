@@ -138,19 +138,19 @@ SHA_MODE haveSHA(std::string name) {
   } else if (name == "SHA-224") {
     return SHA_MODE::SHA_224;
   }
-  return SHA_MODE::SHA_3_SHAKE_256;
+  return SHA_MODE::NONE;
 }
 
-cECPrimeField *haveCurve(std::string curve) {
-  if (curve == "P-224")
-    return new Prime224();
-  else if (curve == "P-256")
-    return new Prime256v1;
-  else if (curve == "P-384")
-    return new Prime384();
-  else if (curve == "P-521")
-    return new Prime521();
-  return nullptr;
+ECGroup haveCurve(std::string curve) {
+    if (curve == "P-224")
+        return ECGroup::P224;
+    else if (curve == "P-256")
+        return ECGroup::P256;
+    else if (curve == "P-384")
+        return ECGroup::P384;
+    else if (curve == "P-521")
+        return ECGroup::P521;
+    return ECGroup::NA;
 }
 
 int main() {
@@ -159,9 +159,9 @@ int main() {
   int passed = 0, failed = 0;
   for (const auto &ch : rsp.curve_hash_tests) {
     SHA_MODE shaMode = haveSHA(ch.hash);
-    cECPrimeField *group = haveCurve(ch.curve);
+    ECGroup group = haveCurve(ch.curve);
     int p = 0, f = 0;
-    if (shaMode != SHA_MODE::SHA_3_SHAKE_256 && group != nullptr) {
+    if (shaMode != SHA_MODE::NONE && group != ECGroup::NA) {
       std::cout << "\033[34mCurve: " << ch.curve << "\n";
       std::cout << "Hash: " << ch.hash << "\033[0m\n";
       for (const auto &t : ch.tests) {
@@ -177,25 +177,22 @@ int main() {
 
         cECSignature *sig = new cECSignature();
         cECKey *key = new cECKey();
-
+        EC_SetGroup(key, group);
         BN_hex2bn(&key->pub->x, t.Qx.c_str());
         BN_hex2bn(&key->pub->y, t.Qy.c_str());
         BN_hex2bn(&key->priv, t.d.c_str());
-        ECCopyGroup(key->group, group);
         std::vector<uint8_t> msg = hexToBytes(t.msg_hex);
 
-        FIPS_186_5_6_4_1_GenerateSignature(sig, msg.data(), msg.size(), key,
-                                           shaMode);
+        EC_GenerateSignature(key, sig, msg, shaMode);
+
         char *bn1 = BN_bn2hex(sig->R);
         char *bn2 = BN_bn2hex(sig->S);
 
         if (strcmp(bn1, t.R.c_str()) && strcmp(bn2, t.S.c_str())) {
-          // printf("\033[1;33m Signature generated correctly, now verifying "
-          //        "signature!\n");
-          // std::cout << "\033[0m";
-          if (FIPS_186_5_6_4_2_VerifySignature(sig, msg.data(), msg.size(),
-                                               key->group, key->pub,
-                                               shaMode) == 0) {
+           //printf("\033[1;33m Signature generated correctly, now verifying "
+           //       "signature!\n");
+           //std::cout << "\033[0m";
+          if(EC_VerifySignature(key, sig, msg, shaMode) == 0) {
             // printf("\033[1;32m Test Succeeded!\n");
             p++;
             // std::cout << "\033[0m";
@@ -219,13 +216,12 @@ int main() {
       }
     }
 
-    if (group != nullptr) {
+    if (group != ECGroup::NA) {
       std::cout << "Results: " << p << " passed " << f << " failed" << std::endl
                 << std::endl;
       passed += p;
       failed += f;
     }
-    delete group;
   }
   std::cout << "Passed: " << passed << std::endl
             << "Failed: " << failed << std::endl;

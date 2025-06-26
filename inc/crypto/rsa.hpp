@@ -1,34 +1,38 @@
-#include <stdio.h>
-#include <openssl/ssl.h>
 #include <openssl/bio.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
 #include <openssl/bn.h>
-#include <openssl/evp.h>
 #include <openssl/core_names.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
+#include <openssl/ssl.h>
 #include <vector>
-#include <iostream>
 
-struct RSA_Params
-{
+/*
+struct RSA_Params {
   BIGNUM *p, *q, *e, *n, *d, *dp, *dq, *qInv;
 };
+*/
 
-int gen_rsa_sp800_56b(RSA_Params *rsa, int nBits, BN_CTX *ctx = BN_CTX_secure_new(), bool constTime = true);
-int rsa_sp800_56b_pairwise_test(RSA_Params *rsa, BN_CTX *ctx = BN_CTX_secure_new());
-int rsa_roundtrip(std::string msg, RSA_Params *rsa);
-int printParameter(std::string param_name, BIGNUM *num);
-
-class cRSAKey
-{
-private:
-  int kBits;
-
+class RSA_CRT_Params {
 public:
-  RSA_Params *params;
-  cRSAKey(int bits, BIGNUM *eGiven, bool auxMode = true, BN_CTX *ctx = BN_CTX_secure_new());
-  unsigned char *encrypt(unsigned int *out_len, char *src, BN_CTX *ctx = BN_CTX_secure_new());
-  std::string decrypt(unsigned char *cipher, unsigned int cipher_length, BN_CTX *ctx = BN_CTX_secure_new(), bool crt = true);
+    BIGNUM *dp, *dq, *qInv, *p, *q;
+    RSA_CRT_Params();
+    ~RSA_CRT_Params();
 };
 
-int roundTrip(cRSAKey *rsa, char *str);
+class cRSAKey {
+public:
+    /* Need the N, E, D */
+    /* (N, E) Form the public */
+    /* (N, D) Form the private */
+    int kBits = 4096; 
+    //BIGNUM *N = BN_secure_new(), *E = BN_secure_new(), *D = BN_secure_new();
+    BIGNUM *n, *e, *d;
+    RSA_CRT_Params *crt;
+    cRSAKey();
+   ~cRSAKey();
+};
+
+void RSA_GenerateKey(cRSAKey *key, BIGNUM *e = nullptr, int kBits = 4096, bool auxMode = true);
+std::vector<uint8_t> RSA_Encrypt(cRSAKey *key, const std::vector<uint8_t> &src);
+std::vector<uint8_t> RSA_Decrypt(cRSAKey *key, const std::vector<uint8_t> &cipher, bool crt = true);

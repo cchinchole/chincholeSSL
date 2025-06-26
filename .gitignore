@@ -2,6 +2,7 @@
 *.json
 *.so
 *.o
+*.a
 *.out
 build/*.*
 Docs/*.txt

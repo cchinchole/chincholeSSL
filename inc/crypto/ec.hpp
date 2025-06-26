@@ -1,12 +1,25 @@
 #ifndef ECDH_HPP
 #define ECDH_HPP
+#include <string>
+#include <memory>
 #include <openssl/bn.h>
+#include <vector>
 #include "../hash/sha.hpp"
+
+enum ECGroup
+{
+    P224,
+    P256,
+    P384,
+    P521,
+    NA
+};
 
 class cECPoint
 {
 public:
-    BIGNUM *x = BN_secure_new(), *y = BN_secure_new();
+    BIGNUM *x, *y;
+    cECPoint();
      ~cECPoint();
 };
 
@@ -46,9 +59,10 @@ public:
 class cECKey
 {
 public:
-    cECPrimeField *group = new cECPrimeField();
-    BIGNUM *priv = BN_secure_new(); /* d */
-    cECPoint *pub = new cECPoint(); /* Q */
+    std::shared_ptr<cECPrimeField> group;
+    BIGNUM *priv; /* d */
+    cECPoint *pub; /* Q */
+    cECKey();
     ~cECKey();
 };
 
@@ -61,10 +75,14 @@ public:
      ~cECSignature();
 };
 
+//void ECCopyGroup(cECPrimeField *to, cECPrimeField *from);
+//int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret, std::string group);
+//int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, uint8_t *msg, size_t msg_len, cECKey *key, SHA_MODE shaMode = SHA_512, char *KSecret = NULL);
+//int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, uint8_t *msg, size_t msg_len, cECPrimeField *D, cECPoint *Q, SHA_MODE shaMode = SHA_512);
+std::string ECGroupString(ECGroup group);
+void EC_SetGroup(cECKey *key, ECGroup group);
+int EC_GenerateSignature(cECKey *key, cECSignature *sig, std::vector<uint8_t>msg, SHA_MODE shaMode);
+int EC_VerifySignature(cECKey *key, cECSignature *sig, std::vector<uint8_t>msg, SHA_MODE shaMode);
+int EC_Generate_KeyPair(cECKey *key, ECGroup group);
 
-void ECCopyGroup(cECPrimeField *to, cECPrimeField *from);
-int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret);
-int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, uint8_t *msg, size_t msg_len, cECKey *key, SHA_MODE shaMode = SHA_512, char *KSecret = NULL);
-int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, uint8_t *msg, size_t msg_len, cECPrimeField *D, cECPoint *Q, SHA_MODE shaMode = SHA_512);
-int ec_sign_message_and_test(cECSignature *sig, cECKey *key, uint8_t *msg);
 #endif

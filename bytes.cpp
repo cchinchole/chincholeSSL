@@ -1,6 +1,7 @@
 #include "inc/utils/bytes.hpp"
 #include <stdexcept>
 #include <iomanip>
+#include <openssl/bn.h>
 
 std::string bytesToHex(const std::vector<uint8_t>& bytes, bool uppercase) {
     std::ostringstream oss;
@@ -32,8 +33,29 @@ std::vector<uint8_t> bytePtrToVector(uint8_t *from, size_t len)
     return std::vector<uint8_t>(from, from+len);
 }
 
+std::vector<uint8_t> charToVector(const char* buffer, size_t length) {
+    return std::vector<uint8_t>(buffer, buffer + length);
+}
+
 std::string asciiToHex(const std::string& ascii, bool uppercase) {
     return bytesToHex(std::vector<uint8_t>(ascii.begin(), ascii.end()), uppercase);
+}
+
+std::vector<uint8_t> convertBignumToVector(BIGNUM* cipherNumber, size_t maxBytes) {
+    
+    std::vector<uint8_t> vec;
+    unsigned char *dataBuffer = (unsigned char*)malloc(maxBytes);
+   
+    if(!dataBuffer)
+        return vec;
+    
+    int bytesWritten = BN_bn2bin(cipherNumber, dataBuffer);
+    if (bytesWritten > 0 && static_cast<size_t>(bytesWritten) <= maxBytes) {
+        vec.assign(dataBuffer, dataBuffer + bytesWritten);
+    }
+    
+    free(dataBuffer);
+    return vec;
 }
 
 char *printWord(uint8_t *input, size_t length, size_t blockSize)

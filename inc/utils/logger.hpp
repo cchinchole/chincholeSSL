@@ -1,10 +1,10 @@
-#include <stdio.h>
+#ifndef LOGGER_HPP
+#define LOGGER_HPP
+
 #include <stdarg.h>
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 
-#ifndef LOGGER_HPP
-#define LOGGER_HPP
 #define PARAM_BN 0
 #define PARAM_INT 0
 

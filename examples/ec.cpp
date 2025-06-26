@@ -1,63 +1,45 @@
 #include "../inc/crypto/ec.hpp"
+#include "hash/sha.hpp"
+#include "utils/bytes.hpp"
 #include <openssl/bn.h>
 
 int main() {
-   
-  /* Assigning to NULL as they will be generated later */
-  cECKey *key = NULL;
-  cECSignature *sig = NULL;
-  cECKey *myKey2 = new cECKey();
-  cECSignature *mySig2 = new cECSignature();
+    cECKey *key = new cECKey();
+    cECSignature *sig = new cECSignature();
+    cECKey *key2 = new cECKey();
+    cECSignature *sig2 = new cECSignature();
 
-  uint8_t *msg = (uint8_t*)"Hello World";
-  size_t msg_len = 11;
+    SHA_MODE hashMode = SHA_MODE::SHA_512;
+    std::vector<uint8_t> msg = hexToBytes("aabbccddeeffaabbcceeddeedd11001100");
 
-  if (key == NULL) {
-    key = new cECKey();
-    FIPS_186_4_B_4_2_KeyPairGeneration(key);
-  }
+    EC_Generate_KeyPair(key, ECGroup::P256);
+    if(EC_GenerateSignature(key, sig, msg, hashMode) != 0)
+        printf("Failed to generate signature\n");
 
-  if (sig == NULL) {
-    sig = new cECSignature();
-    if (FIPS_186_5_6_4_1_GenerateSignature(sig, msg, msg_len, key) != 0)
-      printf("Failed to generate signature\n");
-  }
+    EC_Generate_KeyPair(key2, ECGroup::P256);
 
-  FIPS_186_4_B_4_2_KeyPairGeneration(myKey2);
+    if(EC_GenerateSignature(key2, sig2, msg, hashMode) != 0)
+        printf("Failed to generate signature\n");
 
-  if (FIPS_186_5_6_4_1_GenerateSignature(mySig2, msg, msg_len, myKey2) != 0)
-    printf("Failed to generate signature\n");
+    /* Return code of 0 indicates signature match succeeded */
+    printf("Verifying against correct signature: %s\n",
+           EC_VerifySignature(key, sig, msg, hashMode) == 0 ? "Passed!" : "Failed!");
+    /* Return code of -1 indicates signature match failed */
+    printf("Verifying against wrong signature: %s\n",
+           EC_VerifySignature(key, sig2, msg, hashMode) == -1 ? "Passed!" : "Failed!");
 
-  /* Return code of 0 indicates signature match succeeded */
-  printf("Verifying against correct signature: %s\n",
-         FIPS_186_5_6_4_2_VerifySignature(sig, msg, msg_len, key->group, key->pub) == 0
-             ? "Passed!"
-             : "Failed!");
-  /* Return code of -1 indicates signature match failed */
-  printf("Verifying against wrong signature: %s\n",
-         FIPS_186_5_6_4_2_VerifySignature(mySig2, msg, msg_len, key->group, key->pub) ==
-                 -1
-             ? "Passed!"
-             : "Failed!");
+    /* Return code of -1 indicates signature match failed */
+    printf("Verifying against wrong key: %s\n",
+           EC_VerifySignature(key2, sig, msg, hashMode) == -1 ? "Passed!" : "Failed!");
 
-  /* Return code of -1 indicates signature match failed */
-  printf("Verifying against wrong key: %s\n",
-         FIPS_186_5_6_4_2_VerifySignature(sig, msg, msg_len, myKey2->group,
-                                          myKey2->pub) == -1
-             ? "Passed!"
-             : "Failed!");
-  uint8_t foobar[] = "sdfsdfsdfsdfsd0xx00x0z98z8882828kzzkzkzku2228828";
+    std::vector<uint8_t> foobar = hexToBytes("11aa00bb00ee11cc");
+    /* Return code of -1 indicates signature match failed */
+    printf("Verifying against wrong message: %s\n",
+           EC_VerifySignature(key, sig, foobar, hashMode) == -1 ? "Passed!" : "Failed!");
 
-  /* Return code of -1 indicates signature match failed */
-  printf("Verifying against wrong message: %s\n",
-         FIPS_186_5_6_4_2_VerifySignature(sig, foobar, strlen((char*)foobar), key->group, key->pub) ==
-                 -1
-             ? "Passed!"
-             : "Failed!");
-
-  delete key;
-  delete sig;
-  delete myKey2;
-  delete mySig2;
-  return 0;
+    delete key;
+    delete sig;
+    delete key2;
+    delete sig2;
+    return 0;
 }
