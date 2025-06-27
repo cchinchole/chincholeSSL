@@ -1,6 +1,5 @@
 #include "inc/crypto/aes.hpp"
 #include "cstring"
-#include "inc/utils/bytes.hpp"
 #include "inc/utils/logger.hpp"
 #include <cstdint>
 #include <cstring>
@@ -96,6 +95,19 @@ int getNK(AES_MODE mode) {
     break;
   }
   return -1;
+}
+
+std::string stateToString(uint8_t state[nB][nB]) {
+    std::string result;
+    result.reserve(2 * nB * nB + 1);
+    char buf[3];
+    for (size_t i = 0; i < nB; i++) {
+        for (size_t j = 0; j < nB; j++) {
+            snprintf(buf, 3, "%02hhX", state[j][i]);
+            result += buf;
+        }
+    }
+    return result;
 }
 
 int rotateWord(uint8_t *a) {
@@ -244,18 +256,6 @@ int InvMixColumns(uint8_t state[4][4]) {
   return 0;
 }
 
-std::string stateToString(uint8_t state[nB][nB]) {
-    std::string result;
-    result.reserve(2 * nB * nB + 1);
-    char buf[3];
-    for (size_t i = 0; i < nB; i++) {
-        for (size_t j = 0; j < nB; j++) {
-            snprintf(buf, 3, "%02hhX", state[j][i]);
-            result += buf;
-        }
-    }
-    return result;
-}
 
 char *roundkeyToString(const uint8_t *w) {
 

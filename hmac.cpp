@@ -18,9 +18,6 @@ int hmac_sha(SHA_Context *ctx, uint8_t *hmac_out, uint8_t *msg, size_t msg_len, 
     uint8_t *innerKey = (uint8_t *)malloc(blockLen + msg_len);
     uint8_t *tmp = (uint8_t *)malloc(getSHAReturnLengthByMode(ctx->mode));
 
-    printf("SHA BLOCK LENGTH: %d\n", getSHABlockLengthByMode(SHA_3_512));
-    printf("SHA RETURN LENGTH: %d\n", getSHAReturnLengthByMode(SHA_3_512));
-
     memset(outerKey, 0, blockLen + retLen);
     memset(innerKey, 0, blockLen + msg_len);
 

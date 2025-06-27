@@ -63,7 +63,7 @@ static std::string trim(const std::string &s) {
   return rsp;
 }
 
-void runTest(std::string path, std::string fileName, SHA_MODE sha, int *passed,
+void runTest(std::string path, std::string fileName, SHA_MODE shaMode, int *passed,
              int *failed) {
   auto rsp = parseFile(path + fileName);
   int p = 0, f = 0;
@@ -74,7 +74,7 @@ void runTest(std::string path, std::string fileName, SHA_MODE sha, int *passed,
     std::cout << "MD = (" << t.MD << ")\n";
     #endif
     if (testSHA((char *)hexToBytes(t.Msg).data(), std::stoi(t.Len) / 8,
-                (char *)t.MD.c_str(), sha) == 0)
+                (char *)t.MD.c_str(), shaMode) == 0)
       p++;
     else
       f++;

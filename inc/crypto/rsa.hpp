@@ -1,3 +1,5 @@
+#include "../hash/sha.hpp"
+#include <cstdint>
 #include <openssl/bio.h>
 #include <openssl/bn.h>
 #include <openssl/core_names.h>
@@ -7,11 +9,10 @@
 #include <openssl/ssl.h>
 #include <vector>
 
-/*
-struct RSA_Params {
-  BIGNUM *p, *q, *e, *n, *d, *dp, *dq, *qInv;
+enum class RSA_Padding{
+    OAEP,
+    NONE
 };
-*/
 
 class RSA_CRT_Params {
 public:
@@ -28,11 +29,38 @@ public:
     int kBits = 4096; 
     //BIGNUM *N = BN_secure_new(), *E = BN_secure_new(), *D = BN_secure_new();
     BIGNUM *n, *e, *d;
-    RSA_CRT_Params *crt;
+    RSA_CRT_Params crt;
+    RSA_Padding padding;
+    std::vector<uint8_t> label;
     cRSAKey();
    ~cRSAKey();
 };
 
-void RSA_GenerateKey(cRSAKey *key, BIGNUM *e = nullptr, int kBits = 4096, bool auxMode = true);
-std::vector<uint8_t> RSA_Encrypt(cRSAKey *key, const std::vector<uint8_t> &src);
-std::vector<uint8_t> RSA_Decrypt(cRSAKey *key, const std::vector<uint8_t> &cipher, bool crt = true);
+std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed, size_t maskLen, SHA_MODE shaMode = SHA_MODE::SHA_256);
+void RSA_GenerateKey(cRSAKey &key, BIGNUM *e = nullptr, int kBits = 4096, bool auxMode = true);
+std::vector<uint8_t> RSA_Encrypt(cRSAKey &key, const std::vector<uint8_t> &src);
+std::vector<uint8_t> RSA_Decrypt(cRSAKey &key, const std::vector<uint8_t> &cipher, bool crt = true);
+/*
+ * Key Pair:
+ * <d, n>: Form the private decryption key.
+ * <e, n>: Form the public encryption key.
+ *
+ * Chinese Remainder Theorem Params:
+ * <p, q, dP, dQ, qInv>: Form the quintuple private key used for decryption.
+ * CRT and Euler's Theorem are used here.
+ * https://www.di-mgt.com.au/crt_rsa.html
+ * https://math.berkeley.edu/~charles/55/2-21.pdf
+ * Benefit of using RSA-CRT over RSA is to speed up the decryption time.
+ */
+
+/*
+ * https://math.stackexchange.com/questions/2500022/do-primes-expressed-in-binary-have-more-random-bits-on-average-than-natural
+ * :: Why there are leading ones in rng generation
+ * https://crypto.stanford.edu/pbc/notes/numbertheory/crt.html :: CRT
+ * https://mathstats.uncg.edu/sites/pauli/112/HTML/seceratosthenes.html :: Sieve
+ * of Eratosthenes
+ * http://www.cs.sjsu.edu/~stamp/CS265/SecurityEngineering/chapter5_SE/RSAmath.html
+ * :: RSA https://www.di-mgt.com.au/crt_rsa.html :: CRT encryption
+ * https://security.stackexchange.com/questions/176394/how-does-openssl-generate-a-big-prime-number-so-fast
+ * :: OpenSSL Generating prime numbers
+ */

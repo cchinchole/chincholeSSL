@@ -10,7 +10,7 @@
 #define SHA3_WORDS 25     /* 1600/8 / sizeof(uint64_t) */
 #define SHA3_SPONGE_ARR 5 /* 25 / 5*/
 
-enum SHA_MODE
+enum class SHA_MODE
 {
     SHA_1,
     SHA_224,
@@ -31,7 +31,7 @@ class SHA_Context
 private:
 public:
     uint64_t blockCur = 0;
-    SHA_MODE mode = SHA_1;
+    SHA_MODE mode = SHA_MODE::SHA_1;
     void *HP;
     void *bMsg_lenP;
     void *blockP;
