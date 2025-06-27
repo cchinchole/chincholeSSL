@@ -26,10 +26,24 @@ class cECPoint {
 
 class cECPrimeField {
   public:
-    BIGNUM *p = BN_secure_new(), *a = BN_secure_new(), *b = BN_secure_new(),
-           *n = BN_secure_new();
+    BIGNUM *p, *a, *b, *n;
     int h;
-    cECPoint *G = new cECPoint();
+    cECPoint *G;
+    ECGroup group;
+    cECPrimeField(const char *p, const char *a,const char *b,const char *n,const  char *gx,const  char *gy, ECGroup group) {
+        this->p = BN_secure_new();
+        this->a = BN_secure_new();
+        this->b = BN_secure_new();
+        this->n = BN_secure_new();
+        this->group = group;
+        G = new cECPoint();
+        BN_hex2bn(&this->p, p);
+        BN_hex2bn(&this->a, a);
+        BN_hex2bn(&this->b, b);
+        BN_hex2bn(&this->n, n);
+        BN_hex2bn(&(this->G->x), gx);
+        BN_hex2bn(&(this->G->y), gy);
+    }
     virtual ~cECPrimeField() {
         BN_free(p);
         BN_free(a);
@@ -39,6 +53,7 @@ class cECPrimeField {
     }
 };
 
+/*
 class Prime224 : public cECPrimeField {
   public:
     Prime224();
@@ -58,6 +73,7 @@ class Prime521 : public cECPrimeField {
   public:
     Prime521();
 };
+*/
 
 class cECKey {
   public:
@@ -67,9 +83,9 @@ class cECKey {
     cECKey(ECGroup group);
     cECKey &operator=(const cECKey &from) {
         if (this != &from) {
-        BN_copy(this->priv, from.priv);
-        this->group = from.group;
-        this->pub = from.pub;
+            BN_copy(this->priv, from.priv);
+            this->group = from.group;
+            this->pub = from.pub;
         }
         return *this;
     }
