@@ -139,7 +139,7 @@ ECGroup haveCurve(std::string curve) {
         return ECGroup::P384;
     else if (curve == "P-521")
         return ECGroup::P521;
-    return ECGroup::NA;
+    return ECGroup::NONE;
 }
 
 int main() {
@@ -150,7 +150,7 @@ int main() {
         SHA_MODE shaMode = haveSHA(ch.hash);
         ECGroup group = haveCurve(ch.curve);
 
-        if (shaMode != SHA_MODE::NONE && group != ECGroup::NA) {
+        if (shaMode != SHA_MODE::NONE && group != ECGroup::NONE) {
             std::cout << "\033[34mCurve: " << ch.curve << "\n";
             std::cout << "Hash: " << ch.hash << "\033[0m\n";
             int p = 0, f = 0;
@@ -164,15 +164,13 @@ int main() {
                  std::cout << "Expected Result =(" << t.Result << ")\n";
                */
 
-                cECKey *key = new cECKey();
-                EC_SetGroup(key, group);
-                // cECPoint *pub = new cECPoint();
-                BN_hex2bn(&key->pub->x, t.Qx.c_str());
-                BN_hex2bn(&key->pub->y, t.Qy.c_str());
+                cECKey key(group);
+                BN_hex2bn(&key.pub.x, t.Qx.c_str());
+                BN_hex2bn(&key.pub.y, t.Qy.c_str());
 
-                cECSignature *sig = new cECSignature();
-                BN_hex2bn(&sig->R, t.R.c_str());
-                BN_hex2bn(&sig->S, t.S.c_str());
+                cECSignature sig;
+                BN_hex2bn(&sig.R, t.R.c_str());
+                BN_hex2bn(&sig.S, t.S.c_str());
 
                 std::vector<uint8_t> msgBytes = hexToBytes(t.msg_hex);
                 if (EC_VerifySignature(key, sig, msgBytes, shaMode) ==
@@ -189,8 +187,6 @@ int main() {
                 // printf("\n\n");
 
                 // Clean up allocated memory
-                delete sig;
-                delete key;
             }
             std::cout << "Results: " << p << " passed " << f << " failed."
                       << std::endl

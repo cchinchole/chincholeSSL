@@ -5,11 +5,13 @@
 #include <openssl/crypto.h>
 
 int main() {
-    cRSAKey *key = new cRSAKey();
-
+    cRSAKey key;
+    
     /* Generate a key */
     /* Paramaters: key, public encryption exponent, bits, auxillary prime mode (Leave this true for now) */
     RSA_GenerateKey(key);
+    key.padding = RSA_Padding::NONE; // Redundant for now
+    key.label = std::vector<uint8_t>(); // Redundant for now
 
     std::string str = "Hello World";
     std::vector<uint8_t> cipher;
@@ -25,7 +27,6 @@ int main() {
               << "STRCMP returned " << strresult << std::endl
               << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - "
               << std::endl;
-    delete key;
     OPENSSL_cleanup();
     return 0;
 }

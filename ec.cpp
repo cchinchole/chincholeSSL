@@ -3,46 +3,42 @@
 #include "inc/math/primes.hpp"
 #include "inc/tests/test.hpp"
 #include <linux/random.h>
+#include <map>
 #include <math.h>
+#include <memory>
 #include <openssl/bn.h>
+#include <string>
 #include <sys/syscall.h>
 #include <unistd.h>
-#include <map>
-#include <string>
-#include <memory>
 #include <vector>
 
-void ECCopyGroup(cECPrimeField *to, cECPrimeField *from);
-int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret, std::string group);
-int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, uint8_t *msg, size_t msg_len, cECKey *key, SHA_MODE shaMode = SHA_512, char *KSecret = NULL);
-int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, uint8_t *msg, size_t msg_len, cECPrimeField *D, cECPoint *Q, SHA_MODE shaMode = SHA_512);
+int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret);
+int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig, uint8_t *msg,
+                                       size_t msg_len, cECKey &key,
+                                       SHA_MODE shaMode = SHA_MODE::SHA_512,
+                                       char *KSecret = NULL);
+int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig, uint8_t *msg,
+                                     size_t msg_len, cECKey &key,
+                                     SHA_MODE shaMode = SHA_MODE::SHA_512);
 
 class CurveRegistry {
-private:
+  private:
     static std::map<std::string, std::shared_ptr<cECPrimeField>> curves;
 
-public:
-    static std::shared_ptr<cECPrimeField> GetCurve(const std::string& curveName)
-    {
+  public:
+    static std::shared_ptr<cECPrimeField>
+    GetCurve(const std::string &curveName) {
         auto it = curves.find(curveName);
-        if (it == curves.end())
-        {
-            if (curveName == "P-224")
-            {
+        if (it == curves.end()) {
+            if (curveName == "P-224") {
                 curves[curveName] = std::make_shared<Prime224>();
-            }
-            else if (curveName == "P-256") {
+            } else if (curveName == "P-256") {
                 curves[curveName] = std::make_shared<Prime256v1>();
-            }
-            else if (curveName == "P-384")
-            {
+            } else if (curveName == "P-384") {
                 curves[curveName] = std::make_shared<Prime384>();
-            }
-            else if (curveName == "P-521")
-            {
+            } else if (curveName == "P-521") {
                 curves[curveName] = std::make_shared<Prime521>();
-            }
-            else {
+            } else {
                 throw std::runtime_error("Unknown curve: " + curveName);
             }
         }
@@ -88,6 +84,7 @@ Prime256v1::Prime256v1() {
     char *n = (char *)"ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2"
                       "fc632551";
 
+    this->h = 1;
     BN_hex2bn(&this->p, p);
     BN_hex2bn(&this->a, a);
     BN_hex2bn(&this->b, b);
@@ -168,35 +165,13 @@ cECSignature::cECSignature() {
     S = BN_new();
 }
 
-cECPoint::~cECPoint() {
-    BN_clear_free(this->x);
-    BN_clear_free(this->y);
-}
-
-cECSignature::~cECSignature() {
-    BN_clear_free(this->R);
-    BN_clear_free(this->S);
-}
-
-cECKey::~cECKey() {
-    // delete this->group;
-    delete this->pub;
-    BN_clear_free(this->priv);
-}
-
-cECPrimeField::~cECPrimeField() {
-    BN_clear_free(this->p);
-    BN_clear_free(this->a);
-    BN_clear_free(this->b);
-    BN_clear_free(this->n);
-    delete this->G;
-}
-
-cECKey::cECKey() {
-    // this->group = new cECPrimeField();
-    this->group = CurveRegistry::GetCurve("P-256");
+cECKey::cECKey(ECGroup group) {
+    this->group = group;
     this->priv = BN_secure_new();
-    this->pub = new cECPoint();
+}
+
+cECPrimeField *cECKey::getGroup() {
+    return CurveRegistry::GetCurve(ECGroupString(this->group)).get();
 }
 
 bool isPointAtInfinity(cECPoint *p) {
@@ -213,24 +188,12 @@ void ECCopyPoint(cECPoint *to, cECPoint *from) {
     BN_copy(to->y, from->y);
 }
 
-void ECCopyGroup(cECPrimeField *to, cECPrimeField *from) {
-    BN_copy(to->p, from->p);
-    BN_copy(to->a, from->a);
-    BN_copy(to->b, from->b);
-    BN_copy(to->n, from->n);
-    ECCopyPoint(to->G, from->G);
-}
-
-void ECCopyKey(cECKey *to, cECKey *from) {
-    to->group = from->group;
-    // ECCopyGroup(to->group, from->group);
-    ECCopyPoint(to->pub, from->pub);
-    BN_copy(to->priv, from->priv);
-}
-
 void ECdouble(cECPrimeField *g, cECPoint *final_ret, cECPoint *a,
               BN_CTX *ctx = BN_CTX_new()) {
     BN_CTX_start(ctx);
+
+    /* Our return point so we do not mess with the final point until we are
+     * finished */
     cECPoint *ret = new cECPoint();
     ECCopyPoint(ret, a);
 
@@ -278,11 +241,16 @@ void ECdouble(cECPrimeField *g, cECPoint *final_ret, cECPoint *a,
     delete ret;
 }
 
-void ECadd(cECPrimeField *g, cECPoint *final_out, cECPoint *a, cECPoint *b,
-           BN_CTX *ctx = BN_CTX_new()) {
+void ECadd(cECPrimeField *g, cECPoint *final_out, cECPoint *a, cECPoint *b, BN_CTX *ctx = BN_CTX_new()) {
     BN_CTX_start(ctx);
     BIGNUM *tmp = BN_CTX_get(ctx);
     cECPoint *res = new cECPoint();
+    BIGNUM *lambda = BN_CTX_get(ctx);
+    BIGNUM *tmpAddSub = BN_CTX_get(ctx);
+    BIGNUM *tmpInv = BN_CTX_get(ctx);
+    BIGNUM *tmpMul = BN_CTX_get(ctx);
+    BIGNUM *zero = BN_CTX_get(ctx);
+    BN_set_word(zero, 0);
     if (isPointAtInfinity(a) && isPointAtInfinity(b)) {
         setPointToInfinity(res);
         goto ending;
@@ -307,13 +275,6 @@ void ECadd(cECPrimeField *g, cECPoint *final_out, cECPoint *a, cECPoint *b,
             setPointToInfinity(res);
             goto ending;
         }
-
-        BIGNUM *lambda = BN_CTX_get(ctx);
-        BIGNUM *tmpAddSub = BN_CTX_get(ctx);
-        BIGNUM *tmpInv = BN_CTX_get(ctx);
-        BIGNUM *tmpMul = BN_CTX_get(ctx);
-        BIGNUM *zero = BN_CTX_get(ctx);
-        BN_set_word(zero, 0);
 
         BN_sub(tmpAddSub, b->x, a->x);
         BN_mod_inverse(tmpInv, tmpAddSub, g->p, ctx);
@@ -375,44 +336,9 @@ void ECScalarMult(cECPrimeField *g, cECPoint *Q_output, BIGNUM *scalar,
     delete QRes;
 }
 
-int test_math() {
-    BN_CTX *ctx = BN_CTX_new();
-    BN_CTX_start(ctx);
-    cECPrimeField *group = new Prime256v1();
-    cECPoint *ga = new cECPoint();
-    ga->x = BN_copy(ga->x, group->G->x);
-    ga->y = BN_copy(ga->y, group->G->y);
-
-    printf("GAx: %s\n", BN_bn2dec(ga->x));
-    printf("GAy: %s\n", BN_bn2dec(ga->y));
-    cECPoint *initial13 = new cECPoint();
-    cECPoint *result = new cECPoint();
-    ECCopyPoint(initial13, ga);
-    setPointToInfinity(result);
-    for (int i = 0; i < 5; i++) {
-        printf("Result Addition {%s, %s} + ", BN_bn2dec(result->x),
-               BN_bn2dec(result->y));
-        ECadd(group, result, initial13, result);
-        printf("{%s, %s} = { %s, %s }\n", BN_bn2dec(ga->x), BN_bn2dec(ga->y),
-               BN_bn2dec(result->x), BN_bn2dec(result->y));
-    }
-    BIGNUM *scalar = BN_CTX_get(ctx);
-
-    for (int i = 0; i < 10; i++) {
-        BN_set_word(scalar, i);
-        ECScalarMult(group, result, scalar, initial13);
-        printf("Result Multiply {%s, %s} * %s = { %s, %s }\n",
-               BN_bn2dec(initial13->x), BN_bn2dec(initial13->y),
-               BN_bn2dec(scalar), BN_bn2dec(result->x), BN_bn2dec(result->y));
-    }
-    BN_CTX_end(ctx);
-    BN_CTX_free(ctx);
-    return 0;
-}
-
 /* FIPS 186-5 6.4.1 */
-int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, uint8_t *msg,
-                                       size_t msg_len, cECKey *key,
+int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig, uint8_t *msg,
+                                       size_t msg_len, cECKey &key,
                                        SHA_MODE shaMode, char *KSecret) {
     int retCode = -1;
     BN_CTX *ctx = BN_CTX_new();
@@ -427,9 +353,9 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, uint8_t *msg,
     /* Step 1 - 2 */
     SHA_Context *shaCtx = SHA_Context_new(shaMode);
     uint8_t hash[getSHAReturnLengthByMode(shaCtx->mode)];
-    sha_update((uint8_t *)msg, msg_len, shaCtx);
+    sha_update(msg, msg_len, shaCtx);
     sha_digest(hash, shaCtx);
-    int NLen = BN_num_bits(key->group->n); /* N = len(n) */
+    int NLen = BN_num_bits(key.getGroup()->n); /* N = len(n) */
     int HLen = getSHAReturnLengthByMode(shaCtx->mode) * 8;
     BN_bin2bn(hash, getSHAReturnLengthByMode(shaCtx->mode), tmp);
     if (HLen > NLen)
@@ -440,29 +366,29 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, uint8_t *msg,
     /* Step 3 - 4 */
     /* Add in forcing a KSecret for utilization with test suite */
     if (KSecret == NULL) {
-        BN_rand_range_ex(k, key->group->n, 0, ctx);
+        BN_rand_range_ex(k, key.getGroup()->n, 0, ctx);
     } else {
         BN_hex2bn(&k, KSecret);
     }
-    BN_mod_inverse(kInv, k, key->group->n, ctx);
+    BN_mod_inverse(kInv, k, key.getGroup()->n, ctx);
 
     /* Step 5 */
-    ECScalarMult(key->group.get(), RPoint, k, key->group->G);
+    ECScalarMult(key.getGroup(), RPoint, k, key.getGroup()->G);
 
     /* Step 6 - 8 */
-    BN_mod(sig->R, RPoint->x, key->group->n, ctx);
+    BN_mod(sig.R, RPoint->x, key.getGroup()->n, ctx);
 
     /* Step 9 */
-    BN_mul(tmp, sig->R, key->priv, ctx);
+    BN_mul(tmp, sig.R, key.priv, ctx);
     BN_add(tmp, tmp, E);
-    BN_mod_mul(sig->S, kInv, tmp, key->group->n, ctx);
+    BN_mod_mul(sig.S, kInv, tmp, key.getGroup()->n, ctx);
 
     /* Step 10 */
     BN_zero(k);
     BN_zero(kInv);
 
     /* Step 11 */
-    if (BN_is_zero(sig->S) || BN_is_zero(sig->R)) {
+    if (BN_is_zero(sig.S) || BN_is_zero(sig.R)) {
         retCode = -1;
         goto ending;
     }
@@ -475,60 +401,13 @@ ending:
     return retCode;
 }
 
-/* Compute s^(-1) mod n using Montgomery multiplication */
-int compute_inverse_mod_order(cECPrimeField *group, BIGNUM *result,
-                              const BIGNUM *s, BN_CTX *ctx) {
-    BIGNUM *n_minus_two = NULL, *tmp = NULL;
-    BN_MONT_CTX *mont_ctx = NULL;
-    int ret = -1;
-
-    BN_CTX_start(ctx);
-    BIGNUM *two = BN_CTX_get(ctx);
-    BN_set_word(two, 2);
-
-    n_minus_two = BN_CTX_get(ctx);
-    tmp = BN_CTX_get(ctx);
-    if (n_minus_two == NULL || tmp == NULL) {
-        goto err;
-    }
-
-    /* Check if s is in [1, n-1] */
-    if (BN_is_zero(s) || BN_ucmp(s, group->n) >= 0) {
-        goto err;
-    }
-
-    /* Initialize Montgomery context if not already set */
-    mont_ctx = BN_MONT_CTX_new();
-    if (mont_ctx == NULL) {
-        goto err;
-    }
-    if (!BN_MONT_CTX_set(mont_ctx, group->n, ctx)) {
-        goto err;
-    }
-
-    /* Compute n-2 for Fermat's Little Theorem: s^(-1) = s^(n-2) mod n */
-    if (!BN_sub(n_minus_two, group->n, two)) {
-        goto err;
-    }
-
-    /* Compute s^(n-2) mod n using Montgomery multiplication */
-    if (!BN_mod_exp_mont(result, s, n_minus_two, group->n, ctx, mont_ctx)) {
-        goto err;
-    }
-
-    ret = 0;
-
-err:
-    BN_CTX_end(ctx);
-    BN_MONT_CTX_free(mont_ctx);
-    return ret;
-}
-
 /* FIPS 186-5 6.4.2 */
-int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, uint8_t *msg,
-                                     size_t msg_len, cECPrimeField *D,
-                                     cECPoint *Q, SHA_MODE shaMode) {
+int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig, uint8_t *msg,
+                                     size_t msg_len, cECKey &key,
+                                     SHA_MODE shaMode) {
     int retCode = -1;
+    cECPrimeField *D = key.getGroup();
+    cECPoint *Q = &key.pub;
 
     BN_CTX *ctx = BN_CTX_secure_new();
     BN_CTX_start(ctx);
@@ -543,64 +422,37 @@ int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, uint8_t *msg,
     cECPoint *addend2 = new cECPoint();
     cECPoint *RPoint = new cECPoint();
 
-    if (sig == NULL || Q == nullptr || sig->R == NULL || sig->S == NULL)
-        return -1; /* Fail */
-
-    /* Step 2 - 3: Hash the message */
+    // Step 2 - 3: Hash the message
     SHA_Context *shaCtx = SHA_Context_new(shaMode);
     uint8_t hash[getSHAReturnLengthByMode(shaCtx->mode)];
     sha_update((uint8_t *)msg, msg_len, shaCtx);
     sha_digest(hash, shaCtx);
 
-    if (BN_is_zero(sig->R) || BN_is_zero(sig->S) ||
-        BN_ucmp(sig->R, D->n) >= 0 || BN_ucmp(sig->S, D->n) >= 0)
+    if (BN_is_zero(sig.R) || BN_is_zero(sig.S) || BN_ucmp(sig.R, D->n) >= 0 ||
+        BN_ucmp(sig.S, D->n) >= 0)
         return -1; /* Either R or S is not within 0, n-1 */
 
-    /* Step 3: Convert leftmost N bits of hash to integer */
-
-    /*
-     * Was testing if the OpenSSL way of performing the bitshift is more
-     * reliable. Didn't seem to be any difference between the original way vs
-     * this. (This is likely still more secure though)
-     */
-    /*
-    int nLen = BN_num_bits(D->n);
-    int dgstLen = getSHAReturnLengthByMode(shaMode);
-    if(8*dgstLen > nLen)
-    {
-        dgstLen = (nLen+7)/8;
-    }
-
-    BN_bin2bn(hash, dgstLen, E);
-
-    if(8*dgstLen > nLen)
-      BN_rshift(E, E, 8 - (nLen & 0x7));
-    */
-
+    // Step 3: Convert leftmost N bits of hash to integer
     int NLen = BN_num_bits(D->n); /* N = len(n) */
     int HLen =
         getSHAReturnLengthByMode(shaCtx->mode) * 8; /* hash length in bits */
 
-    /* Store hash in tmp */
+    // Store hash in tmp
     BN_bin2bn(hash, getSHAReturnLengthByMode(shaCtx->mode), tmp);
 
-    /* If the Hash bits > Order bits then only copy the higher order bits to E
-     * else fully copy the hash into E
-     */
+    // If the Hash bits > Order bits then only copy the higher order bits to E
+    //  else fully copy the hash into E
     if (HLen > NLen)
         BN_rshift(E, tmp, HLen - NLen);
     else
         BN_copy(E, tmp);
 
     /* Step 4: Compute s⁻¹ mod n */
-    BN_mod_inverse(sInv, sig->S, D->n, ctx);
-    /* compute_inverse_mod_order(D, sInv, sig->S, ctx);
-     * Another way I can do the inverse, more taxing and not sure I really need
-     * to do this.*/
+    BN_mod_inverse(sInv, sig.S, D->n, ctx);
 
     /* Step 5: Compute u = e⋅s⁻¹ mod n, v = r⋅s⁻¹ mod n */
     BN_mod_mul(u, E, sInv, D->n, ctx);
-    BN_mod_mul(v, sig->R, sInv, D->n, ctx);
+    BN_mod_mul(v, sig.R, sInv, D->n, ctx);
 
     ECScalarMult(D, addend1, u, D->G);
     ECScalarMult(D, addend2, v, Q);
@@ -613,7 +465,7 @@ int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, uint8_t *msg,
 
     BN_nnmod(tmp, RPoint->x, D->n, ctx);
 
-    if (BN_cmp(sig->R, tmp) == 0) {
+    if (BN_cmp(sig.R, tmp) == 0) {
         retCode = 0;
         goto ending;
     } else {
@@ -632,25 +484,22 @@ ending:
 }
 
 /* FIPS 186-4 B.4.2 */
-int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret, ECGroup group) {
+int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey &ret) {
     BN_CTX *ctx = BN_CTX_new();
     BN_CTX_start(ctx);
-    cECKey *key = new cECKey();
-    ret->group = CurveRegistry::GetCurve(ECGroupString(group));
-    key->group = CurveRegistry::GetCurve(ECGroupString(group));
-    BIGNUM *tmp = BN_dup(key->group->n);
+    cECKey key(ret.group);
+    BIGNUM *tmp = BN_dup(key.getGroup()->n);
     BN_sub(tmp, tmp, BN_value_one());
 
 Generate:
-    BN_priv_rand_range_ex(key->priv, tmp, 0, ctx);
+    BN_priv_rand_range_ex(key.priv, tmp, 0, ctx);
 
-    if (BN_cmp(key->priv, tmp) == 1) {
+    if (BN_cmp(key.priv, tmp) == 1) {
         goto Generate;
     }
 
-    ECScalarMult(key->group.get(), key->pub, key->priv, key->group->G);
-    ECCopyKey(ret, key);
-    delete key;
+    ECScalarMult(key.getGroup(), &key.pub, key.priv, key.getGroup()->G);
+    ret = key;
     if (tmp)
         BN_clear_free(tmp);
     BN_CTX_end(ctx);
@@ -658,45 +507,41 @@ Generate:
     return 0;
 }
 
-std::string ECGroupString(ECGroup group)
-{
-    switch(group)
-    {
-        case P224:
-            return "P-224";
-            break;
-        case P256:
-            return "P-256";
-            break;
-        case P384:
-            return "P-384";
-            break;
-        case P521:
-            return "P-521";
-            break;
-        default:
-            return "";
-            break;
+std::string ECGroupString(ECGroup group) {
+    switch (group) {
+    case P224:
+        return "P-224";
+        break;
+    case P256:
+        return "P-256";
+        break;
+    case P384:
+        return "P-384";
+        break;
+    case P521:
+        return "P-521";
+        break;
+    default:
+        return "";
+        break;
     }
     return "";
 }
 
-void EC_SetGroup(cECKey *key, ECGroup group)
-{
-    key->group = CurveRegistry::GetCurve(ECGroupString(group));
+/* TODO Make msg const */
+
+int EC_GenerateSignature(cECKey &key, cECSignature &sig,
+                         std::vector<uint8_t> msg, SHA_MODE shaMode) {
+    return FIPS_186_5_6_4_1_GenerateSignature(sig, msg.data(), msg.size(), key,
+                                              shaMode);
 }
 
-int EC_GenerateSignature(cECKey *key, cECSignature *sig, std::vector<uint8_t>msg, SHA_MODE shaMode)
-{
-    return FIPS_186_5_6_4_1_GenerateSignature(sig, msg.data(), msg.size(), key, shaMode);
+int EC_VerifySignature(cECKey &key, cECSignature &sig, std::vector<uint8_t> msg,
+                       SHA_MODE shaMode) {
+    return FIPS_186_5_6_4_2_VerifySignature(sig, msg.data(), msg.size(), key,
+                                            shaMode);
 }
 
-int EC_VerifySignature(cECKey *key, cECSignature *sig, std::vector<uint8_t>msg, SHA_MODE shaMode)
-{
-    return FIPS_186_5_6_4_2_VerifySignature(sig, msg.data(), msg.size(), key->group.get(), key->pub, shaMode);
-}
-
-int EC_Generate_KeyPair(cECKey *key, ECGroup group)
-{
-    return FIPS_186_4_B_4_2_KeyPairGeneration(key, group);
+int EC_Generate_KeyPair(cECKey &key) {
+    return FIPS_186_4_B_4_2_KeyPairGeneration(key);
 }
