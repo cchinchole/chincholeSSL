@@ -21,6 +21,8 @@ int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig, uint8_t *msg,
                                      size_t msg_len, cECKey &key,
                                      SHA_MODE shaMode = SHA_MODE::SHA_512);
 
+/* SP 800-186: Domain parameters source */
+/* Easily access: https://neuromancer.sk/std/nist/ */
 class CurveRegistry {
   private:
     static std::map<std::string, std::shared_ptr<cECPrimeField>> curves;
@@ -31,13 +33,13 @@ class CurveRegistry {
         auto it = curves.find(curveName);
         if (it == curves.end()) {
             if (curveName == "P-224") {
-                curves[curveName] = std::make_shared<Prime224>();
+                curves[curveName] = std::make_shared<cECPrimeField>("ffffffffffffffffffffffffffffffff000000000000000000000001", "fffffffffffffffffffffffffffffffefffffffffffffffffffffffe", "b4050a850c04b3abf54132565044b0b7d7bfd8ba270b39432355ffb4", "ffffffffffffffffffffffffffff16a2e0b8f03e13dd29455c5c2a3d", "b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21", "bd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34", ECGroup::P224);
             } else if (curveName == "P-256") {
-                curves[curveName] = std::make_shared<Prime256v1>();
-            } else if (curveName == "P-384") {
-                curves[curveName] = std::make_shared<Prime384>();
+                curves[curveName] = std::make_shared<cECPrimeField>("ffffffff00000001000000000000000000000000ffffffffffffffffffffffff", "ffffffff00000001000000000000000000000000fffffffffffffffffffffffc", "5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b", "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551", "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296", "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5", ECGroup::P256);
             } else if (curveName == "P-521") {
-                curves[curveName] = std::make_shared<Prime521>();
+                curves[curveName] = std::make_shared<cECPrimeField>("01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "01fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc", "0051953eb9618e1c9a1f929a21a0b68540eea2da725b99b315f3b8b489918ef109e156193951ec7e937b1652c0bd3bb1bf073573df883d2c34f1ef451fd46b503f00", "01fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aebb6fb71e91386409", "00c6858e06b70404e9cd9e3ecb662395b4429c648139053fb521f828af606b4d3dbaa14b5e77efe75928fe1dc127a2ffa8de3348b3c1856a429bf97e7e31c2e5bd66", "011839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd17273e662c97ee72995ef42640c550b9013fad0761353c7086a272c24088be94769fd16650",  ECGroup::P521);
+            } else if (curveName == "P-384") {
+                curves[curveName] = std::make_shared<cECPrimeField>("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000ffffffff", "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000fffffffc","b3312fa7e23ee7e4988e056be3f82d19181d9c6efe8141120314088f5013875ac656398d8a2ed19d2a85c8edd3ec2aef", "ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973", "aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760ab7", "3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f",  ECGroup::P384);
             } else {
                 throw std::runtime_error("Unknown curve: " + curveName);
             }
@@ -45,115 +47,9 @@ class CurveRegistry {
         return curves[curveName];
     }
 };
+
 std::map<std::string, std::shared_ptr<cECPrimeField>> CurveRegistry::curves;
 
-/* SP 800-186: Domain parameters source */
-Prime224::Prime224() {
-    char *p =
-        (char *)"ffffffffffffffffffffffffffffffff000000000000000000000001";
-    char *a =
-        (char *)"fffffffffffffffffffffffffffffffefffffffffffffffffffffffe";
-    char *b =
-        (char *)"b4050a850c04b3abf54132565044b0b7d7bfd8ba270b39432355ffb4";
-    char *Gx =
-        (char *)"b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21";
-    char *Gy =
-        (char *)"bd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34";
-    char *n =
-        (char *)"ffffffffffffffffffffffffffff16a2e0b8f03e13dd29455c5c2a3d";
-
-    BN_hex2bn(&this->p, p);
-    BN_hex2bn(&this->a, a);
-    BN_hex2bn(&this->b, b);
-    BN_hex2bn(&this->n, n);
-    BN_hex2bn(&(this->G->x), Gx);
-    BN_hex2bn(&(this->G->y), Gy);
-}
-
-Prime256v1::Prime256v1() {
-    char *p = (char *)"ffffffff00000001000000000000000000000000ffffffffffffffff"
-                      "ffffffff";
-    char *a = (char *)"ffffffff00000001000000000000000000000000ffffffffffffffff"
-                      "fffffffc";
-    char *b = (char *)"5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e"
-                      "27d2604b";
-    char *Gx = (char *)"6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a1394"
-                       "5d898c296";
-    char *Gy = (char *)"4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406"
-                       "837bf51f5";
-    char *n = (char *)"ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2"
-                      "fc632551";
-
-    this->h = 1;
-    BN_hex2bn(&this->p, p);
-    BN_hex2bn(&this->a, a);
-    BN_hex2bn(&this->b, b);
-    BN_hex2bn(&this->n, n);
-    BN_hex2bn(&(this->G->x), Gx);
-    BN_hex2bn(&(this->G->y), Gy);
-}
-
-Prime384::Prime384() {
-    char *p =
-        (char *)"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-                "fffffeffffffff0000000000000000ffffffff";
-    char *a =
-        (char *)"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-                "fffffeffffffff0000000000000000fffffffc";
-    char *b =
-        (char *)"b3312fa7e23ee7e4988e056be3f82d19181d9c6efe8141120314088f50"
-                "13875ac656398d8a2ed19d2a85c8edd3ec2aef";
-    char *Gx =
-        (char *)"aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e08"
-                "2542a385502f25dbf55296c3a545e3872760ab7";
-    char *Gy =
-        (char *)"3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b"
-                "5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f";
-    char *n =
-        (char *)"ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4"
-                "372ddf581a0db248b0a77aecec196accc52973";
-
-    BN_hex2bn(&this->p, p);
-    BN_hex2bn(&this->a, a);
-    BN_hex2bn(&this->b, b);
-    BN_hex2bn(&this->n, n);
-    BN_hex2bn(&(this->G->x), Gx);
-    BN_hex2bn(&(this->G->y), Gy);
-}
-
-Prime521::Prime521() {
-    char *p =
-        (char *)"1fffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-                "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-                "fffffffffffffff";
-    char *a =
-        (char *)"1fffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-                "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-                "ffffffffffffffc";
-    char *b =
-        (char *)"051953eb9618e1c9a1f929a21a0b68540eea2da725b99b315f3b8b4899"
-                "18ef109e156193951ec7e937b1652c0bd3bb1bf073573df883d2c34f1e"
-                "f451fd46b503f00";
-    char *Gx =
-        (char *)"0c6858e06b70404e9cd9e3ecb662395b4429c648139053fb521f828af"
-                "606b4d3dbaa14b5e77efe75928fe1dc127a2ffa8de3348b3c1856a429"
-                "bf97e7e31c2e5bd66";
-    char *Gy =
-        (char *)"11839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd"
-                "17273e662c97ee72995ef42640c550b9013fad0761353c7086a272c24"
-                "088be94769fd16650";
-    char *n =
-        (char *)"1fffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-                "ffffffffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aeb"
-                "b6fb71e91386409";
-
-    BN_hex2bn(&this->p, p);
-    BN_hex2bn(&this->a, a);
-    BN_hex2bn(&this->b, b);
-    BN_hex2bn(&this->n, n);
-    BN_hex2bn(&(this->G->x), Gx);
-    BN_hex2bn(&(this->G->y), Gy);
-}
 
 cECPoint::cECPoint() {
     x = BN_secure_new();
@@ -348,6 +244,7 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig, uint8_t *msg,
     BIGNUM *kInv = BN_CTX_get(ctx);
     BIGNUM *tmp = BN_CTX_get(ctx);
     BIGNUM *E = BN_CTX_get(ctx);
+    cECPrimeField *group = key.getGroup();
     cECPoint *RPoint = new cECPoint();
 
     /* Step 1 - 2 */
@@ -355,7 +252,7 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig, uint8_t *msg,
     uint8_t hash[getSHAReturnLengthByMode(shaCtx->mode)];
     sha_update(msg, msg_len, shaCtx);
     sha_digest(hash, shaCtx);
-    int NLen = BN_num_bits(key.getGroup()->n); /* N = len(n) */
+    int NLen = BN_num_bits(group->n); /* N = len(n) */
     int HLen = getSHAReturnLengthByMode(shaCtx->mode) * 8;
     BN_bin2bn(hash, getSHAReturnLengthByMode(shaCtx->mode), tmp);
     if (HLen > NLen)
@@ -366,22 +263,22 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig, uint8_t *msg,
     /* Step 3 - 4 */
     /* Add in forcing a KSecret for utilization with test suite */
     if (KSecret == NULL) {
-        BN_rand_range_ex(k, key.getGroup()->n, 0, ctx);
+        BN_rand_range_ex(k, group->n, 0, ctx);
     } else {
         BN_hex2bn(&k, KSecret);
     }
-    BN_mod_inverse(kInv, k, key.getGroup()->n, ctx);
+    BN_mod_inverse(kInv, k, group->n, ctx);
 
     /* Step 5 */
-    ECScalarMult(key.getGroup(), RPoint, k, key.getGroup()->G);
+    ECScalarMult(group, RPoint, k, group->G);
 
     /* Step 6 - 8 */
-    BN_mod(sig.R, RPoint->x, key.getGroup()->n, ctx);
+    BN_mod(sig.R, RPoint->x, group->n, ctx);
 
     /* Step 9 */
     BN_mul(tmp, sig.R, key.priv, ctx);
     BN_add(tmp, tmp, E);
-    BN_mod_mul(sig.S, kInv, tmp, key.getGroup()->n, ctx);
+    BN_mod_mul(sig.S, kInv, tmp, group->n, ctx);
 
     /* Step 10 */
     BN_zero(k);
@@ -488,7 +385,8 @@ int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey &ret) {
     BN_CTX *ctx = BN_CTX_new();
     BN_CTX_start(ctx);
     cECKey key(ret.group);
-    BIGNUM *tmp = BN_dup(key.getGroup()->n);
+    cECPrimeField* group = key.getGroup();
+    BIGNUM *tmp = BN_dup(group->n);
     BN_sub(tmp, tmp, BN_value_one());
 
 Generate:
@@ -498,7 +396,7 @@ Generate:
         goto Generate;
     }
 
-    ECScalarMult(key.getGroup(), &key.pub, key.priv, key.getGroup()->G);
+    ECScalarMult(group, &key.pub, key.priv, group->G);
     ret = key;
     if (tmp)
         BN_clear_free(tmp);

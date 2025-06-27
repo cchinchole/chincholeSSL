@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -g -O0 -fdiagnostics-color=always
+CXXFLAGS = -std=c++23 -g -O0 -fdiagnostics-color=always
 LDFLAGS =
 
 
