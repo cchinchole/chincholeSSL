@@ -4,6 +4,7 @@
 #include "utils/bytes.hpp"
 #include <stdio.h>
 #include <openssl/bn.h>
+#include <print>
 
 int main() {
     cECKey key(ECGroup::P256);
@@ -18,6 +19,8 @@ int main() {
 
     if(EC_GenerateSignature(key, sig, msg, hashMode) != 0)
         printf("Failed to generate signature\n");
+    
+    std::println("Testing Point {}", *key.getGroup()->G);
 
 
     EC_Generate_KeyPair(key2);
