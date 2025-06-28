@@ -3,13 +3,13 @@ This is a project I did to learn about the mathematics behind cryptography durin
 To see more details on which FIPS documents were used, refer to docs/Crypto.pdf where I break down the documents into a more readable format while citing which document they are within.
 
 ## Dependencies ##
+2. openssl3 headers (Pkg is usually openssl-devel)
+4. G++ (14+)
 1. make
-2. openssl-devel (Atleast version 3) - Used for bignum operations
 3. pkg-config
-4. G++
 
 ## Flags ##
-1. LOG_PARAMS : Thiss will log parameters used in key operations.
+1. LOG_PARAMS : This will log parameters used in key operations.
 2. AES_LOG : Will log the state in the AES ctx for debugging.
 
 ## Building and installing ##
