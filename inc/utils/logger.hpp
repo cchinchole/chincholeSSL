@@ -1,9 +1,12 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
+#include "../crypto/ec.hpp"
+#include <openssl/bn.h>
 #include <stdarg.h>
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
+#include <print>
 
 #define PARAM_BN 0
 #define PARAM_INT 0
@@ -67,4 +70,25 @@ public:
         return 0;
     }
 };
+
+template <>
+struct std::formatter<BIGNUM*> : std::formatter<std::string> {
+  auto format(BIGNUM* p, format_context& ctx) const {
+    char *str = BN_bn2hex(p);
+    auto out = formatter<string>::format(std::format("{}", str), ctx);
+    OPENSSL_free(str);
+    return out;
+  }
+};
+
+template <>
+struct std::formatter<cECPoint> : std::formatter<std::string> {
+  auto format(const cECPoint &point, format_context& ctx) const {
+    auto out = formatter<string>::format(std::format("[{} {}]", point.x, point.y), ctx);
+    return out;
+  }
+};
+
+
+
 #endif

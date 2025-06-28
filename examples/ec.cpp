@@ -1,8 +1,8 @@
 #include "../inc/crypto/ec.hpp"
+#include "../inc/utils/logger.hpp"
 #include "hash/sha.hpp"
 #include "utils/bytes.hpp"
 #include <stdio.h>
-#include <iostream>
 #include <openssl/bn.h>
 
 int main() {
@@ -12,12 +12,13 @@ int main() {
     cECSignature sig2;
 
     SHA_MODE hashMode = SHA_MODE::SHA_512;
-    std::vector<uint8_t> msg = hexToBytes("aabbccddeeffaabbcceeddeedd11001100");
+    ByteArray msg = hexToBytes("aabbccddeeffaabbcceeddeedd11001100");
 
     EC_Generate_KeyPair(key);
 
     if(EC_GenerateSignature(key, sig, msg, hashMode) != 0)
         printf("Failed to generate signature\n");
+
 
     EC_Generate_KeyPair(key2);
 
