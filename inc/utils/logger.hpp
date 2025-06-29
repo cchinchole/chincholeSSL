@@ -2,6 +2,7 @@
 #define LOGGER_HPP
 
 #include "../crypto/ec.hpp"
+#include "bytes.hpp"
 #include <openssl/bn.h>
 #include <stdarg.h>
 #include <openssl/ssl.h>
@@ -90,5 +91,12 @@ struct std::formatter<cECPoint> : std::formatter<std::string> {
 };
 
 
+template <>
+struct std::formatter<ByteArray> : std::formatter<std::string> {
+  auto format(const ByteArray &array, format_context& ctx) const {
+    auto out = formatter<string>::format(std::format("{}", bytesToHex(array)), ctx);
+    return out;
+  }
+};
 
 #endif

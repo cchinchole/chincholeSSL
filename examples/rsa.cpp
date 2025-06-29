@@ -27,8 +27,8 @@ int main() {
     std::println("Key D: {}", key.d);
 
     std::vector<uint8_t> cipher = RSA_Encrypt(key, str);
-    std::println("Cipher after OAEP: {}", bytesToHex(cipher));
-    std::println("After decode: {}", bytesToHex(RSA_Decrypt(key, cipher)));
+    std::println("Cipher after OAEP: {}", cipher);
+    std::println("After decode: {}", (RSA_Decrypt(key, cipher)));
 
     //Generating a new key
     RSA_GenerateKey(key);
