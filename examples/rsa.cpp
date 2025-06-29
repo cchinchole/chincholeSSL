@@ -1,32 +1,49 @@
 #include "../inc/crypto/rsa.hpp"
 #include "../inc/utils/bytes.hpp"
-#include <iostream>
+#include "../inc/utils/logger.hpp"
+#include "hash/sha.hpp"
 #include <openssl/bn.h>
 #include <openssl/crypto.h>
+#include <print>
 
 int main() {
+    //Setting a key via the values key reference, public exponent, prime1, prime2
     cRSAKey key;
-    
-    /* Generate a key */
-    /* Paramaters: key, public encryption exponent, bits, auxillary prime mode (Leave this true for now) */
-    RSA_GenerateKey(key);
-    key.padding = RSA_Padding::NONE; // Redundant for now
-    key.label = std::vector<uint8_t>(); // Redundant for now
+    RSA_GenerateKey(key,1024, std::string("010001"),
+        std::string("d32737e7267ffe1341b2d5c0d150a81b586fb3132bed2f8d5262864a9cb9f30af38be448598d413a172efb802c21acf1c11c520c2f26a471dcad212eac7ca39d"),
+        std::string("cc8853d1d54da630fac004f471f281c7b8982d8224a490edbeb33d3e3d5cc93c4765703d1dd791642f1f116a0dd852be2419b2af72bfe9a030e860b0288b5d77"));
 
-    std::string str = "Hello World";
-    std::vector<uint8_t> cipher;
-    cipher = RSA_Encrypt(key, charToVector(str.c_str(), str.size()));
-    std::vector<uint8_t> decrypt = RSA_Decrypt(key, cipher, NULL);
-    printf("Output size: %d\n", decrypt.size());
-    int strresult =
-        !((std::equal(decrypt.begin(), decrypt.end(), str.begin(), str.end())));
-    std::cout << "- - - - - - - - Encryption Decryption self test - - - - - - - -"
-              << std::endl
-              << "The inputted string: " << asciiToHex(str) << std::endl
-              << "The outputted string: " << bytesToHex(decrypt) << std::endl
-              << "STRCMP returned " << strresult << std::endl
-              << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - "
-              << std::endl;
+    //Setting padding for OAEP
+    key.padding.mode = RSA_Padding::OAEP;
+    key.padding.label = {};
+    key.padding.digestMode = SHA_MODE::SHA_1;
+
+    ByteArray str = {0x66, 0x28, 0x19, 0x4e, 0x12, 0x07, 0x3d, 0xb0, 0x3b, 0xa9, 0x4c, 0xda, 0x9e, 0xf9, 0x53, 0x23, 0x97, 0xd5, 0x0d, 0xba, 0x79, 0xb9, 0x87, 0x00, 0x4a, 0xfe, 0xfe, 0x34};
+
+    //ByteArray seed ={0x18, 0xb7, 0x76, 0xea, 0x21, 0x06, 0x9d, 0x69, 0x77, 0x6a, 0x33, 0xe9, 0x6b, 0xad, 0x48, 0xe1, 0xdd, 0xa0, 0xa5, 0xef};
+    std::println("Values generated via primes: ");
+    std::println("Key N: {}", key.n);
+    std::println("Key E: {}", key.e);
+    std::println("Key D: {}", key.d);
+
+    std::vector<uint8_t> cipher = RSA_Encrypt(key, str);
+    std::println("Cipher after OAEP: {}", bytesToHex(cipher));
+    std::println("After decode: {}", bytesToHex(RSA_Decrypt(key, cipher)));
+
+    //Generating a new key
+    RSA_GenerateKey(key);
+    key.padding.mode = RSA_Padding::NONE; //Defaulted to NONE, but as we changed this earlier will need to set it now.
+
+    //If you want to manually specify a seed, for testing, you must OAEP encode and specify the seed. Then call the RSA Primitive yourself.
+    cipher = RSA_Encrypt(key, str);
+    std::vector<uint8_t> decrypt = RSA_Decrypt(key, cipher);
+    decrypt = stripPadding(decrypt);
+    int strresult = !((std::equal(decrypt.begin(), decrypt.end(), str.begin(), str.end())));
+    std::println("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
+    std::println("The inputted string: {}", str);
+    std::println("The outputted string: {}", decrypt);
+    std::println("STRCMP returned {}",  strresult);
+    std::println("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
     OPENSSL_cleanup();
     return 0;
 }

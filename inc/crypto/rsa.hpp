@@ -1,4 +1,5 @@
 #include "../hash/sha.hpp"
+#include "../utils/bytes.hpp"
 #include <cstdint>
 #include <openssl/bio.h>
 #include <openssl/bn.h>
@@ -12,6 +13,13 @@
 enum class RSA_Padding{
     OAEP,
     NONE
+};
+
+class RSA_Padding_Params {
+public:
+    RSA_Padding mode;
+    SHA_MODE digestMode;
+    ByteArray label;
 };
 
 class RSA_CRT_Params {
@@ -30,16 +38,19 @@ public:
     //BIGNUM *N = BN_secure_new(), *E = BN_secure_new(), *D = BN_secure_new();
     BIGNUM *n, *e, *d;
     RSA_CRT_Params crt;
-    RSA_Padding padding;
-    std::vector<uint8_t> label;
+    RSA_Padding_Params padding;
     cRSAKey();
    ~cRSAKey();
 };
 
-std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed, size_t maskLen, SHA_MODE shaMode = SHA_MODE::SHA_256);
 void RSA_GenerateKey(cRSAKey &key, BIGNUM *e = nullptr, int kBits = 4096, bool auxMode = true);
+void RSA_GenerateKey(cRSAKey &key, int kBits, std::string e,  std::string p1, std::string p2);
+std::vector<uint8_t> RSA_Encrypt_Primative(cRSAKey &key, const std::vector<uint8_t> &src);
 std::vector<uint8_t> RSA_Encrypt(cRSAKey &key, const std::vector<uint8_t> &src);
 std::vector<uint8_t> RSA_Decrypt(cRSAKey &key, const std::vector<uint8_t> &cipher, bool crt = true);
+std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed, size_t maskLen, SHA_MODE shaMode = SHA_MODE::SHA_256);
+ByteArray OAEP_Encode(cRSAKey &key, const ByteArray &msg, SHA_MODE digestMode, ByteArray &seed, bool givenSeed = false);
+ByteArray OAEP_Encode(cRSAKey &key, const ByteArray &msg, SHA_MODE digestMode);
 /*
  * Key Pair:
  * <d, n>: Form the private decryption key.

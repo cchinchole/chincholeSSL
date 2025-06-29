@@ -58,6 +58,15 @@ std::vector<uint8_t> convertBignumToVector(BIGNUM* cipherNumber, size_t maxBytes
     return vec;
 }
 
+ByteArray stripPadding(const ByteArray &input)
+{
+    size_t index = 0;
+    while(index < input.size() && input[index] == 0x00)
+        index++;
+
+    return ByteArray(input.begin() + index, input.end());
+}
+
 char *printWord(uint8_t *input, size_t length, size_t blockSize)
 {
     int blocks = length / blockSize;
