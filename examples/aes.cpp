@@ -6,7 +6,7 @@
 int main() {
     int retCode = 0;
     AES_CTX *ctx = new AES_CTX();
-    ctx->mode = AES_CBC_128;
+    ctx->mode = AES_MODE::AES_CBC_128;
     std::string aes_kat_key = "2b7e151628aed2a6abf7158809cf4f3c";
     std::string aes_iv_key = "000102030405060708090a0b0c0d0e0f";
     std::string cbc_kat =
@@ -43,7 +43,7 @@ int main() {
     outputA.clear();
     outputB.clear();
 
-    ctx->mode = AES_CTR_128;
+    ctx->mode = AES_MODE::AES_CTR_128;
     AES_SetIV(ctx, hexToBytes(ctr_iv).data());
     AES_Encrypt(ctx, outputA.data(), hexToBytes(cbc_kat).data(), 64);
     AES_Decrypt(ctx, outputB.data(), outputA.data(), 64); //Can also use encrypt, doesn't matter for CTR, but for simplicity will leave it like this.

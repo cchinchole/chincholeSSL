@@ -1,6 +1,7 @@
 #include "../../inc/crypto/aes.hpp"
 #include "../../inc/hash/sha.hpp"
 #include "../../inc/utils/bytes.hpp"
+#include "../../inc/utils/logger.hpp"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -114,12 +115,29 @@ AES_MODE haveAES(std::string name) {
     return AES_MODE::AES_ECB_192;
   } else if (name == "ECB256") {
     return AES_MODE::AES_ECB_256;
+  } else if (name == "OFB128") {
+    return AES_MODE::AES_OFB_128;
+  } else if (name == "OFB192") {
+    return AES_MODE::AES_OFB_192;
+  } else if (name == "OFB256") {
+    return AES_MODE::AES_OFB_256;
+  } else if (name == "CFB128") {
+    return AES_MODE::AES_CFB_128;
+  } else if (name == "CFB192") {
+    return AES_MODE::AES_CFB_192;
+  } else if (name == "CFB256") {
+    return AES_MODE::AES_CFB_256;
   }
-    return AES_MODE::AES_CBC_256;
+    return AES_MODE::NONE;
 }
 
 void runTest(std::string path, std::string fileName, AES_MODE mode, int *passed,
              int *failed) {
+  if(mode == AES_MODE::NONE)
+  {
+        printf("Invalid AES mode\n");
+        return;
+  }
   auto rsp = parseSigGen(path + fileName);
   int pe = 0, fe = 0;
   int pd = 0, fd = 0;
@@ -205,7 +223,7 @@ int main() {
           key_size = match[1].str();
         }
 
-        std::cout << "AES Mode: " << std::string(cipher+key_size) << std::endl;
+        std::cout << "AES Mode: " << std::string(cipher+key_size) << " " << fileName <<  std::endl;
 
         runTest(path, fileName, haveAES(cipher+key_size), &passed, &failed);
         tests_performed++;

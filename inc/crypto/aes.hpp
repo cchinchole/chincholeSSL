@@ -10,7 +10,7 @@
 /* Can use this to cast the buffer without having to manually set the 16 bytes */
 // using state_t = uint8_t[4][4];
 
-enum AES_MODE
+enum class AES_MODE
 {
     AES_ECB_128,
     AES_ECB_192,
@@ -27,6 +27,7 @@ enum AES_MODE
     AES_CTR_128,
     AES_CTR_192,
     AES_CTR_256,
+    NONE
 };
 
 class AES_CTX
