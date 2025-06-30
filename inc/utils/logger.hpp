@@ -2,75 +2,32 @@
 #define LOGGER_HPP
 
 #include "../crypto/ec.hpp"
-#include "bytes.hpp"
+#include "../utils/bytes.hpp"
+#include <format>
 #include <openssl/bn.h>
+#include <sstream>
 #include <stdarg.h>
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
-#include <print>
+#include <memory>
+#include <mutex>
+#include <chrono>
+#include <iostream>
 
-#define PARAM_BN 0
-#define PARAM_INT 0
-
-class Logger
-{
-private:
-    BIO *bio_stdout;
+class LoggerClass {
 public:
-    Logger()
-    {
-        bio_stdout = BIO_new_fp(stdout, BIO_NOCLOSE);
-    }
-    ~Logger()
-    {
-        BIO_free(bio_stdout);
-    }
-    int error(const char *from, const char *message)
-    {
-        printf("[Error] raised from [%s]: %s!\n", from, message);
-        return 0;
-    }
-    int warning(const char *from, const char *message)
-    {
-        printf("[Warning] raised from [%s]: %s!\n", from, message);
-        return 0;
-    }
-
-    int info(const char *message)
-    {
-        BIO_printf(bio_stdout, "[Info] %s.\n", message);
-        return 0;
-    }
-
-    int parameter(const char *pName, BIGNUM *param)
-    {
-#ifdef LOG_PARAMS
-        BIO_printf("[Parameter Log] ");
-        BIO_printf("%s: %d\n", pName, BN_bn2dec(((BIGNUM *)param)));
+    template <typename... Args>
+    void print(const std::format_string<Args...> fmt, Args&&... args) {
+#if DEBUG
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::cout << std::format(fmt, std::forward<Args>(args)...) << '\n';
 #endif
-        return 0;
     }
 
-    int aes_printf(const char *format, ...)
-    {
-#ifdef LOG_AES
-        va_list args;
-        va_start(args, format);
-        BIO_vprintf(bio_stdout, format, args);
-        va_end(args);
-#endif
-        return 0;
-    }
-
-    int printf(const char *format, ...)
-    {
-        va_list args;
-        va_start(args, format);
-        BIO_vprintf(bio_stdout, format, args);
-        va_end(args);
-        return 0;
-    }
+private:
+    std::mutex mutex_;
 };
+inline std::shared_ptr<LoggerClass> Logger = std::make_shared<LoggerClass>();
 
 template <>
 struct std::formatter<BIGNUM*> : std::formatter<std::string> {
@@ -85,11 +42,10 @@ struct std::formatter<BIGNUM*> : std::formatter<std::string> {
 template <>
 struct std::formatter<cECPoint> : std::formatter<std::string> {
   auto format(const cECPoint &point, format_context& ctx) const {
-    auto out = formatter<string>::format(std::format("[{} {}]", point.x, point.y), ctx);
+    auto out = formatter<string>::format(std::format("[{}, {}]", point.x, point.y), ctx);
     return out;
   }
 };
-
 
 template <>
 struct std::formatter<ByteArray> : std::formatter<std::string> {
@@ -98,5 +54,32 @@ struct std::formatter<ByteArray> : std::formatter<std::string> {
     return out;
   }
 };
+
+template <>
+struct std::formatter<bool> : std::formatter<std::string> {
+  auto format(const bool boolean, format_context& ctx) const {
+    auto out = formatter<string>::format(std::format("{}", boolean == 1 ? "True" : "False"), ctx);
+    return out;
+  }
+};
+
+inline std::string getCurrentTime()
+{
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+
+    std::tm local_tm;
+    localtime_r(&t, &local_tm);
+
+    std::ostringstream oss;
+    oss << std::put_time(&local_tm, "%H:%M:%S");
+    return oss.str();
+}
+
+#define LOG_INFO(fmt, ...) Logger->print("[{}] [Info] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define LOG_AES(fmt, ...) Logger->print("[{}] [AES] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define LOG_RSA(fmt, ...) Logger->print("[{}] [RSA] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define LOG_WARNING(fmt, ...) Logger->print("[{}] [Warning] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) Logger->print("[{}] [Error] " fmt, getCurrentTime(), ## __VA_ARGS__)
 
 #endif

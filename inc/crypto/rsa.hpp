@@ -25,6 +25,7 @@ public:
 class RSA_CRT_Params {
 public:
     BIGNUM *dp, *dq, *qInv, *p, *q;
+    bool enabled;
     RSA_CRT_Params();
     ~RSA_CRT_Params();
 };
@@ -43,14 +44,16 @@ public:
    ~cRSAKey();
 };
 
-void RSA_GenerateKey(cRSAKey &key, BIGNUM *e = nullptr, int kBits = 4096, bool auxMode = true);
-void RSA_GenerateKey(cRSAKey &key, int kBits, std::string e,  std::string p1, std::string p2);
+void RSA_GenerateKey(cRSAKey &key, int kBits=4096, std::string N="", std::string E="",
+                     std::string D="", std::string ex1="", std::string ex2="",
+                     std::string coef="", std::string P="", std::string Q="");
+//void RSA_GenerateKey(cRSAKey &key, BIGNUM *e = nullptr, int kBits = 4096, bool auxMode = true);
+//void RSA_GenerateKey(cRSAKey &key, int kBits, std::string e,  std::string p1, std::string p2);
 std::vector<uint8_t> RSA_Encrypt_Primative(cRSAKey &key, const std::vector<uint8_t> &src);
 std::vector<uint8_t> RSA_Encrypt(cRSAKey &key, const std::vector<uint8_t> &src);
-std::vector<uint8_t> RSA_Decrypt(cRSAKey &key, const std::vector<uint8_t> &cipher, bool crt = true);
+std::vector<uint8_t> RSA_Decrypt(cRSAKey &key, const std::vector<uint8_t> &cipher);
 std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed, size_t maskLen, SHA_MODE shaMode = SHA_MODE::SHA_256);
-ByteArray OAEP_Encode(cRSAKey &key, const ByteArray &msg, SHA_MODE digestMode, ByteArray &seed, bool givenSeed = false);
-ByteArray OAEP_Encode(cRSAKey &key, const ByteArray &msg, SHA_MODE digestMode);
+ByteArray OAEP_Encode(cRSAKey &key, const ByteArray &msg, ByteArray &seed, bool givenSeed);
 /*
  * Key Pair:
  * <d, n>: Form the private decryption key.
