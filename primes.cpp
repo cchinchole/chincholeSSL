@@ -1,5 +1,4 @@
 #include "inc/math/primes.hpp"
-#include "inc/defs.hpp"
 #include "inc/utils/logger.hpp"
 #include <math.h>
 #include <openssl/bio.h>
@@ -199,9 +198,7 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR) {
     for (int z = 0; z < 200; z++) {
       BN_free(rez[z]);
     }
-#ifdef LOG_PRIME_GEN_B_3_3
-    printf("\n%d succeeded %d failed.\n", success, failed);
-#endif
+    //printf("\n%d succeeded %d failed.\n", success, failed);
   } else {
     /* Fill the bits array with quotient bit size based on number of primes
      * (Only 2 in this case)*/
@@ -210,9 +207,7 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR) {
       results[i] = BN_CTX_get(ctx);
       for (;;) {
         generate_prime(results[i], bitsr[i]);
-#ifdef LOG_PRIME_GEN_B_3_3
-        printf("Testing: %s\n", BN_bn2dec(results[i]));
-#endif
+        //printf("Testing: %s\n", BN_bn2dec(results[i]));
 
         BN_sub(r2, results[i], BN_value_one());
         if (BN_mod_inverse(r1, r2, e, BN_CTX_secure_new()) != NULL)
@@ -220,10 +215,7 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR) {
       }
     }
   }
-#ifdef LOG_PRIME_GEN_B_3_3
-  printf("P found: %s\nQ found: %s\n", BN_bn2dec(results[0]),
-         BN_bn2dec(results[1]));
-#endif
+  //printf("P found: %s\nQ found: %s\n", BN_bn2dec(results[0]),BN_bn2dec(results[1]));
   if (!p && !q) {
     BN_copy(p, results[0]);
     BN_copy(q, results[1]);
@@ -534,7 +526,7 @@ int FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP,
   }
 
 #ifdef LOG_PRIME_GEN_B_3_6
-    //TODO FIX THIS
+   //TODO FIX THIS
   //std::string pHex = BN_bn2hex(p);
   //std::string qHex = BN_bn2hex(q);
   //printf("Found:\nP: %s\nQ: %s\n", pHex.c_str(), qHex.c_str());

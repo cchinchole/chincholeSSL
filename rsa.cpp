@@ -1,5 +1,4 @@
 #include "inc/crypto/rsa.hpp"
-#include "inc/defs.hpp"
 #include "inc/hash/sha.hpp"
 #include "inc/math/primes.hpp"
 #include "inc/utils/bytes.hpp"
@@ -369,11 +368,8 @@ std::vector<uint8_t> RSA_Decrypt_Primative(cRSAKey &key,
             // Standard decryption: m = c^d mod n
             BN_mod_exp(decryptedNumber, cipherNumber, key.d, key.n, ctx);
         }
-#ifdef LOG_CRYPTO
-// TOOD: FIX THIS
-// std::cout << "Decrypted Numbers: " << BN_bn2dec(decryptedData) << std::endl
-// << std::endl;
-#endif
+
+        LOG_RSA("Decrypted numbers: {}", decryptedNumber);
 
         // Convert decrypted data to binary
         std::vector<uint8_t> decryptedBlock(k);

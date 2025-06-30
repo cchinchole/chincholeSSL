@@ -15,8 +15,10 @@ int main() {
         "a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
     std::string ctr_iv = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
 
-    FIPS_197_5_2_KeyExpansion(ctx, hexToBytes(aes_kat_key).data());
-    SetIV(ctx, hexToBytes(aes_iv_key).data());
+    AES_KeyExpansion(ctx, hexToBytes(aes_kat_key).data());
+
+    //Not needed for ECB
+    AES_SetIV(ctx, hexToBytes(aes_iv_key).data());
 
     std::vector<uint8_t> buffer = hexToBytes(cbc_kat);
     std::vector<uint8_t> outputA;
@@ -25,8 +27,8 @@ int main() {
     outputA.resize(buffer.size());
     outputB.resize(buffer.size());
 
-    CBC_Encrypt(ctx, outputA.data(), hexToBytes(cbc_kat).data(), buffer.size());
-    CBC_Decrypt(ctx, outputB.data(), outputA.data(), 64);
+    AES_Encrypt(ctx, outputA.data(), hexToBytes(cbc_kat).data(), buffer.size());
+    AES_Decrypt(ctx, outputB.data(), outputA.data(), 64);
     if (!memcmp(hexToBytes(cbc_kat).data(), outputB.data(), 64))
     {
         printf("CBC passed!\n");
@@ -41,9 +43,10 @@ int main() {
     outputA.clear();
     outputB.clear();
 
-    SetIV(ctx, hexToBytes(ctr_iv).data());
-    CTR_xcrypt(ctx, outputA.data(), hexToBytes(cbc_kat).data(), 64);
-    CTR_xcrypt(ctx, outputB.data(), outputA.data(), 64);
+    ctx->mode = AES_CTR_128;
+    AES_SetIV(ctx, hexToBytes(ctr_iv).data());
+    AES_Encrypt(ctx, outputA.data(), hexToBytes(cbc_kat).data(), 64);
+    AES_Decrypt(ctx, outputB.data(), outputA.data(), 64); //Can also use encrypt, doesn't matter for CTR, but for simplicity will leave it like this.
 
     if (!memcmp(hexToBytes(cbc_kat).data(), outputB.data(), 64))
     {

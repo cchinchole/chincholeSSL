@@ -63,13 +63,25 @@ const uint8_t rCon[11] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10,
 /* FOR (nk,nr) AES256: 8,14 , 192: 6,12; 128: 4, 10*/
 int getNR(AES_MODE mode) {
   switch (mode) {
+  case AES_ECB_128:
   case AES_CBC_128:
+  case AES_CFB_128:
+  case AES_OFB_128:
+  case AES_CTR_128:
     return 10;
     break;
+  case AES_ECB_192:
   case AES_CBC_192:
+  case AES_CFB_192:
+  case AES_OFB_192:
+  case AES_CTR_192:
     return 12;
     break;
+  case AES_ECB_256:
   case AES_CBC_256:
+  case AES_CFB_256:
+  case AES_OFB_256:
+  case AES_CTR_256:
     return 14;
     break;
   default:
@@ -81,13 +93,25 @@ int getNR(AES_MODE mode) {
 
 int getNK(AES_MODE mode) {
   switch (mode) {
+  case AES_ECB_128:
   case AES_CBC_128:
+  case AES_CFB_128:
+  case AES_OFB_128:
+  case AES_CTR_128:
     return 4;
     break;
+  case AES_ECB_192:
   case AES_CBC_192:
+  case AES_CFB_192:
+  case AES_OFB_192:
+  case AES_CTR_192:
     return 6;
     break;
+  case AES_ECB_256:
   case AES_CBC_256:
+  case AES_CFB_256:
+  case AES_OFB_256:
+  case AES_CTR_256:
     return 8;
     break;
   default:
@@ -232,7 +256,7 @@ uint8_t AESMult(uint8_t x, uint8_t y) {
           ((y >> 4 & 1) * xtime(xtime(xtime(xtime(x))))));
 }
 
-int SetIV(AES_CTX *ctx, uint8_t *iv) {
+int AES_SetIV(AES_CTX *ctx, uint8_t *iv) {
   memcpy(ctx->iv, iv, AES_BlockSize);
   return 0;
 }
@@ -428,16 +452,40 @@ int FIPS_197_5_3_InvCipher(AES_CTX *ctx) {
   return retcode;
 }
 
+// SP800-38A  6.1
+int ECB_Encrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len) {
+  for (size_t i = 0; i < buf_len; i += AES_BlockSize) {
+    memcpy(ctx->state, buf, AES_BlockSize);
+    FIPS_197_5_1_Cipher(ctx);
+    memcpy(output, ctx->state, AES_BlockSize);
+    buf += AES_BlockSize;
+    output += AES_BlockSize;
+  }
+  return 0;
+}
+
+// SP800-38A  6.1
+int ECB_Decrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len) {
+  for (size_t i = 0; i < buf_len; i += AES_BlockSize) {
+    memcpy(ctx->state, buf, AES_BlockSize);
+    FIPS_197_5_3_InvCipher(ctx);
+    memcpy(output, ctx->state, AES_BlockSize);
+    buf += AES_BlockSize;
+    output += AES_BlockSize;
+  }
+  return 0;
+}
+
 // SP800-38A  6.2
 int CBC_Encrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len) {
   uint8_t iv[16];
   memcpy(iv, ctx->iv, 16);
-  for (int i = 0; i < buf_len; i += AES_BlockSize) {
+  for (size_t i = 0; i < buf_len; i += AES_BlockSize) {
     memcpy(ctx->state, buf, AES_BlockSize);
 
     /* XOR'ing the current buffer segment with the IV */
-    for (int j = 0; j < 4; j++)
-      for (int k = 0; k < 4; k++)
+    for (size_t j = 0; j < 4; j++)
+      for (size_t k = 0; k < 4; k++)
         ctx->state[j][k] ^= iv[j * 4 + k];
 
     FIPS_197_5_1_Cipher(ctx);
@@ -454,14 +502,14 @@ int CBC_Decrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len) {
   uint8_t iv[16];
   memcpy(iv, ctx->iv, 16);
   uint8_t nextIV[AES_BlockSize];
-  for (int i = 0; i < buf_len; i += AES_BlockSize) {
+  for (size_t i = 0; i < buf_len; i += AES_BlockSize) {
     memcpy(nextIV, buf, AES_BlockSize);
     memcpy(ctx->state, buf, AES_BlockSize);
     FIPS_197_5_3_InvCipher(ctx);
 
     /* XOR'ing the current buffer segment with the IV */
-    for (int j = 0; j < 4; j++)
-      for (int k = 0; k < 4; k++)
+    for (size_t j = 0; j < 4; j++)
+      for (size_t k = 0; k < 4; k++)
         ctx->state[j][k] ^= iv[j * 4 + k];
 
     memcpy(output, ctx->state, AES_BlockSize);
@@ -486,7 +534,7 @@ int CTR_xcrypt(AES_CTX *ctx, uint8_t *out, uint8_t *buf, size_t buf_len) {
       FIPS_197_5_1_Cipher(ctx);
       memcpy(TCounterBuffer, ctx->state, AES_BlockSize);
 
-      for (int i = AES_BlockSize - 1; i >= 0; i--)
+      for (size_t i = AES_BlockSize - 1; i >= 0; i--)
         if (iv[i] == 0xFF)
           iv[i] = 0;
         else {
@@ -498,4 +546,70 @@ int CTR_xcrypt(AES_CTX *ctx, uint8_t *out, uint8_t *buf, size_t buf_len) {
     out[j] = buf[j] ^ TCounterBuffer[TInc];
   }
   return 0;
+}
+
+// Wrapped for better naming
+int AES_KeyExpansion(AES_CTX *ctx, uint8_t *key) {
+    return FIPS_197_5_2_KeyExpansion(ctx, key);
+}
+
+int AES_Encrypt(AES_CTX *ctx, uint8_t *out, uint8_t *buf, size_t buf_len)
+{
+    switch(ctx->mode)
+    {
+        case AES_CBC_128:
+        case AES_CBC_192:
+        case AES_CBC_256:
+            CBC_Encrypt(ctx, out, buf, buf_len);
+        break;
+        
+        case AES_ECB_128:
+        case AES_ECB_192:
+        case AES_ECB_256:
+            ECB_Encrypt(ctx, out, buf, buf_len);
+        break;
+
+        case AES_CTR_128:
+        case AES_CTR_192:
+        case AES_CTR_256:
+            CTR_xcrypt(ctx, out, buf, buf_len);
+        break;
+
+        default:
+            LOG_ERROR("{} Invalid AES mode reached.", __func__);
+            return -1;
+            break;
+    }
+    return 0;
+}
+
+
+int AES_Decrypt(AES_CTX *ctx, uint8_t *out, uint8_t *buf, size_t buf_len)
+{
+    switch(ctx->mode)
+    {
+        case AES_CBC_128:
+        case AES_CBC_192:
+        case AES_CBC_256:
+            CBC_Decrypt(ctx, out, buf, buf_len);
+        break;
+        
+        case AES_ECB_128:
+        case AES_ECB_192:
+        case AES_ECB_256:
+            ECB_Decrypt(ctx, out, buf, buf_len);
+        break;
+        
+        case AES_CTR_128:
+        case AES_CTR_192:
+        case AES_CTR_256:
+            CTR_xcrypt(ctx, out, buf, buf_len);
+        break;
+
+        default:
+            LOG_ERROR("{} Invalid AES mode reached.", __func__);
+            return -1;
+            break;
+    }
+    return 0;
 }

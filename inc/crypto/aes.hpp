@@ -12,9 +12,21 @@
 
 enum AES_MODE
 {
+    AES_ECB_128,
+    AES_ECB_192,
+    AES_ECB_256,
     AES_CBC_128,
     AES_CBC_192,
-    AES_CBC_256
+    AES_CBC_256,
+    AES_CFB_128,
+    AES_CFB_192,
+    AES_CFB_256,
+    AES_OFB_128,
+    AES_OFB_192,
+    AES_OFB_256,
+    AES_CTR_128,
+    AES_CTR_192,
+    AES_CTR_256,
 };
 
 class AES_CTX
@@ -26,12 +38,15 @@ public:
     uint8_t iv[AES_BlockSize]; // IV For CBC
 };
 
-int getNR(AES_MODE mode);
-int getNK(AES_MODE mode);
-int FIPS_197_5_2_KeyExpansion(AES_CTX *ctx, uint8_t *key);
-int FIPS_197_5_1_Cipher(AES_CTX *ctx); // Using a X to signify this is a two way buffer
-int FIPS_197_5_3_InvCipher(AES_CTX *ctx);
-int CBC_Encrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
-int CBC_Decrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
-int CTR_xcrypt(AES_CTX *ctx, uint8_t *out, uint8_t *buf, size_t buf_len);
-int SetIV(AES_CTX *ctx, uint8_t *iv);
+//int getNR(AES_MODE mode);
+//int getNK(AES_MODE mode);
+//int FIPS_197_5_2_KeyExpansion(AES_CTX *ctx, uint8_t *key);
+//int FIPS_197_5_1_Cipher(AES_CTX *ctx); // Using a X to signify this is a two way buffer
+//int FIPS_197_5_3_InvCipher(AES_CTX *ctx);
+//int CBC_Encrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
+//int CBC_Decrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
+//int CTR_xcrypt(AES_CTX *ctx, uint8_t *out, uint8_t *buf, size_t buf_len);
+int AES_KeyExpansion(AES_CTX *ctx, uint8_t *key);
+int AES_SetIV(AES_CTX *ctx, uint8_t *iv);
+int AES_Encrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
+int AES_Decrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);

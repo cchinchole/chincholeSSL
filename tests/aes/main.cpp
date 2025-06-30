@@ -108,6 +108,12 @@ AES_MODE haveAES(std::string name) {
     return AES_MODE::AES_CBC_256;
   } else if (name == "CBC128") {
     return AES_MODE::AES_CBC_128;
+  } else if (name == "ECB128") {
+    return AES_MODE::AES_ECB_128;
+  } else if (name == "ECB192") {
+    return AES_MODE::AES_ECB_192;
+  } else if (name == "ECB256") {
+    return AES_MODE::AES_ECB_256;
   }
     return AES_MODE::AES_CBC_256;
 }
@@ -123,14 +129,16 @@ void runTest(std::string path, std::string fileName, AES_MODE mode, int *passed,
         AES_CTX *ctx = new AES_CTX();
 
         ctx->mode = mode;
-        FIPS_197_5_2_KeyExpansion(ctx, hexToBytes(t.KEY).data());
-        SetIV(ctx, hexToBytes(t.IV).data());
+        AES_KeyExpansion(ctx, hexToBytes(t.KEY).data());
+
+        if(ctx->mode != AES_MODE::AES_ECB_128 && ctx->mode != AES_MODE::AES_ECB_192 && ctx->mode != AES_MODE::AES_ECB_256)
+            AES_SetIV(ctx, hexToBytes(t.IV).data());
 
         std::vector<uint8_t> buffer = hexToBytes(t.PLAINTEXT);
         std::vector<uint8_t> output;
         output.resize(buffer.size());
 
-        CBC_Encrypt(ctx, output.data(), buffer.data(), buffer.size());
+        AES_Encrypt(ctx, output.data(), buffer.data(), buffer.size());
 
         std::string hexOutput = bytesToHex(output);
         if (std::memcmp(output.data(), hexToBytes(t.CIPHERTEXT).data(),
@@ -143,14 +151,15 @@ void runTest(std::string path, std::string fileName, AES_MODE mode, int *passed,
         AES_CTX *ctx = new AES_CTX();
 
         ctx->mode = mode;
-        FIPS_197_5_2_KeyExpansion(ctx, hexToBytes(t.KEY).data());
-        SetIV(ctx, hexToBytes(t.IV).data());
+        AES_KeyExpansion(ctx, hexToBytes(t.KEY).data());
+        if(ctx->mode != AES_MODE::AES_ECB_128 && ctx->mode != AES_MODE::AES_ECB_192 && ctx->mode != AES_MODE::AES_ECB_256)
+            AES_SetIV(ctx, hexToBytes(t.IV).data());
 
         std::vector<uint8_t> buffer = hexToBytes(t.CIPHERTEXT);
         std::vector<uint8_t> output;
         output.resize(buffer.size());
 
-        CBC_Decrypt(ctx, output.data(), buffer.data(), buffer.size());
+        AES_Decrypt(ctx, output.data(), buffer.data(), buffer.size());
 
         if (std::memcmp(output.data(), hexToBytes(t.PLAINTEXT).data(),
                         output.size()) == 0)
@@ -195,6 +204,8 @@ int main() {
         if (std::regex_search(fileName, match, key_size_regex)) {
           key_size = match[1].str();
         }
+
+        std::cout << "AES Mode: " << std::string(cipher+key_size) << std::endl;
 
         runTest(path, fileName, haveAES(cipher+key_size), &passed, &failed);
         tests_performed++;

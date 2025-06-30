@@ -9,8 +9,7 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
 3. pkg-config
 
 ## Flags ##
-1. LOG_PARAMS : This will log parameters used in key operations.
-2. AES_LOG : Will log the state in the AES ctx for debugging.
+1. Makefile : DEBUG, setting this to true will output verbose parameters and steps during encryption / decryption. (Extremely unsafe, only for dev use)
 
 ## Building and installing ##
 1. Ensure the dependencies is installed and the libraries are accessible
@@ -28,5 +27,7 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
 2. The tests will access the files in the vectors folder and automatically run what the library is capable of.
 
 ## Future Plans ##
-1. Logger Queue. Rather than posting logs to stdout, I would like to push all errors and information to a queue that can then be wrote to a log file. This will also have the benefit of easily deciding the log levels as everything will always be pushed, but can be adjusted via a flag before being written.
-2. Will rewrite this in a more *C++* style, currently this follows more C practice, but utilizes classes.
+1. AES rewritten to input and output a ByteArray *vector<uint8_t>*
+2. AES modes CFB, OFB
+3. Add nice codeblocks to README to show quick examples of usage
+4. Input PEM files
