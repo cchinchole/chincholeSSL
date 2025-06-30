@@ -1,6 +1,7 @@
 # Compiler and flags
+DEBUG = 0
 CXX = g++
-CXXFLAGS = -std=c++23 -g -O0 -fdiagnostics-color=always
+CXXFLAGS = -std=c++23 -g -O0 -DDEBUG=$(DEBUG) -fdiagnostics-color=always
 LDFLAGS =
 
 

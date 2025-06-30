@@ -259,7 +259,6 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
   BIGNUM *R, *r1mul2, *r1_mul2_r2, *temp, *tempPrivFactor, *range, *base;
   int bits = nLen >> 1;
   int status = RET_NOSTATUS;
-  Logger *_Logger = new Logger();
 
   BN_CTX_start(ctx);
   R = BN_CTX_get(ctx);
@@ -277,8 +276,7 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
   /* Step 1 */
   /* GCD(2r1, r1) != 1 */
   if (BN_cmp(temp, r1mul2) != 0 && BN_cmp(temp, r2) != 0 && !BN_is_one(temp)) {
-    _Logger->error(__func__,
-                   "GCD was not = 1 between the two auxiliary primes");
+    LOG_ERROR("{} GCD was not = 1 between the two auxiliary primes", __func__);
     status = RET_FAILURE;
     goto ending;
   }
@@ -317,7 +315,7 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
     //BN_free(twofiftysix);
 
     if (bits < BN_num_bits(temp)) {
-      _Logger->error(__func__, "Bits was less than the temp");
+      LOG_ERROR("{} Bits was less than the temp", __func__);
       status = RET_FAILURE;
       goto ending;
     }
@@ -340,14 +338,19 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
     int i = 0; /* 5 */
     for (;;) {
       if (BN_num_bits(PRIV_PRIME_FACTOR) > bits) /* Step 6 */
+      {
         if (Xin == NULL)
+        {
           break; /* Bad X generation so go back to step 3 */
-        else {
-          _Logger->error(__func__, "X was already declared.");
+        }
+        else
+        {
+          LOG_ERROR("{} X was already declared.", __func__);
           status = RET_FAILURE;
           goto ending;
           /* X was inputted if we make it here. */
         }
+      }
 
       BN_copy(tempPrivFactor, PRIV_PRIME_FACTOR);
       BN_sub_word(tempPrivFactor, 1);
@@ -364,7 +367,7 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
       i++;                   /* Step 8 */
       if (i >= 5 * nLen / 2) /* Step 9 */
       {
-        _Logger->error(__func__, "I was >= 5*nlen/2");
+        LOG_ERROR("{} I was >= 5*nlen/2", __func__);
         status = RET_FAILURE;
         goto ending;
       }
@@ -372,7 +375,6 @@ int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
     }
   }
 ending:
-  delete _Logger;
   BN_CTX_end(ctx);
   return status;
 }
@@ -403,7 +405,6 @@ int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2,
                              int nlen, bool testParamsFilled, BN_CTX *ctx) {
   int status = RET_NOSTATUS;
   BIGNUM *p1i = NULL, *p2i = NULL, *xp1i = NULL, *xp2i = NULL;
-  Logger *_Logger = new Logger();
 
   BN_CTX_start(ctx);
 
@@ -445,8 +446,7 @@ int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2,
 
   /* Make sure the auxilary primes' sum are within the max length */
   if ((BN_num_bits(p1i) + BN_num_bits(p2i)) >= FIPS186_5_MAX_PROB_LEN(nlen)) {
-    _Logger->error(__func__,
-                   "Auxiliary primes sum was not within the maximum length.");
+    LOG_ERROR("{} Auxiliary primes sum was not within the maximum length", __func__);
     status = RET_FAILURE;
     goto ending;
   }
@@ -459,7 +459,6 @@ int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2,
     status = RET_FAILURE;
 
 ending:
-  delete _Logger;
   BN_CTX_end(ctx);
   return status;
 }

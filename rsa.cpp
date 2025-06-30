@@ -22,6 +22,7 @@
 RSA_CRT_Params::RSA_CRT_Params() {
     dp = BN_secure_new(), dq = BN_secure_new(), qInv = BN_secure_new(),
     p = BN_secure_new(), q = BN_secure_new();
+    enabled = true;
 }
 
 RSA_CRT_Params::~RSA_CRT_Params() {
@@ -73,7 +74,6 @@ int gen_rsa_sp800_56b(cRSAKey &key, bool constTime) {
     Timer t;
     BN_CTX *ctx = BN_CTX_secure_new();
     BIGNUM *p1, *q1, *lcm, *p1q1, *gcd;
-    Logger *_Logger = new Logger();
 
     BN_CTX_start(ctx);
     p1 = BN_CTX_get(ctx);
@@ -95,9 +95,6 @@ int gen_rsa_sp800_56b(cRSAKey &key, bool constTime) {
         BN_set_flags(key.crt.qInv, BN_FLG_CONSTTIME);
     }
 
-    _Logger->parameter("P", key.crt.p);
-    _Logger->parameter("Q", key.crt.q);
-    _Logger->parameter("E", key.e);
 
     /* Step 1: Find the least common multiple of (p-1, q-1) */
     BN_sub(p1, key.crt.p, BN_value_one()); /* p - 1 */
@@ -105,35 +102,42 @@ int gen_rsa_sp800_56b(cRSAKey &key, bool constTime) {
     BN_mul(p1q1, p1, q1, ctx);             /* (p-1)(q-1)*/
     BN_gcd(gcd, p1, q1, ctx);
     BN_div(lcm, NULL, p1q1, gcd, ctx);
-
-    _Logger->parameter("GCD", gcd);
-    _Logger->parameter("LCM", lcm);
+    
+    LOG_RSA("P {}", key.crt.p);
+    LOG_RSA("Q {}", key.crt.p);
+    LOG_RSA("E {}", key.e);
+    LOG_RSA("GCD {}", gcd);
+    LOG_RSA("LCM {}", lcm);
 
     /* Step 2: d = e^(-1) mod(LCM[(p-1)(q-1)]) */
     /* Keep repeating incase the bitsize is too short */
     /* Not compliant since will show D failures if the loop continues. Need to
      * finish function and return a value to show failure to restart. */
 
-    for (;;) {
-        BN_mod_inverse(key.d, key.e, lcm, ctx);
-        _Logger->parameter("D", key.d);
-#ifdef DO_CHECKS
-        if (!(BN_num_bits(rsa->d) <= (nBits >> 1)))
-            break;
-#else
-        break;
-#endif
+    if (BN_is_zero(key.d)) {
+        for (;;) {
+            BN_mod_inverse(key.d, key.e, lcm, ctx);
+            LOG_RSA("D {}", key.d);
+            #ifdef DO_CHECKS
+                if (!(BN_num_bits(rsa->d) <= (nBits >> 1)))
+                break;
+            #else
+                break;
+            #endif
+        }
+
+        if (BN_is_zero(key.d) || BN_num_bits(key.d) < key.kBits / 4) {
+            BN_CTX_end(ctx);
+            BN_CTX_free(ctx);
+            return -1;
+        }
     }
 
-    if (BN_is_zero(key.d) || BN_num_bits(key.d) < key.kBits / 4) {
-        BN_CTX_end(ctx);
-        BN_CTX_free(ctx);
-        return -1;
+    if (BN_is_zero(key.n)) {
+        /* Step 3: n = pq */
+        BN_mul(key.n, key.crt.p, key.crt.q, ctx);
+        LOG_RSA("N {}", key.n);
     }
-
-    /* Step 3: n = pq */
-    BN_mul(key.n, key.crt.p, key.crt.q, ctx);
-    _Logger->parameter("N", key.n);
 
     t.start();
     /* Step 4: dP = d mod(p-1)*/
@@ -145,76 +149,81 @@ int gen_rsa_sp800_56b(cRSAKey &key, bool constTime) {
     /* Step 6: qInv = q^(-1) mod(p) */
     BN_mod_inverse(key.crt.qInv, key.crt.q, key.crt.p, ctx);
 
-    //printf("Took: %dms to generate CRT parameters.\n", t.getElapsed(true));
+    // printf("Took: %dms to generate CRT parameters.\n", t.getElapsed(true));
 
-    _Logger->parameter("DP", key.crt.dp);
-    _Logger->parameter("DQ", key.crt.dq);
-    _Logger->parameter("QINV", key.crt.qInv);
-
-    rsa_sp800_56b_pairwise_test(key);
-    /*
-    if (rsa_sp800_56b_pairwise_test(key))
-        printf("Pairwise passed!\n");
-    else
-        printf("Pairwise failed!\n");
-    */
-
-    delete _Logger;
+    LOG_RSA("DP {}", key.crt.dp);
+    LOG_RSA("DQ {}", key.crt.dq);
+    LOG_RSA("QINV {}", key.crt.qInv);
+    
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
-    return 0;
+    return !(rsa_sp800_56b_pairwise_test(key));
 }
 
-void RSA_GenerateKey(cRSAKey &key, BIGNUM *e, int kBits, bool auxMode) {
+void BN_strtobn(BIGNUM *bn, std::string &str) {
+    BIGNUM *bnVal = BN_new();
+    BN_hex2bn(&bnVal, str.c_str());
+    BN_copy(bn, bnVal);
+    BN_free(bnVal);
+}
+
+// Permanently setting to auxMode for now.
+void RSA_GenerateKey(cRSAKey &key, int kBits, std::string N, std::string E,
+                     std::string D, std::string ex1, std::string ex2,
+                     std::string coef, std::string P, std::string Q) {
     key.kBits = kBits;
-    if (!e) {
+    bool auxMode = true;
+
+    // Check what is provided.
+    // If E is not provided ALWAYS set E to 65537
+    // If N,D are not provided -> Check if P,Q are provided; if so then generate
+    // from the P,Q provided If N,D are provided and not CRT -> Generate CRT If
+    // N,D and CRT provided -> Nothing to be done If N,D and P,Q are not
+    // provided -> Generate fully new key
+
+    // Decoding
+    // Provided<2 && >0 -> Only P,Q given
+    // Provided<4 && >2 -> Atleast N,D provided
+    // Provided>4       -> CRT Provided
+    int provided = 0;
+
+    if (E == "") {
         BIGNUM *myE = BN_new();
         BN_set_word(myE, 65537);
         BN_copy(key.e, myE);
         BN_free(myE);
     } else {
-        BN_copy(key.e, e);
+        BN_strtobn(key.e, E);
     }
 
-    if (auxMode) {
-        ACVP_TEST test = {
-            NULL, NULL,       /* XP Out, XQ Out */
-            NULL, NULL, NULL, /* XP, XP1, XP2*/
-            NULL, NULL, NULL, /* XQ, XQ1, XQ2 */
-            NULL, NULL,       /* P1, P2 */
-            NULL, NULL,       /* Q1, Q2 */
-        };
+    if (N != "" && D != "") {
+        BN_strtobn(key.n, N);
+        BN_strtobn(key.d, D);
+        provided += 2;
+    }
 
-        FIPS186_4_GEN_PRIMES(key.crt.p, key.crt.q, key.e, kBits, true, &test);
+    if (ex1 != "" && ex2 != "" && coef != "") {
+        BN_strtobn(key.crt.dp, ex1);
+        BN_strtobn(key.crt.dq, ex2);
+        BN_strtobn(key.crt.qInv, coef);
+        provided += 4;
+    }
+
+    if (P != "" && Q != "") {
+        BN_strtobn(key.crt.p, P);
+        BN_strtobn(key.crt.q, Q);
+        provided++;
+    }
+
+    if (provided < 1) {
+        FIPS186_4_GEN_PRIMES(key.crt.p, key.crt.q, key.e, kBits); //true, &ACVP_TEST
         gen_rsa_sp800_56b(key, true);
-    } else {
-        generatePrimes(key.crt.p, key.crt.q, key.e, kBits, 0);
-        if (gen_rsa_sp800_56b(key, true) != 0)
-            printf("Failed to gen\n");
-    }
-}
-
-/*
- * Generate the RSA key from primes
- */
-void RSA_GenerateKey(cRSAKey &key, int kBits, std::string e, std::string p1,
-                     std::string p2) {
-    key.kBits = kBits;
-    BIGNUM *bnP = BN_new();
-    BIGNUM *bnQ = BN_new();
-    BIGNUM *bnE = BN_new();
-    BN_hex2bn(&bnE, e.c_str());
-    BN_hex2bn(&bnP, p1.c_str());
-    BN_hex2bn(&bnQ, p2.c_str());
-    BN_copy(key.e, bnE);
-    BN_copy(key.crt.p, bnP);
-    BN_copy(key.crt.q, bnQ);
-    BN_free(bnE);
-    BN_free(bnP);
-    BN_free(bnQ);
-
-    gen_rsa_sp800_56b(key, true);
-}
+    } else if (provided > 2) {
+        gen_rsa_sp800_56b(key, true);
+    } else if (provided == 2) {
+        key.crt.enabled = false;
+    } 
+   }
 
 /* TODO : Move this to more suitable place */
 std::vector<uint8_t> sha_hash(std::vector<uint8_t> &input, SHA_MODE mode) {
@@ -244,14 +253,12 @@ std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed, size_t maskLen,
         T.push_back(static_cast<uint8_t>((counter >> 8) & 0xFF));
         T.push_back(static_cast<uint8_t>((counter & 0xFF)));
 
-        // TODO : Make this work for any sha implementation.
         std::vector<uint8_t> hash = sha_hash(T, shaMode);
         mask.insert(mask.end(), hash.begin(), hash.end());
 
         counter++;
         if (counter == 0) {
-            // TODO: Implement error here
-            throw std::overflow_error("MGF1 Overflowed");
+            LOG_ERROR("{} overflow error", __func__);
         }
     }
 
@@ -281,19 +288,12 @@ std::vector<uint8_t> RSA_Encrypt_Primative(cRSAKey &key,
         // Convert to BIGNUM
         BIGNUM *originalNumber = BN_CTX_get(ctx);
         BN_bin2bn(blockStart, blockSize, originalNumber);
-#ifdef LOG_CRYPTO
-// TODO: FIX THIS
-// std::cout << "Original Number: " << BN_bn2dec(originalNumber) << std::endl;
-#endif
+        LOG_RSA("{} Original number: {}", __func__, originalNumber);
 
         // Encrypt
         BIGNUM *cipherNumber = BN_CTX_get(ctx);
         BN_mod_exp(cipherNumber, originalNumber, key.e, key.n, ctx);
-#ifdef LOG_CRYPTO
-        // TODO: FIX THIS
-        // std::cout << "Encrypted Number: " << BN_bn2dec(cipherNumber) <<
-        // std::endl << std::endl;
-#endif
+        LOG_RSA("{} Encryped number: {}", __func__, cipherNumber);
 
         // Convert cipher to binary
         std::vector<uint8_t> cipherBlock(BN_num_bytes(cipherNumber));
@@ -309,8 +309,7 @@ std::vector<uint8_t> RSA_Encrypt_Primative(cRSAKey &key,
 }
 
 std::vector<uint8_t> RSA_Decrypt_Primative(cRSAKey &key,
-                                           const std::vector<uint8_t> &cipher,
-                                           bool crt) {
+                                           const std::vector<uint8_t> &cipher) {
     BN_CTX *ctx = BN_CTX_secure_new();
     bool errorRaised = false;
 
@@ -341,7 +340,7 @@ std::vector<uint8_t> RSA_Decrypt_Primative(cRSAKey &key,
 
         // Decrypt
         BIGNUM *decryptedNumber = BN_CTX_get(ctx);
-        if (crt) {
+        if (key.crt.enabled) {
             // CRT Decryption
             BIGNUM *m1 = BN_CTX_get(ctx);
             BIGNUM *m2 = BN_CTX_get(ctx);
@@ -547,11 +546,11 @@ std::vector<uint8_t> RSA_Encrypt(cRSAKey &key,
 }
 
 std::vector<uint8_t> RSA_Decrypt(cRSAKey &key,
-                                 const std::vector<uint8_t> &cipher, bool crt) {
+                                 const std::vector<uint8_t> &cipher) {
     if (key.padding.mode == RSA_Padding::OAEP) {
-        ByteArray EM = RSA_Decrypt_Primative(key, cipher, crt);
+        ByteArray EM = RSA_Decrypt_Primative(key, cipher);
         return OAEP_Decode(key, EM);
     } else {
-        return RSA_Decrypt_Primative(key, cipher, crt);
+        return RSA_Decrypt_Primative(key, cipher);
     }
 }

@@ -271,8 +271,6 @@ char *roundkeyToString(const uint8_t *w) {
 }
 
 int FIPS_197_5_2_KeyExpansion(AES_CTX *ctx, uint8_t *key) {
-  Logger *_Logger = new Logger();
-
   int retCode = 0;
   uint8_t temp[4];
 
@@ -282,55 +280,53 @@ int FIPS_197_5_2_KeyExpansion(AES_CTX *ctx, uint8_t *key) {
 
   for (int i = 0; i <= getNK(ctx->mode) - 1; i++)
     for (int j = 0; j < 4; j++)
-      _Logger->aes_printf("%02x", ctx->w[(i * 4) + j]);
-  _Logger->aes_printf(" is the input to w\n");
+      LOG_AES("%02x", ctx->w[(i * 4) + j]);
+  LOG_AES(" is the input to w\n");
 
   for (int i = getNK(ctx->mode); i <= 4 * getNR(ctx->mode) + 3; i++) {
     for (int j = 0; j < 4; j++)
       temp[j] = ctx->w[(i - 1) * 4 + j];
 
-    _Logger->aes_printf("[Round %d] temp: ", i);
+    LOG_AES("[Round %d] temp: ", i);
     for (int j = 0; j < 4; j++)
-      _Logger->aes_printf("%02x", temp[j]);
-    _Logger->aes_printf(" ");
+      LOG_AES("%02x", temp[j]);
+    LOG_AES(" ");
 
     if (i % getNK(ctx->mode) == 0) {
       rotateWord(temp);
 
-      _Logger->aes_printf("after rotate: ");
+      LOG_AES("after rotate: ");
       for (int j = 0; j < 4; j++)
-        _Logger->aes_printf("%02x", temp[j]);
-      _Logger->aes_printf(" ");
+        LOG_AES("%02x", temp[j]);
+      LOG_AES(" ");
 
       SubWord(temp);
 
-      _Logger->aes_printf("after subtraction: ");
+      LOG_AES("after subtraction: ");
       for (int j = 0; j < 4; j++)
-        _Logger->aes_printf("%02x", temp[j]);
-      _Logger->aes_printf(" ");
-      _Logger->aes_printf(" rcon [i/nk]: %08x ", rCon[i / getNK(ctx->mode)]);
+        LOG_AES("%02x", temp[j]);
+      LOG_AES(" ");
+      LOG_AES(" rcon [i/nk]: %08x ", rCon[i / getNK(ctx->mode)]);
       temp[0] ^= rCon[i / getNK(ctx->mode)];
 
-      _Logger->aes_printf("after xor: ");
+      LOG_AES("after xor: ");
       for (int j = 0; j < 4; j++)
-        _Logger->aes_printf("%02x", temp[j]);
+        LOG_AES("%02x", temp[j]);
     } else if (getNK(ctx->mode) > 6 && (i % getNK(ctx->mode)) == 4)
       SubWord(temp);
 
-    _Logger->aes_printf("w[i-nk]: ");
+    LOG_AES("w[i-nk]: ");
     for (int j = 0; j < 4; j++) {
-      _Logger->aes_printf("%02x", ctx->w[(i - getNK(ctx->mode)) * 4 + j]);
+      LOG_AES("%02x", ctx->w[(i - getNK(ctx->mode)) * 4 + j]);
       ctx->w[(i * 4) + j] = ctx->w[(i - getNK(ctx->mode)) * 4 + j] ^ temp[j];
     }
-    _Logger->aes_printf(" ");
+    LOG_AES(" ");
 
-    _Logger->aes_printf("xor'd: ");
+    LOG_AES("xor'd: ");
     for (int j = 0; j < 4; j++)
-      _Logger->aes_printf("%02x", ctx->w[(i * 4) + j]);
-    _Logger->aes_printf("\n");
+      LOG_AES("%02x", ctx->w[(i * 4) + j]);
+    LOG_AES("\n");
   }
-
-  delete _Logger;
 
   return retCode;
 }
@@ -346,95 +342,89 @@ int FIPS_197_5_1_4_AddRoundKey(int round, uint8_t state[4][4],
 }
 
 int FIPS_197_5_1_Cipher(AES_CTX *ctx) {
-  Logger *_Logger = new Logger();
   int retcode = 0;
-  _Logger->aes_printf("start state: %s\n", stateToString(ctx->state).c_str());
+  LOG_AES("start state: {}\n", stateToString(ctx->state).c_str());
 
   FIPS_197_5_1_4_AddRoundKey(0, ctx->state, ctx->w);
 
   for (int round = 1; round <= getNR(ctx->mode) - 1; round++) {
-    _Logger->aes_printf("Cipher Round [ %d ]: ", round);
+    LOG_AES("Cipher Round [ {} ]: ", round);
     
-    _Logger->aes_printf("start rnd: %s ", stateToString(ctx->state).c_str());
+    LOG_AES("start rnd: {} ", stateToString(ctx->state).c_str());
     SubWord(ctx->state);
 
     
-    _Logger->aes_printf("after sub: %s ", stateToString(ctx->state).c_str());
+    LOG_AES("after sub: {} ", stateToString(ctx->state).c_str());
 
     ShiftRows(ctx->state);
     
-    _Logger->aes_printf("after shift: %s ", stateToString(ctx->state).c_str());
+    LOG_AES("after shift: {} ", stateToString(ctx->state).c_str());
 
     MixColumns(ctx->state);
     
-    _Logger->aes_printf("after mix: %s", stateToString(ctx->state).c_str());
+    LOG_AES("after mix: {}", stateToString(ctx->state).c_str());
 
     FIPS_197_5_1_4_AddRoundKey(round, ctx->state, ctx->w);
-    _Logger->aes_printf("\n");
+    LOG_AES("\n");
   }
-  _Logger->aes_printf("Cipher Round [ %d ]: ", getNR(ctx->mode));
+  LOG_AES("Cipher Round [ {} ]: ", getNR(ctx->mode));
   
-  _Logger->aes_printf("start rnd: %s ", stateToString(ctx->state).c_str());
+  LOG_AES("start rnd: {} ", stateToString(ctx->state).c_str());
   SubWord(ctx->state);
   
-  _Logger->aes_printf("after sub: %s ", stateToString(ctx->state).c_str());
+  LOG_AES("after sub: {} ", stateToString(ctx->state).c_str());
   ShiftRows(ctx->state);
   
-  _Logger->aes_printf("after shift: %s\n", stateToString(ctx->state).c_str());
+  LOG_AES("after shift: {}\n", stateToString(ctx->state).c_str());
   FIPS_197_5_1_4_AddRoundKey(getNR(ctx->mode), ctx->state, ctx->w);
   
-  _Logger->aes_printf("output state: %s\n", stateToString(ctx->state).c_str());
-  delete _Logger;
+  LOG_AES("output state: {}\n", stateToString(ctx->state).c_str());
   return retcode;
 }
 
 int FIPS_197_5_3_InvCipher(AES_CTX *ctx) {
-  Logger *_Logger = new Logger();
   int retcode = 0;
   
-  _Logger->aes_printf("start state: %s\n", stateToString(ctx->state).c_str());
+  LOG_AES("start state: {}\n", stateToString(ctx->state).c_str());
 
   FIPS_197_5_1_4_AddRoundKey(getNR(ctx->mode), ctx->state, ctx->w);
 
   for (int round = getNR(ctx->mode) - 1; round >= 1; round--) {
-    _Logger->aes_printf("InvCipher Round [ %d ]: ", round);
+    LOG_AES("InvCipher Round [ {} ]: ", round);
 
     
-    _Logger->aes_printf("start rnd: %s ", stateToString(ctx->state).c_str());
+    LOG_AES("start rnd: {} ", stateToString(ctx->state).c_str());
 
     InvShiftRows(ctx->state);
     
-    _Logger->aes_printf("after invshift: %s ", stateToString(ctx->state).c_str());
+    LOG_AES("after invshift: {} ", stateToString(ctx->state).c_str());
 
     InvSubWord(ctx->state);
     
-    _Logger->aes_printf("after invsub: %s ", stateToString(ctx->state).c_str());
+    LOG_AES("after invsub: {} ", stateToString(ctx->state).c_str());
 
     FIPS_197_5_1_4_AddRoundKey(round, ctx->state, ctx->w);
 
     InvMixColumns(ctx->state);
     
-    _Logger->aes_printf("after invmix: %s", stateToString(ctx->state).c_str());
+    LOG_AES("after invmix: {}", stateToString(ctx->state).c_str());
 
-    _Logger->aes_printf("\n");
+    LOG_AES("\n");
   }
-  _Logger->aes_printf("Cipher Round [ %d ]: ", 0);
+  LOG_AES("Cipher Round [ {} ]: ", 0);
   
-  _Logger->aes_printf("start rnd: %s ", stateToString(ctx->state).c_str());
+  LOG_AES("start rnd: {} ", stateToString(ctx->state).c_str());
   InvShiftRows(ctx->state);
   
-  _Logger->aes_printf("after invshift: %s", stateToString(ctx->state).c_str());
+  LOG_AES("after invshift: {}", stateToString(ctx->state).c_str());
 
   InvSubWord(ctx->state);
   
-  _Logger->aes_printf("after invsub: %s ", stateToString(ctx->state).c_str());
+  LOG_AES("after invsub: {} ", stateToString(ctx->state).c_str());
 
   FIPS_197_5_1_4_AddRoundKey(0, ctx->state, ctx->w);
   
-  _Logger->aes_printf("output state: %s\n", stateToString(ctx->state).c_str());
-
-  delete _Logger;
-
+  LOG_AES("output state: {}\n", stateToString(ctx->state).c_str());
   return retcode;
 }
 
