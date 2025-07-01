@@ -10,6 +10,7 @@
 #include <openssl/crypto.h>
 #include <regex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 struct SiggenTest {
@@ -102,37 +103,40 @@ SiggenRsp parseSigGen(const std::string &filename) {
   return rsp;
 }
 
-AES_MODE haveAES(std::string name) {
-  if (name == "CBC192") {
-    return AES_MODE::AES_CBC_192;
-  } else if (name == "CBC256") {
-    return AES_MODE::AES_CBC_256;
-  } else if (name == "CBC128") {
-    return AES_MODE::AES_CBC_128;
-  } else if (name == "ECB128") {
-    return AES_MODE::AES_ECB_128;
-  } else if (name == "ECB192") {
-    return AES_MODE::AES_ECB_192;
-  } else if (name == "ECB256") {
-    return AES_MODE::AES_ECB_256;
-  } else if (name == "OFB128") {
-    return AES_MODE::AES_OFB_128;
-  } else if (name == "OFB192") {
-    return AES_MODE::AES_OFB_192;
-  } else if (name == "OFB256") {
-    return AES_MODE::AES_OFB_256;
-  } else if (name == "CFB128") {
-    return AES_MODE::AES_CFB_128;
-  } else if (name == "CFB192") {
-    return AES_MODE::AES_CFB_192;
-  } else if (name == "CFB256") {
-    return AES_MODE::AES_CFB_256;
-  }
-    return AES_MODE::NONE;
+AES_MODE getMode(std::string &s)
+{
+    static const std::unordered_map<std::string, AES_MODE> stringToEnum = {
+        {"ECB", AES_MODE::ECB},
+        {"CBC", AES_MODE::CBC},
+        {"CTR", AES_MODE::CTR},
+        {"CFB", AES_MODE::CFB},
+        {"OFB", AES_MODE::OFB},
+    };
+
+    auto it = stringToEnum.find(s);
+    if(it == stringToEnum.end())
+        return AES_MODE::NONE;
+
+    return it->second;
 }
 
-void runTest(std::string path, std::string fileName, AES_MODE mode, int *passed,
+AES_KEYSIZE getKeySize(std::string &s)
+{
+    static const std::unordered_map<std::string, AES_KEYSIZE> stringToEnum = {
+        {"128", AES_KEYSIZE::m128},
+        {"192", AES_KEYSIZE::m192},
+        {"256", AES_KEYSIZE::m256},
+    };
+
+    auto it = stringToEnum.find(s);
+    return it->second;
+}
+
+void runTest(std::string path, std::string fileName, std::string sMode, std::string keySize, int *passed,
              int *failed) {
+
+  AES_MODE mode = getMode(sMode);
+  AES_KEYSIZE kSize = getKeySize(keySize);
   if(mode == AES_MODE::NONE)
   {
         printf("Invalid AES mode\n");
@@ -144,12 +148,12 @@ void runTest(std::string path, std::string fileName, AES_MODE mode, int *passed,
   for (const auto &ch : rsp.curve_hash_tests) {
     for (const auto &t : ch.tests) {
       if (ch.state == "ENCRYPT") {
-        AES_CTX *ctx = new AES_CTX();
+        AES_CTX ctx(mode, kSize);
 
-        ctx->mode = mode;
+        //ctx->mode = mode
         AES_KeyExpansion(ctx, hexToBytes(t.KEY).data());
 
-        if(ctx->mode != AES_MODE::AES_ECB_128 && ctx->mode != AES_MODE::AES_ECB_192 && ctx->mode != AES_MODE::AES_ECB_256)
+        if(ctx.mode != AES_MODE::ECB)
             AES_SetIV(ctx, hexToBytes(t.IV).data());
 
         std::vector<uint8_t> buffer = hexToBytes(t.PLAINTEXT);
@@ -164,13 +168,11 @@ void runTest(std::string path, std::string fileName, AES_MODE mode, int *passed,
           pe++;
         else
           fe++;
-        delete ctx;
       } else if (ch.state == "DECRYPT") {
-        AES_CTX *ctx = new AES_CTX();
+        AES_CTX ctx(mode, kSize);
 
-        ctx->mode = mode;
         AES_KeyExpansion(ctx, hexToBytes(t.KEY).data());
-        if(ctx->mode != AES_MODE::AES_ECB_128 && ctx->mode != AES_MODE::AES_ECB_192 && ctx->mode != AES_MODE::AES_ECB_256)
+        if(ctx.mode != AES_MODE::ECB)
             AES_SetIV(ctx, hexToBytes(t.IV).data());
 
         std::vector<uint8_t> buffer = hexToBytes(t.CIPHERTEXT);
@@ -184,8 +186,6 @@ void runTest(std::string path, std::string fileName, AES_MODE mode, int *passed,
           pd++;
         else
           fd++;
-
-        delete ctx;
       }
     }
   }
@@ -225,7 +225,7 @@ int main() {
 
         std::cout << "AES Mode: " << std::string(cipher+key_size) << " " << fileName <<  std::endl;
 
-        runTest(path, fileName, haveAES(cipher+key_size), &passed, &failed);
+        runTest(path, fileName, cipher, key_size, &passed, &failed);
         tests_performed++;
       }
     }

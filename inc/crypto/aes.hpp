@@ -1,3 +1,4 @@
+#include <openssl/ec.h>
 #include <stdio.h>
 #include <memory>
 #include <cstdint>
@@ -12,31 +13,38 @@
 
 enum class AES_MODE
 {
-    AES_ECB_128,
-    AES_ECB_192,
-    AES_ECB_256,
-    AES_CBC_128,
-    AES_CBC_192,
-    AES_CBC_256,
-    AES_CFB_128,
-    AES_CFB_192,
-    AES_CFB_256,
-    AES_OFB_128,
-    AES_OFB_192,
-    AES_OFB_256,
-    AES_CTR_128,
-    AES_CTR_192,
-    AES_CTR_256,
+    ECB,
+    CBC,
+    CFB,
+    OFB,
+    CTR,
     NONE
+};
+
+enum class AES_KEYSIZE
+{
+    m128 = 0,
+    m192 = 1,
+    m256 = 2
 };
 
 class AES_CTX
 {
 public:
     AES_MODE mode;
+    AES_KEYSIZE ksize;
     uint8_t state[nB][nB];
     uint8_t w[240];            // Round Key; setting to maximum size for AES256
     uint8_t iv[AES_BlockSize]; // IV For CBC
+
+    AES_CTX(AES_MODE mode, AES_KEYSIZE ksize)
+    {
+        this->mode = mode;
+        this->ksize = ksize;
+        memset(iv, 0, AES_BlockSize);
+        memset(w, 0, 240);
+        memset(state, 0, nB*nB);
+    }
 };
 
 //int getNR(AES_MODE mode);
@@ -47,7 +55,7 @@ public:
 //int CBC_Encrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
 //int CBC_Decrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
 //int CTR_xcrypt(AES_CTX *ctx, uint8_t *out, uint8_t *buf, size_t buf_len);
-int AES_KeyExpansion(AES_CTX *ctx, uint8_t *key);
-int AES_SetIV(AES_CTX *ctx, uint8_t *iv);
-int AES_Encrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
-int AES_Decrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
+int AES_KeyExpansion(AES_CTX &ctx, uint8_t *key);
+int AES_SetIV(AES_CTX &ctx, uint8_t *iv);
+int AES_Encrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
+int AES_Decrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
