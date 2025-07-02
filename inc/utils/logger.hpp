@@ -76,6 +76,31 @@ inline std::string getCurrentTime()
     return oss.str();
 }
 
+// Formatter specialization for uint8_t[4][4]
+template<>
+struct std::formatter<uint8_t[4][4]> {
+    constexpr auto parse(std::format_parse_context& ctx) {
+        return ctx.begin();
+    }
+
+    template<typename FormatContext>
+    auto format(const uint8_t (&state)[4][4], FormatContext& ctx) const {
+        auto out = ctx.out();
+        out = std::format_to(out, "[\n");
+        for (int i = 0; i < 4; ++i) {
+            out = std::format_to(out, "  [");
+            for (int j = 0; j < 4; ++j) {
+                out = std::format_to(out, "{:2d}", state[i][j]);
+                if (j < 3) out = std::format_to(out, ", ");
+            }
+            out = std::format_to(out, "]");
+            if (i < 3) out = std::format_to(out, ",");
+            out = std::format_to(out, "\n");
+        }
+        return std::format_to(out, "]");
+    }
+};
+
 #define LOG_INFO(fmt, ...) Logger->print("[{}] [Info] " fmt, getCurrentTime(), ##__VA_ARGS__)
 #define LOG_AES(fmt, ...) Logger->print("[{}] [AES] " fmt, getCurrentTime(), ##__VA_ARGS__)
 #define LOG_RSA(fmt, ...) Logger->print("[{}] [RSA] " fmt, getCurrentTime(), ##__VA_ARGS__)

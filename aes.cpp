@@ -239,6 +239,7 @@ char *roundkeyToString(const uint8_t *w) {
     return dest;
 }
 
+//TODO Fix the debugging in this.
 int FIPS_197_5_2_KeyExpansion(AES_CTX &ctx, uint8_t *key) {
     int retCode = 0;
     uint8_t temp[4];
@@ -247,55 +248,54 @@ int FIPS_197_5_2_KeyExpansion(AES_CTX &ctx, uint8_t *key) {
         for (int j = 0; j < 4; j++)
             ctx.w[(i * 4) + j] = key[(i * 4) + j];
 
-    for (int i = 0; i <= getNK(ctx) - 1; i++)
-        for (int j = 0; j < 4; j++)
-            LOG_AES("%02x", ctx.state[(i * 4) + j]);
-    LOG_AES(" is the input to w\n");
+    //for (int i = 0; i <= getNK(ctx) - 1; i++)
+    //    for (int j = 0; j < 4; j++)
+    //        LOG_AES("{}", ctx.state[(i * 4) + j]);
+    //LOG_AES(" is the input to w");
 
     for (int i = getNK(ctx); i <= 4 * getNR(ctx) + 3; i++) {
         for (int j = 0; j < 4; j++)
             temp[j] = ctx.w[(i - 1) * 4 + j];
 
-        LOG_AES("[Round %d] temp: ", i);
-        for (int j = 0; j < 4; j++)
-            LOG_AES("%02x", temp[j]);
-        LOG_AES(" ");
+        //LOG_AES("[Round {}] temp: ", i);
+        //for (int j = 0; j < 4; j++)
+        //    LOG_AES("{}", temp[j]);
+        //LOG_AES(" ");
 
         if (i % getNK(ctx) == 0) {
             rotateWord(temp);
 
-            LOG_AES("after rotate: ");
-            for (int j = 0; j < 4; j++)
-                LOG_AES("%02x", temp[j]);
-            LOG_AES(" ");
+            //LOG_AES("after rotate: ");
+            //for (int j = 0; j < 4; j++)
+            //    LOG_AES("{}", temp[j]);
+            //LOG_AES(" ");
 
             SubWord(temp);
 
-            LOG_AES("after subtraction: ");
-            for (int j = 0; j < 4; j++)
-                LOG_AES("%02x", temp[j]);
-            LOG_AES(" ");
-            LOG_AES(" rcon [i/nk]: %08x ", rCon[i / getNK(ctx)]);
+            //LOG_AES("after subtraction: ");
+            //for (int j = 0; j < 4; j++)
+            //    LOG_AES("{}", temp[j]);
+            //LOG_AES(" ");
+            //LOG_AES(" rcon [i/nk]: {} ", rCon[i / getNK(ctx)]);
             temp[0] ^= rCon[i / getNK(ctx)];
 
-            LOG_AES("after xor: ");
-            for (int j = 0; j < 4; j++)
-                LOG_AES("%02x", temp[j]);
+            //LOG_AES("after xor: ");
+            //for (int j = 0; j < 4; j++)
+            //    LOG_AES("{}", temp[j]);
         } else if (getNK(ctx) > 6 && (i % getNK(ctx)) == 4)
             SubWord(temp);
 
-        LOG_AES("w[i-nk]: ");
+        //LOG_AES("w[i-nk]: ");
         for (int j = 0; j < 4; j++) {
-            LOG_AES("%02x", ctx.w[(i - getNK(ctx)) * 4 + j]);
+        //    LOG_AES("{}", ctx.w[(i - getNK(ctx)) * 4 + j]);
             ctx.w[(i * 4) + j] =
                 ctx.w[(i - getNK(ctx)) * 4 + j] ^ temp[j];
         }
-        LOG_AES(" ");
+        //LOG_AES(" ");
 
-        LOG_AES("xor'd: ");
-        for (int j = 0; j < 4; j++)
-            LOG_AES("%02x", ctx.w[(i * 4) + j]);
-        LOG_AES("\n");
+        //LOG_AES("xor'd: ");
+        //for (int j = 0; j < 4; j++)
+        //    LOG_AES("{}", ctx.w[(i * 4) + j]);
     }
 
     return retCode;
