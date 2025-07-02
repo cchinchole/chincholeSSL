@@ -72,6 +72,45 @@ int getNK(AES_CTX &ctx) {
     return tNK[static_cast<int>(ctx.ksize)];
 }
 
+char *roundkeyToString(const uint8_t *w) {
+
+    char *dest = (char *)malloc(2 * AES_BlockSize + 1);
+    if (!dest)
+        return NULL;
+
+    char *p = dest;
+    for (size_t i = 0; i < nB; i++)
+        for (size_t j = 0; j < nB; j++)
+            p += sprintf((char *)p, "%02hhX", (w[(j * nB) + i]));
+    return dest;
+}
+
+std::string tempToString(const unsigned char* temp) {
+    std::stringstream ss;
+    for (int j = 0; j < 4; j++) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(temp[j]);
+        if (j < 3) ss << " ";
+    }
+    return ss.str();
+}
+
+std::string wnkToString(AES_CTX &ctx, int i) {
+    std::stringstream ss;
+    for (int j = 0; j < 4; j++) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(ctx.w[(i - getNK(ctx)) * 4 + j]);
+        if (j < 3) ss << " ";
+    }
+    return ss.str();
+}
+
+std::string wnkOpsToString(AES_CTX &ctx, int i) {
+    std::stringstream ss;
+    for (int j = 0; j < 4; j++) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(ctx.w[(i) * 4 + j]);
+        if (j < 3) ss << " ";
+    }
+    return ss.str();
+}
 std::string stateToString(uint8_t state[nB][nB]) {
     std::string result;
     result.reserve(2 * nB * nB + 1);
@@ -226,19 +265,6 @@ int InvMixColumns(uint8_t state[4][4]) {
     return 0;
 }
 
-char *roundkeyToString(const uint8_t *w) {
-
-    char *dest = (char *)malloc(2 * AES_BlockSize + 1);
-    if (!dest)
-        return NULL;
-
-    char *p = dest;
-    for (size_t i = 0; i < nB; i++)
-        for (size_t j = 0; j < nB; j++)
-            p += sprintf((char *)p, "%02hhX", (w[(j * nB) + i]));
-    return dest;
-}
-
 //TODO Fix the debugging in this.
 int FIPS_197_5_2_KeyExpansion(AES_CTX &ctx, uint8_t *key) {
     int retCode = 0;
@@ -248,54 +274,37 @@ int FIPS_197_5_2_KeyExpansion(AES_CTX &ctx, uint8_t *key) {
         for (int j = 0; j < 4; j++)
             ctx.w[(i * 4) + j] = key[(i * 4) + j];
 
-    //for (int i = 0; i <= getNK(ctx) - 1; i++)
-    //    for (int j = 0; j < 4; j++)
-    //        LOG_AES("{}", ctx.state[(i * 4) + j]);
-    //LOG_AES(" is the input to w");
-
+    LOG_AES("[Key Expansion (w)]: {}\n", roundkeyToString(ctx.w));
     for (int i = getNK(ctx); i <= 4 * getNR(ctx) + 3; i++) {
         for (int j = 0; j < 4; j++)
             temp[j] = ctx.w[(i - 1) * 4 + j];
 
-        //LOG_AES("[Round {}] temp: ", i);
-        //for (int j = 0; j < 4; j++)
-        //    LOG_AES("{}", temp[j]);
-        //LOG_AES(" ");
+        LOG_AES("[KeyExpansion Round {}]", i);
+        LOG_AES("temp: {}", tempToString(temp));
 
         if (i % getNK(ctx) == 0) {
             rotateWord(temp);
-
-            //LOG_AES("after rotate: ");
-            //for (int j = 0; j < 4; j++)
-            //    LOG_AES("{}", temp[j]);
-            //LOG_AES(" ");
+            LOG_AES("after rotate temp: {}", tempToString(temp));
 
             SubWord(temp);
-
-            //LOG_AES("after subtraction: ");
-            //for (int j = 0; j < 4; j++)
-            //    LOG_AES("{}", temp[j]);
-            //LOG_AES(" ");
-            //LOG_AES(" rcon [i/nk]: {} ", rCon[i / getNK(ctx)]);
+            LOG_AES("after subtract temp: {}", tempToString(temp));
+            
             temp[0] ^= rCon[i / getNK(ctx)];
+            LOG_AES("after xor temp: {}", tempToString(temp));
 
-            //LOG_AES("after xor: ");
-            //for (int j = 0; j < 4; j++)
-            //    LOG_AES("{}", temp[j]);
         } else if (getNK(ctx) > 6 && (i % getNK(ctx)) == 4)
+        {
             SubWord(temp);
-
-        //LOG_AES("w[i-nk]: ");
-        for (int j = 0; j < 4; j++) {
-        //    LOG_AES("{}", ctx.w[(i - getNK(ctx)) * 4 + j]);
-            ctx.w[(i * 4) + j] =
-                ctx.w[(i - getNK(ctx)) * 4 + j] ^ temp[j];
+            LOG_AES("after subtract temp: {}", tempToString(temp));
         }
-        //LOG_AES(" ");
 
-        //LOG_AES("xor'd: ");
-        //for (int j = 0; j < 4; j++)
-        //    LOG_AES("{}", ctx.w[(i * 4) + j]);
+        LOG_AES("w[i-nk]: {}", wnkToString(ctx, i));
+        for (int j = 0; j < 4; j++) {
+            //ctx.w[(i * 4) + j] = ctx.w[(i - getNK(ctx)) * 4 + j] ^ temp[j];
+            ctx.w[(i * 4) + j] = ctx.w[(i - getNK(ctx)) * 4 + j] ^ temp[j];
+
+        }
+        LOG_AES("w[i] xor: {}\n", wnkOpsToString(ctx, i));
     }
 
     return retCode;
@@ -303,7 +312,6 @@ int FIPS_197_5_2_KeyExpansion(AES_CTX &ctx, uint8_t *key) {
 
 int FIPS_197_5_1_4_AddRoundKey(int round, uint8_t state[4][4],
                                const uint8_t *w) {
-
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
             (state)[i][j] ^= w[(round * nB * 4) + (i * nB) + j];
@@ -318,7 +326,7 @@ int FIPS_197_5_1_Cipher(AES_CTX &ctx) {
     FIPS_197_5_1_4_AddRoundKey(0, ctx.state, ctx.w);
 
     for (int round = 1; round <= getNR(ctx) - 1; round++) {
-        LOG_AES("Cipher Round [ {} ]: ", round);
+        LOG_AES("Cipher Round [ {} ]:", round);
 
         LOG_AES("start rnd: {} ", stateToString(ctx.state).c_str());
         SubWord(ctx.state);
@@ -331,22 +339,17 @@ int FIPS_197_5_1_Cipher(AES_CTX &ctx) {
 
         MixColumns(ctx.state);
 
-        LOG_AES("after mix: {}", stateToString(ctx.state).c_str());
+        LOG_AES("after mix: {}\n", stateToString(ctx.state).c_str());
 
         FIPS_197_5_1_4_AddRoundKey(round, ctx.state, ctx.w);
-        LOG_AES("\n");
     }
     LOG_AES("Cipher Round [ {} ]: ", getNR(ctx));
-
-    LOG_AES("start rnd: {} ", stateToString(ctx.state).c_str());
+    LOG_AES("start rnd: {}", stateToString(ctx.state).c_str());
     SubWord(ctx.state);
-
-    LOG_AES("after sub: {} ", stateToString(ctx.state).c_str());
+    LOG_AES("after sub: {}", stateToString(ctx.state).c_str());
     ShiftRows(ctx.state);
-
-    LOG_AES("after shift: {}\n", stateToString(ctx.state).c_str());
+    LOG_AES("after shift: {}", stateToString(ctx.state).c_str());
     FIPS_197_5_1_4_AddRoundKey(getNR(ctx), ctx.state, ctx.w);
-
     LOG_AES("output state: {}\n", stateToString(ctx.state).c_str());
     return retcode;
 }
@@ -361,15 +364,15 @@ int FIPS_197_5_3_InvCipher(AES_CTX &ctx) {
     for (int round = getNR(ctx) - 1; round >= 1; round--) {
         LOG_AES("InvCipher Round [ {} ]: ", round);
 
-        LOG_AES("start rnd: {} ", stateToString(ctx.state).c_str());
+        LOG_AES("start rnd: {}", stateToString(ctx.state).c_str());
 
         InvShiftRows(ctx.state);
 
-        LOG_AES("after invshift: {} ", stateToString(ctx.state).c_str());
+        LOG_AES("after invshift: {}", stateToString(ctx.state).c_str());
 
         InvSubWord(ctx.state);
 
-        LOG_AES("after invsub: {} ", stateToString(ctx.state).c_str());
+        LOG_AES("after invsub: {}", stateToString(ctx.state).c_str());
 
         FIPS_197_5_1_4_AddRoundKey(round, ctx.state, ctx.w);
 
@@ -377,18 +380,18 @@ int FIPS_197_5_3_InvCipher(AES_CTX &ctx) {
 
         LOG_AES("after invmix: {}", stateToString(ctx.state).c_str());
 
-        LOG_AES("\n");
+        LOG_AES("");
     }
     LOG_AES("Cipher Round [ {} ]: ", 0);
 
-    LOG_AES("start rnd: {} ", stateToString(ctx.state).c_str());
+    LOG_AES("start rnd: {}", stateToString(ctx.state).c_str());
     InvShiftRows(ctx.state);
 
     LOG_AES("after invshift: {}", stateToString(ctx.state).c_str());
 
     InvSubWord(ctx.state);
 
-    LOG_AES("after invsub: {} ", stateToString(ctx.state).c_str());
+    LOG_AES("after invsub: {}", stateToString(ctx.state).c_str());
 
     FIPS_197_5_1_4_AddRoundKey(0, ctx.state, ctx.w);
 
@@ -465,6 +468,7 @@ int CBC_Decrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len) {
 }
 
 // SP800-38A 6.3
+// Current implementation only works for 128mode.
 int CFB_XCrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len) {
 
     uint8_t iv[16];
