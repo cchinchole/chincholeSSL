@@ -262,8 +262,8 @@ std::vector<uint8_t> sha_hash(std::vector<uint8_t> &input, SHA_MODE mode)
     std::vector<uint8_t> hash;
     hash.resize(getSHAReturnLengthByMode(mode));
     SHA_Context *ctx = SHA_Context_new(mode);
-    sha_update(input.data(), input.size(), ctx);
-    sha_digest(hash.data(), ctx);
+    SHA_Update(input.data(), input.size(), ctx);
+    SHA_Digest(hash.data(), ctx);
     delete ctx;
     return hash;
 }

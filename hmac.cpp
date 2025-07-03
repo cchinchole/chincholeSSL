@@ -32,8 +32,8 @@ int hmac_sha(SHA_Context *ctx,
      * it's own message */
     if (key_len > blockLen)
     {
-        sha_update(key, key_len, ctx);
-        sha_digest(tmp, ctx);
+        SHA_Update(key, key_len, ctx);
+        SHA_Digest(tmp, ctx);
         /* Find the minimum length for the key to be copied with */
         if (blockLen < retLen)
         {
@@ -61,14 +61,14 @@ int hmac_sha(SHA_Context *ctx,
     /* Digest the inner with message */
     ctx->clear();
     memcpy(innerKey + blockLen, msg, msg_len);
-    sha_update(innerKey, blockLen + msg_len, ctx);
-    sha_digest(tmp, ctx);
+    SHA_Update(innerKey, blockLen + msg_len, ctx);
+    SHA_Digest(tmp, ctx);
 
     /* Digest the outer now with the previous result */
     ctx->clear();
     memcpy(outerKey + blockLen, tmp, retLen);
-    sha_update(outerKey, blockLen + retLen, ctx);
-    sha_digest(hmac_out, ctx);
+    SHA_Update(outerKey, blockLen + retLen, ctx);
+    SHA_Digest(hmac_out, ctx);
 
     free(outerKey);
     free(innerKey);

@@ -46,7 +46,7 @@ int testSHA_Shake(char *msg,
 {
     SHA_3_Context *ctx = (SHA_3_Context *)SHA_Context_new(SHA_MODE(mode));
     unsigned char rawDigest[digestSize / 8];
-    sha_update((uint8_t *)msg, msg_len, ctx);
+    SHA_Update((uint8_t *)msg, msg_len, ctx);
     SHA_3_xof(ctx);
     SHA_3_shake_digest(rawDigest, digestSize / 8, ctx);
     std::string hexString = bytesToHex(bytePtrToVector(rawDigest, digestSize));
@@ -67,8 +67,8 @@ int testSHA(char *msg, size_t msg_len, char *KAT, SHA_MODE mode, bool quiet)
     SHA_Context *ctx = SHA_Context_new(mode);
     unsigned char rawDigest[getSHAReturnLengthByMode(ctx->mode)];
 
-    sha_update((uint8_t *)msg, msg_len, ctx);
-    sha_digest(rawDigest, ctx);
+    SHA_Update((uint8_t *)msg, msg_len, ctx);
+    SHA_Digest(rawDigest, ctx);
 
     std::vector<uint8_t> vec =
         bytePtrToVector(rawDigest, getSHAReturnLengthByMode(ctx->mode));

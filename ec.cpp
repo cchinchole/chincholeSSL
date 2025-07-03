@@ -355,8 +355,8 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig,
     /* Step 1 - 2 */
     SHA_Context *shaCtx = SHA_Context_new(shaMode);
     uint8_t hash[getSHAReturnLengthByMode(shaCtx->mode)];
-    sha_update(msg, msg_len, shaCtx);
-    sha_digest(hash, shaCtx);
+    SHA_Update(msg, msg_len, shaCtx);
+    SHA_Digest(hash, shaCtx);
     int NLen = BN_num_bits(group->n); /* N = len(n) */
     int HLen = getSHAReturnLengthByMode(shaCtx->mode) * 8;
     BN_bin2bn(hash, getSHAReturnLengthByMode(shaCtx->mode), tmp);
@@ -434,8 +434,8 @@ int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig,
     // Step 2 - 3: Hash the message
     SHA_Context *shaCtx = SHA_Context_new(shaMode);
     uint8_t hash[getSHAReturnLengthByMode(shaCtx->mode)];
-    sha_update((uint8_t *)msg, msg_len, shaCtx);
-    sha_digest(hash, shaCtx);
+    SHA_Update((uint8_t *)msg, msg_len, shaCtx);
+    SHA_Digest(hash, shaCtx);
 
     if (BN_is_zero(sig.R) || BN_is_zero(sig.S) || BN_ucmp(sig.R, D->n) >= 0 ||
         BN_ucmp(sig.S, D->n) >= 0)

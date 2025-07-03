@@ -18,7 +18,6 @@ int main() {
     AES_SetIV(ctx, hexToBytes(aes_iv_key).data());
 
     std::vector<uint8_t> buffer = hexToBytes(cbc_kat);
-    LOG_ERROR("HERE!");
     std::vector<uint8_t> outputA;
     std::vector<uint8_t> outputB;
 

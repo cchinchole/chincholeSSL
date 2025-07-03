@@ -156,26 +156,22 @@ public:
     void clear();
 };
 
-char *SHA_MODE_NAME(SHA_MODE mode);
+SHA_Context *SHA_Context_new(SHA_MODE mode);
 int getSHABlockLengthByMode(SHA_MODE mode);
 int getSHAReturnLengthByMode(SHA_MODE mode);
-SHA_Context *SHA_Context_new(SHA_MODE mode);
-
-int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
-int SHA_384512_digest(uint8_t *digest_out, SHA_Context *ctx);
+char *SHA_MODE_NAME(SHA_MODE mode);
 
 int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_1_digest(uint8_t *digest_out, SHA_Context *ctx);
-
 int SHA_224256_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_224256_digest(uint8_t *digest_out, SHA_Context *ctx);
-
 int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx);
 int SHA_3_digest(uint8_t *digest_out, SHA_3_Context *ctx);
-
 int SHA_3_xof(SHA_3_Context *ctx);
 int SHA_3_shake_digest(uint8_t *digestOut, size_t digestLen, SHA_3_Context *ctx);
+int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
+int SHA_384512_digest(uint8_t *digest_out, SHA_Context *ctx);
 
-int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
-int sha_digest(uint8_t *digest_out, SHA_Context *ctx);
+int SHA_Update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
+int SHA_Digest(uint8_t *digest_out, SHA_Context *ctx);
 #endif

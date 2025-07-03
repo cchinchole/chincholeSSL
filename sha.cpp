@@ -269,7 +269,7 @@ char *SHA_MODE_NAME(SHA_MODE mode)
     }
     return (char *)"";
 }
-int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
+int SHA_Update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
 {
     switch (ctx->mode)
     {
@@ -301,7 +301,7 @@ int sha_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
     }
     return 0;
 }
-int sha_digest(uint8_t *digest_out, SHA_Context *ctx)
+int SHA_Digest(uint8_t *digest_out, SHA_Context *ctx)
 {
     switch (ctx->mode)
     {

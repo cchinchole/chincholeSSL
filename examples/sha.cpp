@@ -11,8 +11,8 @@ int main() {
   size_t msg_len = strlen((char *)msg);
   /* These two functions are needed to set the message then digest it into a
    * hash for any suitable sha mode */
-  sha_update(msg, msg_len, ctx);
-  sha_digest(rawDigest, ctx);
+  SHA_Update(msg, msg_len, ctx);
+  SHA_Digest(rawDigest, ctx);
   printf("SHA512: %s\n", bytesToHex( bytePtrToVector(rawDigest, getSHAReturnLengthByMode(ctx->mode))).c_str());
 
   ctx->clear();

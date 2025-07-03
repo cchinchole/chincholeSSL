@@ -53,28 +53,6 @@ class cECPrimeField {
     }
 };
 
-/*
-class Prime224 : public cECPrimeField {
-  public:
-    Prime224();
-};
-
-class Prime256v1 : public cECPrimeField {
-  public:
-    Prime256v1();
-};
-
-class Prime384 : public cECPrimeField {
-  public:
-    Prime384();
-};
-
-class Prime521 : public cECPrimeField {
-  public:
-    Prime521();
-};
-*/
-
 class cECKey {
   public:
     ECGroup group;
