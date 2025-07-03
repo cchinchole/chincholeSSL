@@ -17,10 +17,54 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
 3. make all - This will build both the lib and examples
 4. make install - Installs the libraries to /usr/local/lib and /usr/local/include
 
-## Examples ##
-1. Build the examples using either "make" within the example directory or "make -C examples" from the root.
-2. Examples are outputted to the examples/bin directory.
-3. These are statically linked to the library.
+## Example Usage ##
+*For more details, review the examples folder*
+### AES ###
+```cpp
+    #include "cssl/crypto/aes.hpp"
+    #include "cssl/utils/bytes.hpp"
+
+    AES_CTX ctx(AES_MODE::CBC, AES_KEYSIZE::m128);
+    std::string aes_key = "2b7e151628aed2a6abf7158809cf4f3c";
+    std::string aes_iv_key = "000102030405060708090a0b0c0d0e0f";
+    std::string cbc_kat = "3243f6a8885a308d313198a2e0370734";
+
+    std::vector<uint8_t> buffer = hexToBytes(cbc_kat);
+    std::vector<uint8_t> outputA;
+    std::vector<uint8_t> outputB;
+
+    outputA.resize(buffer.size());
+    outputB.resize(buffer.size());
+
+    AES_KeyExpansion(ctx, hexToBytes(aes_kat_key).data());
+    AES_SetIV(ctx, hexToBytes(aes_iv_key).data());
+
+    AES_Encrypt(ctx, outputA.data(), buffer.data(), buffer.size());
+    AES_Decrypt(ctx, outputB.data(), outputA.data(), outputA.size());
+```
+
+### RSA ###
+```cpp
+ #include "cssl/crypto/rsa.hpp"
+ #include "cssl/utils/bytes.hpp"
+
+ cRSAKey key;
+ RSA_GenerateKey(key);
+ ByteArray cipher = RSA_Encrypt(key, str);
+ ByteArray decrypt = RSA_Decrypt(key, cipher);
+```
+
+### EC ###
+```cpp
+    #include "cssl/crypto/ec.hpp"
+    #include "cssl/utils/bytes.hpp"
+    cECKey key(ECGroup::P256);
+    cECSignature sig;
+    ByteArray msg = hexToBytes("aabbccddeeffaabbcceeddeedd11001100");
+    EC_Generate_KeyPair(key);
+    EC_GenerateSignature(key, sig, msg, SHA_MODE::SHA_512);
+    EC_VerifySignature(key, sig, msg, hashMode); //Returns 0 on success
+```
 
 ## Tests ##
 1. To run a test, for example sha hashing, enter the directory and run "make run". (Ensure you have already built the library with make all in the root directory)
@@ -28,6 +72,4 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
 
 ## Future Plans ##
 1. AES rewritten to input and output a ByteArray *vector<uint8_t>*
-2. AES modes CFB, OFB
-3. Add nice codeblocks to README to show quick examples of usage
-4. Input PEM files
+2. Input PEM files
