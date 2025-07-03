@@ -6,7 +6,8 @@
 #define SHA1_ROUNDS 80
 #define SHA1_MASK 0x0000000f
 #define SHA1_LEN_BYTES sizeof(uint64_t)
-#define SHA1_ROTL(value, bits) (((value) << (bits)) | ((value) >> (sizeof(uint32_t) * 8 - (bits))))
+#define SHA1_ROTL(value, bits)                                                 \
+    (((value) << (bits)) | ((value) >> (sizeof(uint32_t) * 8 - (bits))))
 
 uint32_t Ch(uint32_t x, uint32_t y, uint32_t z)
 {
@@ -81,12 +82,9 @@ int SHA_1_Process(SHA_Context *ctx)
 
         if (t >= 16)
         {
-            W[s] = SHA1_ROTL(
-                W[(s + 13) & SHA1_MASK] ^
-                    W[(s + 8) & SHA1_MASK] ^
-                    W[(s + 2) & SHA1_MASK] ^
-                    W[s],
-                1);
+            W[s] = SHA1_ROTL(W[(s + 13) & SHA1_MASK] ^ W[(s + 8) & SHA1_MASK] ^
+                                 W[(s + 2) & SHA1_MASK] ^ W[s],
+                             1);
         }
 
         tmp = SHA1_ROTL(a, 5) + sha1_f(b, c, d, t) + e + sha1_k(t) + W[s];
@@ -95,7 +93,8 @@ int SHA_1_Process(SHA_Context *ctx)
         c = SHA1_ROTL(b, 30);
         b = a;
         a = tmp;
-        // printf("[Round %d]: A: %08X B: %08X C: %08X D: %08X E: %08X \n", t, a, b, c, d, e);
+        // printf("[Round %d]: A: %08X B: %08X C: %08X D: %08X E: %08X \n", t,
+        // a, b, c, d, e);
     }
 
     /* Step 4: compute intermediate hash value */
@@ -115,7 +114,8 @@ int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
     if ((*bMsg_len + (byMsg_len * 8)) >= pow(2, 64))
         return -1;
 
-    /* Clear the block with 0's then copy up to 64 bytes of a message into the block. If we hit 64 then process this message and continue. */
+    /* Clear the block with 0's then copy up to 64 bytes of a message into the
+     * block. If we hit 64 then process this message and continue. */
     const uint8_t *src = (uint8_t *)msg;
     memset(block, 0, getSHABlockLengthByMode(ctx->mode));
     *bMsg_len += (byMsg_len * 8);
@@ -141,9 +141,11 @@ int SHA_1_digest(uint8_t *digest_out, SHA_Context *ctx)
     block[ctx->blockCur++] = 0x80;
 
     if (getSHABlockLengthByMode(ctx->mode) - ctx->blockCur > 0)
-        memset(block + ctx->blockCur, 0, getSHABlockLengthByMode(ctx->mode) - ctx->blockCur);
+        memset(block + ctx->blockCur, 0,
+               getSHABlockLengthByMode(ctx->mode) - ctx->blockCur);
 
-    /* Check if we can fit the message length into current block if not then process a new block */
+    /* Check if we can fit the message length into current block if not then
+     * process a new block */
     if (ctx->blockCur > (getSHABlockLengthByMode(ctx->mode) - sizeof(uint64_t)))
     {
         SHA_1_Process(ctx);

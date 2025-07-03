@@ -1,13 +1,20 @@
-#include "inc/hash/sha.hpp"
 #include "inc/hash/hmac.hpp"
+#include "inc/hash/sha.hpp"
 #include "inc/utils/logger.hpp"
 #include <math.h>
 
 /* FIPS 198-1 */
-int hmac_sha(SHA_Context *ctx, uint8_t *hmac_out, uint8_t *msg, size_t msg_len, uint8_t *key, size_t key_len)
+int hmac_sha(SHA_Context *ctx,
+             uint8_t *hmac_out,
+             uint8_t *msg,
+             size_t msg_len,
+             uint8_t *key,
+             size_t key_len)
 {
 
-    if(ctx->mode != SHA_MODE::SHA_1 && ctx->mode != SHA_MODE::SHA_224 && ctx->mode != SHA_MODE::SHA_256 && ctx->mode != SHA_MODE::SHA_384 && ctx->mode != SHA_MODE::SHA_512)
+    if (ctx->mode != SHA_MODE::SHA_1 && ctx->mode != SHA_MODE::SHA_224 &&
+        ctx->mode != SHA_MODE::SHA_256 && ctx->mode != SHA_MODE::SHA_384 &&
+        ctx->mode != SHA_MODE::SHA_512)
         return -1;
 
     int blockLen = getSHABlockLengthByMode(ctx->mode);
@@ -21,7 +28,8 @@ int hmac_sha(SHA_Context *ctx, uint8_t *hmac_out, uint8_t *msg, size_t msg_len, 
     memset(outerKey, 0, blockLen + retLen);
     memset(innerKey, 0, blockLen + msg_len);
 
-    /* If our key takes more than one block then we need to digest this into it's own message */
+    /* If our key takes more than one block then we need to digest this into
+     * it's own message */
     if (key_len > blockLen)
     {
         sha_update(key, key_len, ctx);

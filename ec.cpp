@@ -1,91 +1,169 @@
 #include "inc/crypto/ec.hpp"
+
+#include <linux/random.h>
+#include <math.h>
+#include <openssl/bn.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "inc/hash/sha.hpp"
 #include "inc/math/primes.hpp"
 #include "inc/tests/test.hpp"
-#include <linux/random.h>
-#include <map>
-#include <math.h>
-#include <memory>
-#include <openssl/bn.h>
-#include <string>
-#include <sys/syscall.h>
-#include <unistd.h>
-#include <vector>
 
 int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret);
-int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig, uint8_t *msg,
-                                       size_t msg_len, cECKey &key,
+int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig,
+                                       uint8_t *msg,
+                                       size_t msg_len,
+                                       cECKey &key,
                                        SHA_MODE shaMode = SHA_MODE::SHA_512,
                                        char *KSecret = NULL);
-int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig, uint8_t *msg,
-                                     size_t msg_len, cECKey &key,
+int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig,
+                                     uint8_t *msg,
+                                     size_t msg_len,
+                                     cECKey &key,
                                      SHA_MODE shaMode = SHA_MODE::SHA_512);
 
 /* SP 800-186: Domain parameters source */
 /* Easily access: https://neuromancer.sk/std/nist/ */
-class CurveRegistry {
+class CurveRegistry
+{
   private:
     static std::map<std::string, std::shared_ptr<cECPrimeField>> curves;
 
   public:
-    static std::shared_ptr<cECPrimeField>
-    GetCurve(const std::string &curveName) {
+    static std::shared_ptr<cECPrimeField> GetCurve(const std::string &curveName)
+    {
         auto it = curves.find(curveName);
-        if (it == curves.end()) {
-            if (curveName == "P-224") {
-                curves[curveName] = std::make_shared<cECPrimeField>("ffffffffffffffffffffffffffffffff000000000000000000000001", "fffffffffffffffffffffffffffffffefffffffffffffffffffffffe", "b4050a850c04b3abf54132565044b0b7d7bfd8ba270b39432355ffb4", "ffffffffffffffffffffffffffff16a2e0b8f03e13dd29455c5c2a3d", "b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21", "bd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34", ECGroup::P224);
-            } else if (curveName == "P-256") {
-                curves[curveName] = std::make_shared<cECPrimeField>("ffffffff00000001000000000000000000000000ffffffffffffffffffffffff", "ffffffff00000001000000000000000000000000fffffffffffffffffffffffc", "5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b", "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551", "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296", "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5", ECGroup::P256);
-            } else if (curveName == "P-521") {
-                curves[curveName] = std::make_shared<cECPrimeField>("01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "01fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc", "0051953eb9618e1c9a1f929a21a0b68540eea2da725b99b315f3b8b489918ef109e156193951ec7e937b1652c0bd3bb1bf073573df883d2c34f1ef451fd46b503f00", "01fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aebb6fb71e91386409", "00c6858e06b70404e9cd9e3ecb662395b4429c648139053fb521f828af606b4d3dbaa14b5e77efe75928fe1dc127a2ffa8de3348b3c1856a429bf97e7e31c2e5bd66", "011839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd17273e662c97ee72995ef42640c550b9013fad0761353c7086a272c24088be94769fd16650",  ECGroup::P521);
-            } else if (curveName == "P-384") {
-                curves[curveName] = std::make_shared<cECPrimeField>("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000ffffffff", "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000fffffffc","b3312fa7e23ee7e4988e056be3f82d19181d9c6efe8141120314088f5013875ac656398d8a2ed19d2a85c8edd3ec2aef", "ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973", "aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760ab7", "3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f",  ECGroup::P384);
-            } else {
+        if (it == curves.end())
+        {
+            if (curveName == "P-224")
+            {
+                curves[curveName] = std::make_shared<cECPrimeField>(
+                    "ffffffffffffffffffffffffffffffff000000000000000000000001",
+                    "fffffffffffffffffffffffffffffffefffffffffffffffffffffffe",
+                    "b4050a850c04b3abf54132565044b0b7d7bfd8ba270b39432355ffb4",
+                    "ffffffffffffffffffffffffffff16a2e0b8f03e13dd29455c5c2a3d",
+                    "b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21",
+                    "bd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34",
+                    ECGroup::P224);
+            }
+            else if (curveName == "P-256")
+            {
+                curves[curveName] = std::make_shared<cECPrimeField>(
+                    "ffffffff00000001000000000000000000000000ffffffffffffffffff"
+                    "ffffff",
+                    "ffffffff00000001000000000000000000000000ffffffffffffffffff"
+                    "fffffc",
+                    "5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27"
+                    "d2604b",
+                    "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc"
+                    "632551",
+                    "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d8"
+                    "98c296",
+                    "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837"
+                    "bf51f5",
+                    ECGroup::P256);
+            }
+            else if (curveName == "P-521")
+            {
+                curves[curveName] = std::make_shared<cECPrimeField>(
+                    "01ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                    "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                    "ffffffffffffffff",
+                    "01ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                    "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                    "fffffffffffffffc",
+                    "0051953eb9618e1c9a1f929a21a0b68540eea2da725b99b315f3b8b489"
+                    "918ef109e156193951ec7e937b1652c0bd3bb1bf073573df883d2c34f1"
+                    "ef451fd46b503f00",
+                    "01ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                    "fffffffffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47ae"
+                    "bb6fb71e91386409",
+                    "00c6858e06b70404e9cd9e3ecb662395b4429c648139053fb521f828af"
+                    "606b4d3dbaa14b5e77efe75928fe1dc127a2ffa8de3348b3c1856a429b"
+                    "f97e7e31c2e5bd66",
+                    "011839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd"
+                    "17273e662c97ee72995ef42640c550b9013fad0761353c7086a272c240"
+                    "88be94769fd16650",
+                    ECGroup::P521);
+            }
+            else if (curveName == "P-384")
+            {
+                curves[curveName] = std::make_shared<cECPrimeField>(
+                    "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                    "fffffeffffffff0000000000000000ffffffff",
+                    "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                    "fffffeffffffff0000000000000000fffffffc",
+                    "b3312fa7e23ee7e4988e056be3f82d19181d9c6efe8141120314088f50"
+                    "13875ac656398d8a2ed19d2a85c8edd3ec2aef",
+                    "ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4"
+                    "372ddf581a0db248b0a77aecec196accc52973",
+                    "aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082"
+                    "542a385502f25dbf55296c3a545e3872760ab7",
+                    "3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5"
+                    "f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f",
+                    ECGroup::P384);
+            }
+            else
+            {
                 throw std::runtime_error("Unknown curve: " + curveName);
             }
         }
         return curves[curveName];
     }
 };
-
 std::map<std::string, std::shared_ptr<cECPrimeField>> CurveRegistry::curves;
 
-
-cECPoint::cECPoint() {
+cECPoint::cECPoint()
+{
     x = BN_secure_new();
     y = BN_secure_new();
 }
 
-cECSignature::cECSignature() {
+cECSignature::cECSignature()
+{
     R = BN_new();
     S = BN_new();
 }
 
-cECKey::cECKey(ECGroup group) {
+cECKey::cECKey(ECGroup group)
+{
     this->group = group;
     this->priv = BN_secure_new();
 }
 
-cECPrimeField *cECKey::getGroup() {
+cECPrimeField *cECKey::getGroup()
+{
     return CurveRegistry::GetCurve(ECGroupString(this->group)).get();
 }
 
-bool isPointAtInfinity(cECPoint *p) {
+bool isPointAtInfinity(cECPoint *p)
+{
     return (BN_is_zero(p->x) && BN_is_zero(p->y));
 }
 
-void setPointToInfinity(cECPoint *p) {
+void setPointToInfinity(cECPoint *p)
+{
     BN_zero(p->x);
     BN_zero(p->y);
 }
 
-void ECCopyPoint(cECPoint *to, cECPoint *from) {
+void ECCopyPoint(cECPoint *to, cECPoint *from)
+{
     BN_copy(to->x, from->x);
     BN_copy(to->y, from->y);
 }
 
-void ECdouble(cECPrimeField *g, cECPoint *final_ret, cECPoint *a,
-              BN_CTX *ctx = BN_CTX_new()) {
+void ECdouble(cECPrimeField *g,
+              cECPoint *final_ret,
+              cECPoint *a,
+              BN_CTX *ctx = BN_CTX_new())
+{
     BN_CTX_start(ctx);
 
     /* Our return point so we do not mess with the final point until we are
@@ -137,7 +215,12 @@ void ECdouble(cECPrimeField *g, cECPoint *final_ret, cECPoint *a,
     delete ret;
 }
 
-void ECadd(cECPrimeField *g, cECPoint *final_out, cECPoint *a, cECPoint *b, BN_CTX *ctx = BN_CTX_new()) {
+void ECadd(cECPrimeField *g,
+           cECPoint *final_out,
+           cECPoint *a,
+           cECPoint *b,
+           BN_CTX *ctx = BN_CTX_new())
+{
     BN_CTX_start(ctx);
     BIGNUM *tmp = BN_CTX_get(ctx);
     cECPoint *res = new cECPoint();
@@ -147,27 +230,38 @@ void ECadd(cECPrimeField *g, cECPoint *final_out, cECPoint *a, cECPoint *b, BN_C
     BIGNUM *tmpMul = BN_CTX_get(ctx);
     BIGNUM *zero = BN_CTX_get(ctx);
     BN_set_word(zero, 0);
-    if (isPointAtInfinity(a) && isPointAtInfinity(b)) {
+    if (isPointAtInfinity(a) && isPointAtInfinity(b))
+    {
         setPointToInfinity(res);
         goto ending;
-    } else if (isPointAtInfinity(a)) {
+    }
+    else if (isPointAtInfinity(a))
+    {
         ECCopyPoint(res, b);
         goto ending;
-    } else if (isPointAtInfinity(b)) {
+    }
+    else if (isPointAtInfinity(b))
+    {
         ECCopyPoint(res, a);
         goto ending;
-    } else if (!BN_cmp((a->x), (b->x)) && !BN_cmp((a->y), (b->y))) {
+    }
+    else if (!BN_cmp((a->x), (b->x)) && !BN_cmp((a->y), (b->y)))
+    {
         BN_mod(tmp, a->y, (g->p), ctx);
-        if (BN_is_zero(tmp)) {
+        if (BN_is_zero(tmp))
+        {
             setPointToInfinity(res);
             goto ending;
         }
         ECdouble(g, res, a);
         goto ending;
-    } else {
+    }
+    else
+    {
         BN_sub(tmp, b->x, a->x);
         BN_mod(tmp, tmp, g->p, ctx);
-        if (BN_is_zero(tmp)) {
+        if (BN_is_zero(tmp))
+        {
             setPointToInfinity(res);
             goto ending;
         }
@@ -202,8 +296,12 @@ ending:
     delete res;
 }
 
-void ECScalarMult(cECPrimeField *g, cECPoint *Q_output, BIGNUM *scalar,
-                  cECPoint *Point, BN_CTX *ctx = BN_CTX_new()) {
+void ECScalarMult(cECPrimeField *g,
+                  cECPoint *Q_output,
+                  BIGNUM *scalar,
+                  cECPoint *Point,
+                  BN_CTX *ctx = BN_CTX_new())
+{
     BN_CTX_start(ctx);
     int i = 0;
     cECPoint *temp = new cECPoint();
@@ -211,13 +309,16 @@ void ECScalarMult(cECPrimeField *g, cECPoint *Q_output, BIGNUM *scalar,
     cECPoint *QRes = new cECPoint();
     ECCopyPoint(PointCopy, Point);
     setPointToInfinity(QRes);
-    for (i = BN_num_bits(scalar); i >= 0; i--) {
+    for (i = BN_num_bits(scalar); i >= 0; i--)
+    {
         if (BN_is_bit_set(scalar, i))
             break;
     }
 
-    for (int j = 0; j <= i; j++) {
-        if (BN_is_bit_set(scalar, j)) {
+    for (int j = 0; j <= i; j++)
+    {
+        if (BN_is_bit_set(scalar, j))
+        {
             ECadd(g, temp, QRes, PointCopy);
             ECCopyPoint(QRes, temp);
         }
@@ -233,9 +334,13 @@ void ECScalarMult(cECPrimeField *g, cECPoint *Q_output, BIGNUM *scalar,
 }
 
 /* FIPS 186-5 6.4.1 */
-int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig, uint8_t *msg,
-                                       size_t msg_len, cECKey &key,
-                                       SHA_MODE shaMode, char *KSecret) {
+int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig,
+                                       uint8_t *msg,
+                                       size_t msg_len,
+                                       cECKey &key,
+                                       SHA_MODE shaMode,
+                                       char *KSecret)
+{
     int retCode = -1;
     BN_CTX *ctx = BN_CTX_new();
     BN_CTX_start(ctx);
@@ -262,9 +367,12 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig, uint8_t *msg,
 
     /* Step 3 - 4 */
     /* Add in forcing a KSecret for utilization with test suite */
-    if (KSecret == NULL) {
+    if (KSecret == NULL)
+    {
         BN_rand_range_ex(k, group->n, 0, ctx);
-    } else {
+    }
+    else
+    {
         BN_hex2bn(&k, KSecret);
     }
     BN_mod_inverse(kInv, k, group->n, ctx);
@@ -285,7 +393,8 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig, uint8_t *msg,
     BN_zero(kInv);
 
     /* Step 11 */
-    if (BN_is_zero(sig.S) || BN_is_zero(sig.R)) {
+    if (BN_is_zero(sig.S) || BN_is_zero(sig.R))
+    {
         retCode = -1;
         goto ending;
     }
@@ -299,9 +408,12 @@ ending:
 }
 
 /* FIPS 186-5 6.4.2 */
-int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig, uint8_t *msg,
-                                     size_t msg_len, cECKey &key,
-                                     SHA_MODE shaMode) {
+int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig,
+                                     uint8_t *msg,
+                                     size_t msg_len,
+                                     cECKey &key,
+                                     SHA_MODE shaMode)
+{
     int retCode = -1;
     cECPrimeField *D = key.getGroup();
     cECPoint *Q = &key.pub;
@@ -355,17 +467,21 @@ int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig, uint8_t *msg,
     ECScalarMult(D, addend2, v, Q);
     ECadd(D, RPoint, addend1, addend2);
 
-    if (isPointAtInfinity(RPoint)) {
+    if (isPointAtInfinity(RPoint))
+    {
         retCode = -1;
         goto ending;
     }
 
     BN_nnmod(tmp, RPoint->x, D->n, ctx);
 
-    if (BN_cmp(sig.R, tmp) == 0) {
+    if (BN_cmp(sig.R, tmp) == 0)
+    {
         retCode = 0;
         goto ending;
-    } else {
+    }
+    else
+    {
         retCode = -1;
         goto ending;
     }
@@ -381,18 +497,20 @@ ending:
 }
 
 /* FIPS 186-4 B.4.2 */
-int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey &ret) {
+int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey &ret)
+{
     BN_CTX *ctx = BN_CTX_new();
     BN_CTX_start(ctx);
     cECKey key(ret.group);
-    cECPrimeField* group = key.getGroup();
+    cECPrimeField *group = key.getGroup();
     BIGNUM *tmp = BN_dup(group->n);
     BN_sub(tmp, tmp, BN_value_one());
 
 Generate:
     BN_priv_rand_range_ex(key.priv, tmp, 0, ctx);
 
-    if (BN_cmp(key.priv, tmp) == 1) {
+    if (BN_cmp(key.priv, tmp) == 1)
+    {
         goto Generate;
     }
 
@@ -405,8 +523,10 @@ Generate:
     return 0;
 }
 
-std::string ECGroupString(ECGroup group) {
-    switch (group) {
+std::string ECGroupString(ECGroup group)
+{
+    switch (group)
+    {
     case P224:
         return "P-224";
         break;
@@ -428,18 +548,25 @@ std::string ECGroupString(ECGroup group) {
 
 /* TODO Make msg const */
 
-int EC_GenerateSignature(cECKey &key, cECSignature &sig,
-                         std::vector<uint8_t> msg, SHA_MODE shaMode) {
+int EC_GenerateSignature(cECKey &key,
+                         cECSignature &sig,
+                         std::vector<uint8_t> msg,
+                         SHA_MODE shaMode)
+{
     return FIPS_186_5_6_4_1_GenerateSignature(sig, msg.data(), msg.size(), key,
                                               shaMode);
 }
 
-int EC_VerifySignature(cECKey &key, cECSignature &sig, std::vector<uint8_t> msg,
-                       SHA_MODE shaMode) {
+int EC_VerifySignature(cECKey &key,
+                       cECSignature &sig,
+                       std::vector<uint8_t> msg,
+                       SHA_MODE shaMode)
+{
     return FIPS_186_5_6_4_2_VerifySignature(sig, msg.data(), msg.size(), key,
                                             shaMode);
 }
 
-int EC_Generate_KeyPair(cECKey &key) {
+int EC_Generate_KeyPair(cECKey &key)
+{
     return FIPS_186_4_B_4_2_KeyPairGeneration(key);
 }

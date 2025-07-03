@@ -9,15 +9,6 @@
 int main() {
     //Setting a key via the values key reference, public exponent, prime1, prime2
     cRSAKey key;
-    LOG_AES("Test! {}", key.d);
-    LOG_WARNING("Test! {}", key.d);
-    LOG_ERROR("Test! {}", __func__);
-    LOG_RSA("Test! {}", __func__);
-    LOG_INFO("test!! {}", "info");
-    //kBits=4096, N="", E="", D="", ex1="", ex2="", coef="", P="", Q="");
-    //RSA_GenerateKey(key,1024, std::string("010001"),
-    //    std::string("d32737e7267ffe1341b2d5c0d150a81b586fb3132bed2f8d5262864a9cb9f30af38be448598d413a172efb802c21acf1c11c520c2f26a471dcad212eac7ca39d"),
-    //    std::string("cc8853d1d54da630fac004f471f281c7b8982d8224a490edbeb33d3e3d5cc93c4765703d1dd791642f1f116a0dd852be2419b2af72bfe9a030e860b0288b5d77"));
 
     //Example provided the bits, N, E, D
     RSA_GenerateKey(key, 1024,

@@ -1,58 +1,30 @@
 #include "inc/hash/sha.hpp"
 
-uint32_t SHA_1_H0[5] = {
-    0x67452301,
-    0xefcdab89,
-    0x98badcfe,
-    0x10325476,
-    0xc3d2e1f0};
+uint32_t SHA_1_H0[5] = {0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476,
+                        0xc3d2e1f0};
 
-uint32_t SHA_224_H0[8] = {
-    0xc1059ed8,
-    0x367cd507,
-    0x3070dd17,
-    0xf70e5939,
-    0xffc00b31,
-    0x68581511,
-    0x64f98fa7,
-    0xbefa4fa4};
+uint32_t SHA_224_H0[8] = {0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939,
+                          0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4};
 
-uint32_t SHA_256_H0[8] = {
-    0x6a09e667,
-    0xbb67ae85,
-    0x3c6ef372,
-    0xa54ff53a,
-    0x510e527f,
-    0x9b05688c,
-    0x1f83d9ab,
-    0x5be0cd19};
+uint32_t SHA_256_H0[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+                          0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 
-uint64_t SHA_512_H0[8] = {
-    0x6a09e667f3bcc908,
-    0xbb67ae8584caa73b,
-    0x3c6ef372fe94f82b,
-    0xa54ff53a5f1d36f1,
-    0x510e527fade682d1,
-    0x9b05688c2b3e6c1f,
-    0x1f83d9abfb41bd6b,
-    0x5be0cd19137e2179};
+uint64_t SHA_512_H0[8] = {0x6a09e667f3bcc908, 0xbb67ae8584caa73b,
+                          0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
+                          0x510e527fade682d1, 0x9b05688c2b3e6c1f,
+                          0x1f83d9abfb41bd6b, 0x5be0cd19137e2179};
 
-uint64_t SHA_384_H0[8] = {
-    0xcbbb9d5dc1059ed8,
-    0x629a292a367cd507,
-    0x9159015a3070dd17,
-    0x152fecd8f70e5939,
-    0x67332667ffc00b31,
-    0x8eb44a8768581511,
-    0xdb0c2e0d64f98fa7,
-    0x47b5481dbefa4fa4};
+uint64_t SHA_384_H0[8] = {0xcbbb9d5dc1059ed8, 0x629a292a367cd507,
+                          0x9159015a3070dd17, 0x152fecd8f70e5939,
+                          0x67332667ffc00b31, 0x8eb44a8768581511,
+                          0xdb0c2e0d64f98fa7, 0x47b5481dbefa4fa4};
 
 SHA_3_Context::SHA_3_Context(SHA_MODE mode)
 {
     this->mode = mode;
     switch (mode)
     {
-        case SHA_MODE::SHA_3_224:
+    case SHA_MODE::SHA_3_224:
         this->digestBytes = 224 / 8;
         break;
     case SHA_MODE::SHA_3_256:
@@ -71,12 +43,13 @@ SHA_3_Context::SHA_3_Context(SHA_MODE mode)
     memset(&sponge, 0, sizeof(sponge));
     this->blockCur = 0;
     r = (SHA3_WORDS * 8) - (2 * (digestBytes));
-    this ->HP = nullptr;
+    this->HP = nullptr;
     this->bMsg_lenP = nullptr;
     this->blockP = nullptr;
 }
 
-void SHA_3_Context::clear() {
+void SHA_3_Context::clear()
+{
     memset(&sponge, 0, sizeof(sponge));
     blockCur = 0;
 }
