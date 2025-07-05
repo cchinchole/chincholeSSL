@@ -63,7 +63,7 @@ static std::string trim(const std::string &s) {
   return rsp;
 }
 
-void runTest(std::string path, std::string fileName, SHA_MODE shaMode, int *passed,
+void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode, int *passed,
              int *failed) {
   auto rsp = parseFile(path + fileName);
   int p = 0, f = 0;
@@ -85,26 +85,26 @@ void runTest(std::string path, std::string fileName, SHA_MODE shaMode, int *pass
             << std::endl << std::endl;
 }
 
-SHA_MODE haveSHA(std::string name) {
+DIGEST_MODE haveSHA(std::string name) {
   if (name == "SHA1")
-    return SHA_MODE::SHA_1;
+    return DIGEST_MODE::SHA_1;
   else if (name == "SHA224")
-    return SHA_MODE::SHA_224;
+    return DIGEST_MODE::SHA_224;
   else if (name == "SHA256")
-    return SHA_MODE::SHA_256;
+    return DIGEST_MODE::SHA_256;
   else if (name == "SHA384")
-    return SHA_MODE::SHA_384;
+    return DIGEST_MODE::SHA_384;
   else if (name == "SHA512")
-    return SHA_MODE::SHA_512;
+    return DIGEST_MODE::SHA_512;
   else if (name == "SHA3_224")
-    return SHA_MODE::SHA_3_224;
+    return DIGEST_MODE::SHA_3_224;
   else if (name == "SHA3_256")
-    return SHA_MODE::SHA_3_256;
+    return DIGEST_MODE::SHA_3_256;
   else if (name == "SHA3_384")
-    return SHA_MODE::SHA_3_384;
+    return DIGEST_MODE::SHA_3_384;
   else if (name == "SHA3_512")
-    return SHA_MODE::SHA_3_512;
-  return SHA_MODE::NONE;
+    return DIGEST_MODE::SHA_3_512;
+  return DIGEST_MODE::NONE;
 }
 
 int main() {

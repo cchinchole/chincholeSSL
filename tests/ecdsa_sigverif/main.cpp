@@ -115,19 +115,19 @@ int didTestSucceed(std::string s) {
         return -1;
 }
 
-SHA_MODE haveSHA(std::string name) {
+DIGEST_MODE haveSHA(std::string name) {
     if (name == "SHA-1") {
-        return SHA_MODE::SHA_1;
+        return DIGEST_MODE::SHA_1;
     } else if (name == "SHA-256") {
-        return SHA_MODE::SHA_256;
+        return DIGEST_MODE::SHA_256;
     } else if (name == "SHA-384") {
-        return SHA_MODE::SHA_384;
+        return DIGEST_MODE::SHA_384;
     } else if (name == "SHA-512") {
-        return SHA_MODE::SHA_512;
+        return DIGEST_MODE::SHA_512;
     } else if (name == "SHA-224") {
-        return SHA_MODE::SHA_224;
+        return DIGEST_MODE::SHA_224;
     }
-    return SHA_MODE::NONE;
+    return DIGEST_MODE::NONE;
 }
 
 ECGroup haveCurve(std::string curve) {
@@ -147,10 +147,10 @@ int main() {
     auto rsp = parseSigGen("SigVer.rsp");
     int passed = 0, failed = 0;
     for (const auto &ch : rsp.curve_hash_tests) {
-        SHA_MODE shaMode = haveSHA(ch.hash);
+        DIGEST_MODE shaMode = haveSHA(ch.hash);
         ECGroup group = haveCurve(ch.curve);
 
-        if (shaMode != SHA_MODE::NONE && group != ECGroup::NONE) {
+        if (shaMode != DIGEST_MODE::NONE && group != ECGroup::NONE) {
             std::cout << "\033[34mCurve: " << ch.curve << "\n";
             std::cout << "Hash: " << ch.hash << "\033[0m\n";
             int p = 0, f = 0;

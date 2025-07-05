@@ -19,21 +19,21 @@ uint64_t SHA_384_H0[8] = {0xcbbb9d5dc1059ed8, 0x629a292a367cd507,
                           0x67332667ffc00b31, 0x8eb44a8768581511,
                           0xdb0c2e0d64f98fa7, 0x47b5481dbefa4fa4};
 
-SHA_3_Context::SHA_3_Context(SHA_MODE mode)
+SHA_3_Context::SHA_3_Context(DIGEST_MODE mode)
 {
     this->mode = mode;
     switch (mode)
     {
-    case SHA_MODE::SHA_3_224:
+    case DIGEST_MODE::SHA_3_224:
         this->digestBytes = 224 / 8;
         break;
-    case SHA_MODE::SHA_3_256:
+    case DIGEST_MODE::SHA_3_256:
         this->digestBytes = 256 / 8;
         break;
-    case SHA_MODE::SHA_3_384:
+    case DIGEST_MODE::SHA_3_384:
         this->digestBytes = 384 / 8;
         break;
-    case SHA_MODE::SHA_3_512:
+    case DIGEST_MODE::SHA_3_512:
         this->digestBytes = 512 / 8;
         break;
     default:
@@ -61,7 +61,7 @@ SHA_1_Context::SHA_1_Context()
     HP = &H;
     blockP = &block;
 
-    mode = SHA_MODE::SHA_1;
+    mode = DIGEST_MODE::SHA_1;
     bMsg_len = 0;
     blockCur = 0;
     memset(block, 0, SHA1_BLOCK_SIZE_BYTES);
@@ -84,7 +84,7 @@ SHA_224_Context::SHA_224_Context()
     HP = &H;
     blockP = &block;
 
-    mode = SHA_MODE::SHA_224;
+    mode = DIGEST_MODE::SHA_224;
     bMsg_len = 0;
     blockCur = 0;
     memset(block, 0, SHA256_BLOCK_SIZE_BYTES);
@@ -107,7 +107,7 @@ SHA_256_Context::SHA_256_Context()
     HP = &H;
     blockP = &block;
 
-    mode = SHA_MODE::SHA_256;
+    mode = DIGEST_MODE::SHA_256;
     bMsg_len = 0;
     blockCur = 0;
     memset(block, 0, SHA256_BLOCK_SIZE_BYTES);
@@ -130,7 +130,7 @@ SHA_512_Context::SHA_512_Context()
     HP = &H;
     blockP = &block;
 
-    mode = SHA_MODE::SHA_512;
+    mode = DIGEST_MODE::SHA_512;
     bMsg_len[0] = 0;
     bMsg_len[1] = 0;
     blockCur = 0;
@@ -156,7 +156,7 @@ SHA_384_Context::SHA_384_Context()
     HP = &H;
     blockP = &block;
 
-    mode = SHA_MODE::SHA_384;
+    mode = DIGEST_MODE::SHA_384;
     bMsg_len[0] = 0;
     bMsg_len[1] = 0;
     blockCur = 0;
@@ -174,19 +174,19 @@ void SHA_384_Context::clear()
     }
 }
 
-int getSHABlockLengthByMode(SHA_MODE mode)
+int getSHABlockLengthByMode(DIGEST_MODE mode)
 {
     switch (mode)
     {
-    case SHA_MODE::SHA_1:
+    case DIGEST_MODE::SHA_1:
         return SHA1_BLOCK_SIZE_BYTES;
         break;
-    case SHA_MODE::SHA_224:
-    case SHA_MODE::SHA_256:
+    case DIGEST_MODE::SHA_224:
+    case DIGEST_MODE::SHA_256:
         return SHA256_BLOCK_SIZE_BYTES;
         break;
-    case SHA_MODE::SHA_384:
-    case SHA_MODE::SHA_512:
+    case DIGEST_MODE::SHA_384:
+    case DIGEST_MODE::SHA_512:
         return SHA2_384512_BLOCK_SIZE_BYTES;
         break;
     default:
@@ -195,35 +195,35 @@ int getSHABlockLengthByMode(SHA_MODE mode)
     }
     return -1;
 }
-int getSHAReturnLengthByMode(SHA_MODE mode)
+int getSHAReturnLengthByMode(DIGEST_MODE mode)
 {
     switch (mode)
     {
-    case SHA_MODE::SHA_1:
+    case DIGEST_MODE::SHA_1:
         return 160 / 8;
         break;
-    case SHA_MODE::SHA_224:
+    case DIGEST_MODE::SHA_224:
         return 224 / 8;
         break;
-    case SHA_MODE::SHA_256:
+    case DIGEST_MODE::SHA_256:
         return 256 / 8;
         break;
-    case SHA_MODE::SHA_384:
+    case DIGEST_MODE::SHA_384:
         return 384 / 8;
         break;
-    case SHA_MODE::SHA_512:
+    case DIGEST_MODE::SHA_512:
         return 512 / 8;
         break;
-    case SHA_MODE::SHA_3_224:
+    case DIGEST_MODE::SHA_3_224:
         return 224 / 8;
         break;
-    case SHA_MODE::SHA_3_256:
+    case DIGEST_MODE::SHA_3_256:
         return 256 / 8;
         break;
-    case SHA_MODE::SHA_3_384:
+    case DIGEST_MODE::SHA_3_384:
         return 384 / 8;
         break;
-    case SHA_MODE::SHA_3_512:
+    case DIGEST_MODE::SHA_3_512:
         return 512 / 8;
         break;
     default:
@@ -232,35 +232,35 @@ int getSHAReturnLengthByMode(SHA_MODE mode)
     }
     return -1;
 }
-char *SHA_MODE_NAME(SHA_MODE mode)
+char *DIGEST_MODE_NAME(DIGEST_MODE mode)
 {
     switch (mode)
     {
-    case SHA_MODE::SHA_1:
+    case DIGEST_MODE::SHA_1:
         return (char *)"SHA_1";
         break;
-    case SHA_MODE::SHA_224:
+    case DIGEST_MODE::SHA_224:
         return (char *)"SHA_224";
         break;
-    case SHA_MODE::SHA_256:
+    case DIGEST_MODE::SHA_256:
         return (char *)"SHA_256";
         break;
-    case SHA_MODE::SHA_384:
+    case DIGEST_MODE::SHA_384:
         return (char *)"SHA_384";
         break;
-    case SHA_MODE::SHA_512:
+    case DIGEST_MODE::SHA_512:
         return (char *)"SHA_512";
         break;
-    case SHA_MODE::SHA_3_224:
+    case DIGEST_MODE::SHA_3_224:
         return (char *)"SHA_3_224";
         break;
-    case SHA_MODE::SHA_3_256:
+    case DIGEST_MODE::SHA_3_256:
         return (char *)"SHA_3_256";
         break;
-    case SHA_MODE::SHA_3_384:
+    case DIGEST_MODE::SHA_3_384:
         return (char *)"SHA_3_384";
         break;
-    case SHA_MODE::SHA_3_512:
+    case DIGEST_MODE::SHA_3_512:
         return (char *)"SHA_3_512";
         break;
     default:
@@ -273,27 +273,27 @@ int SHA_Update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
 {
     switch (ctx->mode)
     {
-    case SHA_MODE::SHA_1:
+    case DIGEST_MODE::SHA_1:
         SHA_1_update(msg, byMsg_len, (SHA_1_Context *)ctx);
         break;
-    case SHA_MODE::SHA_224:
+    case DIGEST_MODE::SHA_224:
         SHA_224256_update(msg, byMsg_len, (SHA_224_Context *)ctx);
         break;
-    case SHA_MODE::SHA_256:
+    case DIGEST_MODE::SHA_256:
         SHA_224256_update(msg, byMsg_len, (SHA_256_Context *)ctx);
         break;
-    case SHA_MODE::SHA_384:
+    case DIGEST_MODE::SHA_384:
         SHA_384512_update(msg, byMsg_len, (SHA_384_Context *)ctx);
         break;
-    case SHA_MODE::SHA_512:
+    case DIGEST_MODE::SHA_512:
         SHA_384512_update(msg, byMsg_len, (SHA_512_Context *)ctx);
         break;
-    case SHA_MODE::SHA_3_224:
-    case SHA_MODE::SHA_3_256:
-    case SHA_MODE::SHA_3_384:
-    case SHA_MODE::SHA_3_512:
-    case SHA_MODE::SHA_3_SHAKE_128:
-    case SHA_MODE::SHA_3_SHAKE_256:
+    case DIGEST_MODE::SHA_3_224:
+    case DIGEST_MODE::SHA_3_256:
+    case DIGEST_MODE::SHA_3_384:
+    case DIGEST_MODE::SHA_3_512:
+    case DIGEST_MODE::SHA_3_SHAKE_128:
+    case DIGEST_MODE::SHA_3_SHAKE_256:
         SHA_3_update(msg, byMsg_len, (SHA_3_Context *)ctx);
         break;
     default:
@@ -305,25 +305,25 @@ int SHA_Digest(uint8_t *digest_out, SHA_Context *ctx)
 {
     switch (ctx->mode)
     {
-    case SHA_MODE::SHA_1:
+    case DIGEST_MODE::SHA_1:
         SHA_1_digest(digest_out, (SHA_1_Context *)ctx);
         break;
-    case SHA_MODE::SHA_224:
+    case DIGEST_MODE::SHA_224:
         SHA_224256_digest(digest_out, (SHA_224_Context *)ctx);
         break;
-    case SHA_MODE::SHA_256:
+    case DIGEST_MODE::SHA_256:
         SHA_224256_digest(digest_out, (SHA_256_Context *)ctx);
         break;
-    case SHA_MODE::SHA_512:
+    case DIGEST_MODE::SHA_512:
         SHA_384512_digest(digest_out, (SHA_512_Context *)ctx);
         break;
-    case SHA_MODE::SHA_384:
+    case DIGEST_MODE::SHA_384:
         SHA_384512_digest(digest_out, (SHA_384_Context *)ctx);
         break;
-    case SHA_MODE::SHA_3_224:
-    case SHA_MODE::SHA_3_256:
-    case SHA_MODE::SHA_3_384:
-    case SHA_MODE::SHA_3_512:
+    case DIGEST_MODE::SHA_3_224:
+    case DIGEST_MODE::SHA_3_256:
+    case DIGEST_MODE::SHA_3_384:
+    case DIGEST_MODE::SHA_3_512:
         SHA_3_digest(digest_out, (SHA_3_Context *)ctx);
         break;
     default:
@@ -332,32 +332,32 @@ int SHA_Digest(uint8_t *digest_out, SHA_Context *ctx)
     return 0;
 }
 
-SHA_Context *SHA_Context_new(SHA_MODE mode)
+SHA_Context *SHA_Context_new(DIGEST_MODE mode)
 {
     SHA_Context *ctx = NULL;
     switch (mode)
     {
-    case SHA_MODE::SHA_1:
+    case DIGEST_MODE::SHA_1:
         ctx = new SHA_1_Context();
         break;
-    case SHA_MODE::SHA_224:
+    case DIGEST_MODE::SHA_224:
         ctx = new SHA_224_Context();
         break;
-    case SHA_MODE::SHA_256:
+    case DIGEST_MODE::SHA_256:
         ctx = new SHA_256_Context();
         break;
-    case SHA_MODE::SHA_384:
+    case DIGEST_MODE::SHA_384:
         ctx = new SHA_384_Context();
         break;
-    case SHA_MODE::SHA_512:
+    case DIGEST_MODE::SHA_512:
         ctx = new SHA_512_Context();
         break;
-    case SHA_MODE::SHA_3_224:
-    case SHA_MODE::SHA_3_256:
-    case SHA_MODE::SHA_3_384:
-    case SHA_MODE::SHA_3_512:
-    case SHA_MODE::SHA_3_SHAKE_128:
-    case SHA_MODE::SHA_3_SHAKE_256:
+    case DIGEST_MODE::SHA_3_224:
+    case DIGEST_MODE::SHA_3_256:
+    case DIGEST_MODE::SHA_3_384:
+    case DIGEST_MODE::SHA_3_512:
+    case DIGEST_MODE::SHA_3_SHAKE_128:
+    case DIGEST_MODE::SHA_3_SHAKE_256:
         ctx = new SHA_3_Context(mode);
         break;
     default:

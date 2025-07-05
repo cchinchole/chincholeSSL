@@ -18,7 +18,7 @@ enum class RSA_Padding{
 class RSA_Padding_Params {
 public:
     RSA_Padding mode;
-    SHA_MODE digestMode;
+    DIGEST_MODE digestMode;
     ByteArray label;
 };
 
@@ -52,7 +52,7 @@ void RSA_GenerateKey(cRSAKey &key, int kBits=4096, std::string N="", std::string
 std::vector<uint8_t> RSA_Encrypt_Primative(cRSAKey &key, const std::vector<uint8_t> &src);
 std::vector<uint8_t> RSA_Encrypt(cRSAKey &key, const std::vector<uint8_t> &src);
 std::vector<uint8_t> RSA_Decrypt(cRSAKey &key, const std::vector<uint8_t> &cipher);
-std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed, size_t maskLen, SHA_MODE shaMode = SHA_MODE::SHA_256);
+std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed, size_t maskLen, DIGEST_MODE shaMode = DIGEST_MODE::SHA_256);
 ByteArray OAEP_Encode(cRSAKey &key, const ByteArray &msg, ByteArray &seed, bool givenSeed);
 /*
  * Key Pair:

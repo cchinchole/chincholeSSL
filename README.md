@@ -45,13 +45,13 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
 
 ### RSA ###
 ```cpp
- #include "cssl/crypto/rsa.hpp"
- #include "cssl/utils/bytes.hpp"
+     #include "cssl/crypto/rsa.hpp"
+     #include "cssl/utils/bytes.hpp"
 
- cRSAKey key;
- RSA_GenerateKey(key);
- ByteArray cipher = RSA_Encrypt(key, str);
- ByteArray decrypt = RSA_Decrypt(key, cipher);
+     cRSAKey key;
+     RSA_GenerateKey(key);
+     ByteArray cipher = RSA_Encrypt(key, str);
+     ByteArray decrypt = RSA_Decrypt(key, cipher);
 ```
 
 ### EC ###
@@ -62,8 +62,8 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
     cECSignature sig;
     ByteArray msg = hexToBytes("aabbccddeeffaabbcceeddeedd11001100");
     EC_Generate_KeyPair(key);
-    EC_GenerateSignature(key, sig, msg, SHA_MODE::SHA_512);
-    EC_VerifySignature(key, sig, msg, hashMode); //Returns 0 on success
+    EC_GenerateSignature(key, sig, msg, DIGEST_MODE::SHA_512);
+    EC_VerifySignature(key, sig, msg, DIGEST_MODE::SHA_512); //Returns 0 on success
 ```
 
 ## Tests ##

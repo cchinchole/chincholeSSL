@@ -257,7 +257,7 @@ void RSA_GenerateKey(cRSAKey &key,
 }
 
 /* TODO : Move this to more suitable place */
-std::vector<uint8_t> sha_hash(std::vector<uint8_t> &input, SHA_MODE mode)
+std::vector<uint8_t> sha_hash(std::vector<uint8_t> &input, DIGEST_MODE mode)
 {
     std::vector<uint8_t> hash;
     hash.resize(getSHAReturnLengthByMode(mode));
@@ -270,7 +270,7 @@ std::vector<uint8_t> sha_hash(std::vector<uint8_t> &input, SHA_MODE mode)
 
 std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed,
                           size_t maskLen,
-                          SHA_MODE shaMode)
+                          DIGEST_MODE shaMode)
 {
     const size_t hLen = getSHAReturnLengthByMode(shaMode);
     std::vector<uint8_t> mask;

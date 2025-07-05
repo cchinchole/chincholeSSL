@@ -85,15 +85,15 @@ class cECSignature {
 // Hiding these functions
 // int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret, std::string group);
 // int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, uint8_t *msg,
-// size_t msg_len, cECKey *key, SHA_MODE shaMode = SHA_512, char *KSecret =
+// size_t msg_len, cECKey *key, DIGEST_MODE shaMode = SHA_512, char *KSecret =
 // NULL); int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, uint8_t *msg,
-// size_t msg_len, cECPrimeField *D, cECPoint *Q, SHA_MODE shaMode = SHA_512);
+// size_t msg_len, cECPrimeField *D, cECPoint *Q, DIGEST_MODE shaMode = SHA_512);
 std::string ECGroupString(ECGroup group);
 int EC_GenerateSignature(cECKey &key, cECSignature &sig,
                          std::vector<uint8_t> msg,
-                         SHA_MODE shaMode = SHA_MODE::SHA_512);
+                         DIGEST_MODE shaMode = DIGEST_MODE::SHA_512);
 int EC_VerifySignature(cECKey &key, cECSignature &sig, std::vector<uint8_t> msg,
-                       SHA_MODE shaMode = SHA_MODE::SHA_512);
+                       DIGEST_MODE shaMode = DIGEST_MODE::SHA_512);
 int EC_Generate_KeyPair(cECKey &key);
 
 #endif

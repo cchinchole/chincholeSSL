@@ -20,13 +20,13 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig,
                                        uint8_t *msg,
                                        size_t msg_len,
                                        cECKey &key,
-                                       SHA_MODE shaMode = SHA_MODE::SHA_512,
+                                       DIGEST_MODE shaMode = DIGEST_MODE::SHA_512,
                                        char *KSecret = NULL);
 int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig,
                                      uint8_t *msg,
                                      size_t msg_len,
                                      cECKey &key,
-                                     SHA_MODE shaMode = SHA_MODE::SHA_512);
+                                     DIGEST_MODE shaMode = DIGEST_MODE::SHA_512);
 
 /* SP 800-186: Domain parameters source */
 /* Easily access: https://neuromancer.sk/std/nist/ */
@@ -338,7 +338,7 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig,
                                        uint8_t *msg,
                                        size_t msg_len,
                                        cECKey &key,
-                                       SHA_MODE shaMode,
+                                       DIGEST_MODE shaMode,
                                        char *KSecret)
 {
     int retCode = -1;
@@ -412,7 +412,7 @@ int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig,
                                      uint8_t *msg,
                                      size_t msg_len,
                                      cECKey &key,
-                                     SHA_MODE shaMode)
+                                     DIGEST_MODE shaMode)
 {
     int retCode = -1;
     cECPrimeField *D = key.getGroup();
@@ -551,7 +551,7 @@ std::string ECGroupString(ECGroup group)
 int EC_GenerateSignature(cECKey &key,
                          cECSignature &sig,
                          std::vector<uint8_t> msg,
-                         SHA_MODE shaMode)
+                         DIGEST_MODE shaMode)
 {
     return FIPS_186_5_6_4_1_GenerateSignature(sig, msg.data(), msg.size(), key,
                                               shaMode);
@@ -560,7 +560,7 @@ int EC_GenerateSignature(cECKey &key,
 int EC_VerifySignature(cECKey &key,
                        cECSignature &sig,
                        std::vector<uint8_t> msg,
-                       SHA_MODE shaMode)
+                       DIGEST_MODE shaMode)
 {
     return FIPS_186_5_6_4_2_VerifySignature(sig, msg.data(), msg.size(), key,
                                             shaMode);

@@ -4,7 +4,7 @@
 #include <cstring>
 
 int main() {
-  SHA_MODE mode = SHA_MODE::SHA_3_512;
+  DIGEST_MODE mode = DIGEST_MODE::SHA_3_512;
   SHA_Context *ctx = SHA_Context_new(mode);
   unsigned char rawDigest[getSHAReturnLengthByMode(mode)];
   uint8_t *msg = (uint8_t *)"Hello World!";

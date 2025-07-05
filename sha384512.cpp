@@ -137,7 +137,7 @@ int SHA_384512_process(SHA_Context *ctx)
 
 int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
 {
-    if (ctx->mode != SHA_MODE::SHA_512 && ctx->mode != SHA_MODE::SHA_384)
+    if (ctx->mode != DIGEST_MODE::SHA_512 && ctx->mode != DIGEST_MODE::SHA_384)
         return -1;
 
     uint64_t *bMsg_len = ((uint64_t *)ctx->bMsg_lenP);
@@ -180,7 +180,7 @@ int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
 int SHA_384512_digest(uint8_t *digest_out, SHA_Context *ctx)
 {
 
-    if (ctx->mode != SHA_MODE::SHA_512 && ctx->mode != SHA_MODE::SHA_384)
+    if (ctx->mode != DIGEST_MODE::SHA_512 && ctx->mode != DIGEST_MODE::SHA_384)
         return -1;
 
     uint64_t *bMsg_len = ((uint64_t *)ctx->bMsg_lenP);

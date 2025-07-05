@@ -10,7 +10,7 @@
 #define SHA3_WORDS 25     /* 1600/8 / sizeof(uint64_t) */
 #define SHA3_SPONGE_ARR 5 /* 25 / 5*/
 
-enum class SHA_MODE
+enum class DIGEST_MODE
 {
     SHA_1,
     SHA_224,
@@ -31,7 +31,7 @@ class SHA_Context
 private:
 public:
     uint64_t blockCur = 0;
-    SHA_MODE mode = SHA_MODE::SHA_1;
+    DIGEST_MODE mode = DIGEST_MODE::SHA_1;
     void *HP;
     void *bMsg_lenP;
     void *blockP;
@@ -52,7 +52,7 @@ public:
         uint64_t words[SHA3_SPONGE_ARR][SHA3_SPONGE_ARR];
     } sponge;
 
-    SHA_3_Context(SHA_MODE mode);
+    SHA_3_Context(DIGEST_MODE mode);
     void clear();
 };
 
@@ -156,10 +156,10 @@ public:
     void clear();
 };
 
-SHA_Context *SHA_Context_new(SHA_MODE mode);
-int getSHABlockLengthByMode(SHA_MODE mode);
-int getSHAReturnLengthByMode(SHA_MODE mode);
-char *SHA_MODE_NAME(SHA_MODE mode);
+SHA_Context *SHA_Context_new(DIGEST_MODE mode);
+int getSHABlockLengthByMode(DIGEST_MODE mode);
+int getSHAReturnLengthByMode(DIGEST_MODE mode);
+char *DIGEST_MODE_NAME(DIGEST_MODE mode);
 
 int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_1_digest(uint8_t *digest_out, SHA_Context *ctx);

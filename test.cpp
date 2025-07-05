@@ -44,7 +44,7 @@ int testSHA_Shake(char *msg,
                   size_t digestSize,
                   bool quiet)
 {
-    SHA_3_Context *ctx = (SHA_3_Context *)SHA_Context_new(SHA_MODE(mode));
+    SHA_3_Context *ctx = (SHA_3_Context *)SHA_Context_new(DIGEST_MODE(mode));
     unsigned char rawDigest[digestSize / 8];
     SHA_Update((uint8_t *)msg, msg_len, ctx);
     SHA_3_xof(ctx);
@@ -54,15 +54,15 @@ int testSHA_Shake(char *msg,
     int res = (hexString == KAT);
     if (!quiet)
         res == 0 ? printf("(%s Test) HASH Returned: %s PASSED!\n",
-                          SHA_MODE_NAME(SHA_MODE(mode)), hexString.c_str())
+                          DIGEST_MODE_NAME(DIGEST_MODE(mode)), hexString.c_str())
                  : printf("(%s Test) HASH Returned: %s FAILED!\n",
-                          SHA_MODE_NAME(SHA_MODE(mode)), hexString.c_str());
+                          DIGEST_MODE_NAME(DIGEST_MODE(mode)), hexString.c_str());
 
     return res;
 }
 
 /* Returns 0 on success */
-int testSHA(char *msg, size_t msg_len, char *KAT, SHA_MODE mode, bool quiet)
+int testSHA(char *msg, size_t msg_len, char *KAT, DIGEST_MODE mode, bool quiet)
 {
     SHA_Context *ctx = SHA_Context_new(mode);
     unsigned char rawDigest[getSHAReturnLengthByMode(ctx->mode)];
@@ -76,9 +76,9 @@ int testSHA(char *msg, size_t msg_len, char *KAT, SHA_MODE mode, bool quiet)
     int res = strcasecmp((char *)hexString.c_str(), KAT);
     if (!quiet)
         res == 0 ? printf("(%s Test) HASH Returned: %s PASSED!\n",
-                          SHA_MODE_NAME(mode), hexString.c_str())
+                          DIGEST_MODE_NAME(mode), hexString.c_str())
                  : printf("(%s Test) HASH Returned: %s FAILED!\n",
-                          SHA_MODE_NAME(mode), hexString.c_str());
+                          DIGEST_MODE_NAME(mode), hexString.c_str());
 
     delete ctx;
     return res;
@@ -93,8 +93,8 @@ int testHMAC(char *msg,
              int mode,
              bool quiet)
 {
-    unsigned char rawDigest[getSHAReturnLengthByMode(SHA_MODE(mode))];
-    SHA_Context *ctx = SHA_Context_new(SHA_MODE(mode));
+    unsigned char rawDigest[getSHAReturnLengthByMode(DIGEST_MODE(mode))];
+    SHA_Context *ctx = SHA_Context_new(DIGEST_MODE(mode));
     hmac_sha(ctx, rawDigest, (unsigned char *)msg, msg_len,
              (unsigned char *)key, key_len);
 
@@ -104,7 +104,7 @@ int testHMAC(char *msg,
     if (!quiet)
     {
         res == 0 ? printf("(HMAC [ %s ] Test) HASH Returned: %s PASSED!\n",
-                          SHA_MODE_NAME(SHA_MODE(mode)), hexString.c_str())
+                          DIGEST_MODE_NAME(DIGEST_MODE(mode)), hexString.c_str())
                  : printf("HASH Returned: %s FAILED!\n", hexString.c_str());
     }
     return res;
