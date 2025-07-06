@@ -77,17 +77,16 @@ int getNK(AES_CTX &ctx)
     return tNK[static_cast<int>(ctx.ksize)];
 }
 
-char *roundkeyToString(const uint8_t *w)
+std::string roundkeyToString(const uint8_t *w)
 {
-    char *dest = (char *)malloc(2 * AES_BlockSize + 1);
-    if (!dest)
-        return NULL;
-
-    char *p = dest;
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    
     for (size_t i = 0; i < nB; i++)
         for (size_t j = 0; j < nB; j++)
-            p += sprintf((char *)p, "%02hhX", (w[(j * nB) + i]));
-    return dest;
+            oss << std::setw(2) << static_cast<unsigned>(w[(j * nB) + i]);
+            
+    return oss.str();
 }
 
 std::string tempToString(const unsigned char *temp)
@@ -579,78 +578,82 @@ int CTR_xcrypt(AES_CTX &ctx, uint8_t *out, uint8_t *buf, size_t buf_len)
     return 0;
 }
 
-int AES_SetIV(AES_CTX &ctx, uint8_t *iv)
+int AES_SetIV(AES_CTX &ctx, ByteArray iv)
 {
-    memcpy(ctx.iv, iv, AES_BlockSize);
+    memcpy(ctx.iv, iv.data(), AES_BlockSize);
     return 0;
 }
 
 // Wrapped for better naming
-int AES_KeyExpansion(AES_CTX &ctx, uint8_t *key)
+int AES_KeyExpansion(AES_CTX &ctx, ByteArray key)
 {
-    return FIPS_197_5_2_KeyExpansion(ctx, key);
+    return FIPS_197_5_2_KeyExpansion(ctx, key.data());
 }
 
-int AES_Encrypt(AES_CTX &ctx, uint8_t *out, uint8_t *buf, size_t buf_len)
+ByteArray AES_Encrypt(AES_CTX &ctx, ByteArray &buf)
 {
+    ByteArray output;
+    output.resize(buf.size());
     switch (ctx.mode)
     {
     case AES_MODE::CBC:
-        CBC_Encrypt(ctx, out, buf, buf_len);
+        CBC_Encrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case AES_MODE::ECB:
-        ECB_Encrypt(ctx, out, buf, buf_len);
+        ECB_Encrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case AES_MODE::CTR:
-        CTR_xcrypt(ctx, out, buf, buf_len);
+        CTR_xcrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case AES_MODE::OFB:
-        OFB_XCrypt(ctx, out, buf, buf_len);
+        OFB_XCrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case AES_MODE::CFB:
-        CFB_XCrypt(ctx, out, buf, buf_len);
+        CFB_XCrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     default:
         LOG_ERROR("{} Invalid AES mode reached.", __func__);
-        return -1;
+        return ByteArray();
         break;
     }
-    return 0;
+    return output;
 }
 
-int AES_Decrypt(AES_CTX &ctx, uint8_t *out, uint8_t *buf, size_t buf_len)
+ByteArray AES_Decrypt(AES_CTX &ctx, ByteArray &buf)
 {
+    ByteArray output;
+    output.resize(buf.size());
     switch (ctx.mode)
     {
     case AES_MODE::CBC:
-        CBC_Decrypt(ctx, out, buf, buf_len);
+        CBC_Decrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case AES_MODE::ECB:
-        ECB_Decrypt(ctx, out, buf, buf_len);
+        ECB_Decrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case AES_MODE::CTR:
-        CTR_xcrypt(ctx, out, buf, buf_len);
+        CTR_xcrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case AES_MODE::OFB:
-        OFB_XCrypt(ctx, out, buf, buf_len);
+        OFB_XCrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case AES_MODE::CFB:
-        CFB_XCrypt(ctx, out, buf, buf_len);
+        CFB_XCrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     default:
         LOG_ERROR("{} Invalid AES mode reached.", __func__);
-        return -1;
+        return ByteArray();
         break;
     }
-    return 0;
+    return output;
 }

@@ -26,21 +26,14 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
 
     AES_CTX ctx(AES_MODE::CBC, AES_KEYSIZE::m128);
     std::string aes_key = "2b7e151628aed2a6abf7158809cf4f3c";
-    std::string aes_iv_key = "000102030405060708090a0b0c0d0e0f";
+    std::string aes_iv = "000102030405060708090a0b0c0d0e0f";
     std::string cbc_kat = "3243f6a8885a308d313198a2e0370734";
 
-    std::vector<uint8_t> buffer = hexToBytes(cbc_kat);
-    std::vector<uint8_t> outputA;
-    std::vector<uint8_t> outputB;
-
-    outputA.resize(buffer.size());
-    outputB.resize(buffer.size());
-
-    AES_KeyExpansion(ctx, hexToBytes(aes_kat_key).data());
-    AES_SetIV(ctx, hexToBytes(aes_iv_key).data());
-
-    AES_Encrypt(ctx, outputA.data(), buffer.data(), buffer.size());
-    AES_Decrypt(ctx, outputB.data(), outputA.data(), outputA.size());
+    ByteArray buffer = hexToBytes(cbc_kat);
+    AES_KeyExpansion(ctx, hexToBytes(aes_kat_key));
+    AES_SetIV(ctx, hexToBytes(aes_iv));
+    ByteArray cipher = AES_Encrypt(ctx, buffer);
+    ByteArray decipher = AES_Decrypt(ctx, cipher);
 ```
 
 ### RSA ###

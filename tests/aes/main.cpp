@@ -151,17 +151,13 @@ void runTest(std::string path, std::string fileName, std::string sMode, std::str
         AES_CTX ctx(mode, kSize);
 
         //ctx->mode = mode
-        AES_KeyExpansion(ctx, hexToBytes(t.KEY).data());
+        AES_KeyExpansion(ctx, hexToBytes(t.KEY));
 
         if(ctx.mode != AES_MODE::ECB)
-            AES_SetIV(ctx, hexToBytes(t.IV).data());
+            AES_SetIV(ctx, hexToBytes(t.IV));
 
         std::vector<uint8_t> buffer = hexToBytes(t.PLAINTEXT);
-        std::vector<uint8_t> output;
-        output.resize(buffer.size());
-
-        AES_Encrypt(ctx, output.data(), buffer.data(), buffer.size());
-
+        std::vector<uint8_t> output = AES_Encrypt(ctx, buffer);
         std::string hexOutput = bytesToHex(output);
         if (std::memcmp(output.data(), hexToBytes(t.CIPHERTEXT).data(),
                         output.size()) == 0)
@@ -171,15 +167,12 @@ void runTest(std::string path, std::string fileName, std::string sMode, std::str
       } else if (ch.state == "DECRYPT") {
         AES_CTX ctx(mode, kSize);
 
-        AES_KeyExpansion(ctx, hexToBytes(t.KEY).data());
+        AES_KeyExpansion(ctx, hexToBytes(t.KEY));
         if(ctx.mode != AES_MODE::ECB)
-            AES_SetIV(ctx, hexToBytes(t.IV).data());
+            AES_SetIV(ctx, hexToBytes(t.IV));
 
         std::vector<uint8_t> buffer = hexToBytes(t.CIPHERTEXT);
-        std::vector<uint8_t> output;
-        output.resize(buffer.size());
-
-        AES_Decrypt(ctx, output.data(), buffer.data(), buffer.size());
+        std::vector<uint8_t> output = AES_Decrypt(ctx, buffer);
 
         if (std::memcmp(output.data(), hexToBytes(t.PLAINTEXT).data(),
                         output.size()) == 0)

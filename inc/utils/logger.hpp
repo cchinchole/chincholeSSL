@@ -23,6 +23,12 @@ public:
         std::cout << std::format(fmt, std::forward<Args>(args)...) << '\n';
 #endif
     }
+    
+    template <typename... Args>
+    void print_always(const std::format_string<Args...> fmt, Args&&... args) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::cout << std::format(fmt, std::forward<Args>(args)...) << '\n';
+    }
 
 private:
     std::mutex mutex_;
@@ -101,6 +107,10 @@ struct std::formatter<uint8_t[4][4]> {
     }
 };
 
+//This will always print
+#define PRINT(fmt, ...) Logger->print_always("[{}] " fmt, getCurrentTime(), ##__VA_ARGS__)
+
+//Following below only print if the DEBUG flag is passed
 #define LOG_INFO(fmt, ...) Logger->print("[{}] [Info] " fmt, getCurrentTime(), ##__VA_ARGS__)
 #define LOG_AES(fmt, ...) Logger->print("[{}] [AES] " fmt, getCurrentTime(), ##__VA_ARGS__)
 #define LOG_RSA(fmt, ...) Logger->print("[{}] [RSA] " fmt, getCurrentTime(), ##__VA_ARGS__)
