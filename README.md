@@ -64,5 +64,5 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
 2. The tests will access the files in the vectors folder and automatically run what the library is capable of.
 
 ## Future Plans ##
-1. AES rewritten to input and output a ByteArray *vector<uint8_t>*
+1. Update SHA to using ByteArray for definitions.
 2. Input PEM files
