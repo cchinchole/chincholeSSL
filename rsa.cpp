@@ -5,6 +5,7 @@
 #include "inc/utils/logger.hpp"
 #include "inc/utils/time.hpp"
 #include <algorithm>
+#include <iterator>
 #include <openssl/bio.h>
 #include <openssl/bn.h>
 #include <openssl/core_names.h>
@@ -14,7 +15,6 @@
 #include <openssl/rsa.h>
 #include <openssl/ssl.h>
 #include <print>
-#include <stdexcept>
 #include <stdio.h>
 #include <vector>
 
@@ -68,6 +68,7 @@ int rsa_sp800_56b_pairwise_test(cRSAKey &key)
 }
 
 /* Computes d, n, dP, dQ, qInv from the prime factors and public exponent */
+// Returns 0 on success of pairwise
 int gen_rsa_sp800_56b(cRSAKey &key, bool constTime)
 {
     /* FIPS requires the bit length to be within 17-256 */
@@ -120,8 +121,6 @@ int gen_rsa_sp800_56b(cRSAKey &key, bool constTime)
     /* Not compliant since will show D failures if the loop continues. Need to
      * finish function and return a value to show failure to restart. */
 
-    if (BN_is_zero(key.d))
-    {
         for (;;)
         {
             BN_mod_inverse(key.d, key.e, lcm, ctx);
@@ -140,14 +139,10 @@ int gen_rsa_sp800_56b(cRSAKey &key, bool constTime)
             BN_CTX_free(ctx);
             return -1;
         }
-    }
 
-    if (BN_is_zero(key.n))
-    {
         /* Step 3: n = pq */
         BN_mul(key.n, key.crt.p, key.crt.q, ctx);
         LOG_RSA("N {}", key.n);
-    }
 
     t.start();
     /* Step 4: dP = d mod(p-1)*/
@@ -158,9 +153,6 @@ int gen_rsa_sp800_56b(cRSAKey &key, bool constTime)
 
     /* Step 6: qInv = q^(-1) mod(p) */
     BN_mod_inverse(key.crt.qInv, key.crt.q, key.crt.p, ctx);
-
-    // printf("Took: %dms to generate CRT parameters.\n", t.getElapsed(true));
-
     LOG_RSA("DP {}", key.crt.dp);
     LOG_RSA("DQ {}", key.crt.dq);
     LOG_RSA("QINV {}", key.crt.qInv);
@@ -176,6 +168,15 @@ void BN_strtobn(BIGNUM *bn, std::string &str)
     BN_hex2bn(&bnVal, str.c_str());
     BN_copy(bn, bnVal);
     BN_free(bnVal);
+}
+
+void RSA_SetPaddingMode(cRSAKey &key, RSA_Padding padding_mode, ByteArray label, DIGEST_MODE shaDigest)
+{
+    key.padding.mode = padding_mode;
+    if(label.size() != 0)
+        std::copy(label.begin(), label.end(), std::back_inserter(key.padding.label));
+    if(shaDigest != DIGEST_MODE::NONE)
+        key.padding.digestMode = shaDigest;
 }
 
 // Permanently setting to auxMode for now.
@@ -244,11 +245,18 @@ void RSA_GenerateKey(cRSAKey &key,
     {
         FIPS186_4_GEN_PRIMES(key.crt.p, key.crt.q, key.e,
                              kBits); // true, &ACVP_TEST
-        gen_rsa_sp800_56b(key, true);
+        if(gen_rsa_sp800_56b(key, true))
+        {
+            PRINT("FAILED TO GENERATE CRT {}", __LINE__);
+        }
+
     }
     else if (provided > 2)
     {
-        gen_rsa_sp800_56b(key, true);
+        if(gen_rsa_sp800_56b(key, true))
+        {
+            PRINT("FAILED TO GENERATE CRT {}", __LINE__);
+        }
     }
     else if (provided == 2)
     {
@@ -427,6 +435,7 @@ std::vector<uint8_t> RSA_Decrypt_Primative(cRSAKey &key,
 Error:
     if (errorRaised)
     {
+        printf("ERROR RAISED\n");
         BN_CTX_end(ctx);
         return ByteArray();
     }
