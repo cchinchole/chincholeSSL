@@ -170,13 +170,15 @@ void BN_strtobn(BIGNUM *bn, std::string &str)
     BN_free(bnVal);
 }
 
-void RSA_SetPaddingMode(cRSAKey &key, RSA_Padding padding_mode, ByteArray label, DIGEST_MODE shaDigest)
+void RSA_SetPaddingMode(cRSAKey &key, RSA_Padding padding_mode, ByteArray label, DIGEST_MODE hashMode, DIGEST_MODE maskHashMode)
 {
     key.padding.mode = padding_mode;
-    if(label.size() != 0)
-        std::copy(label.begin(), label.end(), std::back_inserter(key.padding.label));
-    if(shaDigest != DIGEST_MODE::NONE)
-        key.padding.digestMode = shaDigest;
+    key.padding.label.clear();
+    std::copy(label.begin(), label.end(), std::back_inserter(key.padding.label));
+    if(hashMode != DIGEST_MODE::NONE)
+        key.padding.hashMode = hashMode;
+    if(maskHashMode != DIGEST_MODE::NONE)
+        key.padding.maskHashMode = maskHashMode;
 }
 
 // Permanently setting to auxMode for now.
@@ -243,23 +245,26 @@ void RSA_GenerateKey(cRSAKey &key,
 
     if (provided < 1)
     {
+        // Nothing is provided
         FIPS186_4_GEN_PRIMES(key.crt.p, key.crt.q, key.e,
                              kBits); // true, &ACVP_TEST
         if(gen_rsa_sp800_56b(key, true))
         {
-            PRINT("FAILED TO GENERATE CRT {}", __LINE__);
+            LOG_ERROR("FAILED TO GENERATE CRT {}", __LINE__);
         }
 
     }
     else if (provided > 2)
     {
+        //N, E, D, and the primes were given
         if(gen_rsa_sp800_56b(key, true))
         {
-            PRINT("FAILED TO GENERATE CRT {}", __LINE__);
+            LOG_ERROR("FAILED TO GENERATE CRT {}", __LINE__);
         }
     }
     else if (provided == 2)
     {
+        // N, E, D are provided, but we don't have the primes. Cannot proceed with CRT
         key.crt.enabled = false;
     }
 }
@@ -339,7 +344,7 @@ std::vector<uint8_t> RSA_Encrypt_Primative(cRSAKey &key,
         // Encrypt
         BIGNUM *cipherNumber = BN_CTX_get(ctx);
         BN_mod_exp(cipherNumber, originalNumber, key.e, key.n, ctx);
-        LOG_RSA("{} Encryped number: {}", __func__, cipherNumber);
+        LOG_RSA("{} Encrypted number: {}", __func__, cipherNumber);
 
         // Convert cipher to binary
         std::vector<uint8_t> cipherBlock(BN_num_bytes(cipherNumber));
@@ -372,7 +377,7 @@ std::vector<uint8_t> RSA_Decrypt_Primative(cRSAKey &key,
         BN_CTX_free(ctx);
 
         // Invalid cipher length
-        return std::vector<uint8_t>();
+        return {};
     }
 
     std::vector<uint8_t> returnData;
@@ -386,6 +391,13 @@ std::vector<uint8_t> RSA_Decrypt_Primative(cRSAKey &key,
         // Convert cipher block to BIGNUM
         BIGNUM *cipherNumber = BN_CTX_get(ctx);
         BN_bin2bn(cipher.data() + i * maxBytes, maxBytes, cipherNumber);
+
+        if(BN_cmp(cipherNumber, key.n) == 0 || BN_cmp(cipherNumber, key.n) == 1)
+        {
+            //Failure;
+            errorRaised = true;
+            goto Error;
+        }
 
         // Decrypt
         BIGNUM *decryptedNumber = BN_CTX_get(ctx);
@@ -435,9 +447,9 @@ std::vector<uint8_t> RSA_Decrypt_Primative(cRSAKey &key,
 Error:
     if (errorRaised)
     {
-        printf("ERROR RAISED\n");
         BN_CTX_end(ctx);
-        return ByteArray();
+        BN_CTX_free(ctx);
+        return {};
     }
     BN_CTX_free(ctx);
     return returnData;
@@ -451,7 +463,7 @@ ByteArray OAEP_Encode(cRSAKey &key,
 {
     const size_t kLen = msg.size(); // Msg length
     const size_t nLen = key.kBits / 8;
-    const size_t hLen = getSHAReturnLengthByMode(key.padding.digestMode);
+    const size_t hLen = getSHAReturnLengthByMode(key.padding.hashMode);
 
     if (kLen > (nLen - (2 * hLen) - 2))
     {
@@ -460,7 +472,7 @@ ByteArray OAEP_Encode(cRSAKey &key,
     }
 
     // Step A
-    ByteArray lHash = sha_hash(key.padding.label, key.padding.digestMode);
+    ByteArray lHash = sha_hash(key.padding.label, key.padding.hashMode);
 
     // Step B
     size_t psLen = nLen - kLen - (2 * hLen) - 2;
@@ -482,7 +494,7 @@ ByteArray OAEP_Encode(cRSAKey &key,
     }
 
     // Step E
-    ByteArray dbMask = mgf1(seed, nLen - hLen - 1, key.padding.digestMode);
+    ByteArray dbMask = mgf1(seed, nLen - hLen - 1, key.padding.maskHashMode);
 
     // Step F
     ByteArray maskedDB(DB.size());
@@ -492,7 +504,7 @@ ByteArray OAEP_Encode(cRSAKey &key,
     }
 
     // Step G
-    ByteArray seedMask = mgf1(maskedDB, hLen, key.padding.digestMode);
+    ByteArray seedMask = mgf1(maskedDB, hLen, key.padding.maskHashMode);
 
     // Step H
     ByteArray maskedSeed(hLen);
@@ -510,40 +522,44 @@ ByteArray OAEP_Encode(cRSAKey &key,
     return EM;
 }
 
+
 // NIST SP800-56B 7.2.2.4
 ByteArray OAEP_Decode(cRSAKey &key, const ByteArray &EM)
 {
     const size_t nLen = key.kBits / 8;
-    const size_t hLen = getSHAReturnLengthByMode(key.padding.digestMode);
+    const size_t hLen = getSHAReturnLengthByMode(key.padding.hashMode);
     bool decryptionError = false;
+
+    //Initial check to see if Decrypt failed
+    if(EM.empty())
+    {
+        decryptionError = true;
+        return ByteArray();
+    }
 
     // Confirm correct size and that the first bit is padded
     if (EM[0] != 0x00)
     {
         decryptionError = true;
     }
+
     if (EM.size() != nLen)
     {
         decryptionError = true;
-        std::println("Size mismatch expected: {} got: {}", nLen, EM.size());
     }
 
     // Step A
-    ByteArray HA = sha_hash(key.padding.label, key.padding.digestMode);
+    ByteArray HA = sha_hash(key.padding.label, key.padding.hashMode);
 
     // Step B
-    // EM = 00000000 || maskedMGFSeed || maskedDB
-    const uint8_t *pMaskedSeed =
-        EM.data() + 1; // Pulls the masked MGFSeed disregarding the 0x00
-    const uint8_t *pMaskedDB =
-        EM.data() + 1 +
-        hLen; // Pulls the maskedDB skips hLen (seed hash) +1 0x00
+    const uint8_t *pMaskedSeed = EM.data() + 1; // Pulls the masked MGFSeed disregarding the 0x00
+    const uint8_t *pMaskedDB = EM.data() + 1 + hLen; // Pulls the maskedDB skips hLen (seed hash) +1 0x00
 
     ByteArray maskedSeed(pMaskedSeed, pMaskedSeed + hLen);
     ByteArray maskedDB(pMaskedDB, pMaskedDB + (nLen - hLen - 1));
 
     // Step C
-    ByteArray msgSeedMask = mgf1(maskedDB, hLen, key.padding.digestMode);
+    ByteArray msgSeedMask = mgf1(maskedDB, hLen, key.padding.maskHashMode);
 
     // Step D
     ByteArray seed(hLen);
@@ -553,7 +569,7 @@ ByteArray OAEP_Decode(cRSAKey &key, const ByteArray &EM)
     }
 
     // Step E
-    ByteArray dbMask = mgf1(seed, nLen - hLen - 1, key.padding.digestMode);
+    ByteArray dbMask = mgf1(seed, nLen - hLen - 1, key.padding.maskHashMode);
 
     // Step F
     ByteArray DB(maskedDB.size());
@@ -600,7 +616,7 @@ ByteArray OAEP_Decode(cRSAKey &key, const ByteArray &EM)
     {
         // We do not immediately jump here so we can obfuscate what the error
         // cause was
-        ByteArray msg;
+        ByteArray msg = {};
         return msg;
     }
 }

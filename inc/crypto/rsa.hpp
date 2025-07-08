@@ -18,7 +18,8 @@ enum class RSA_Padding{
 class RSA_Padding_Params {
 public:
     RSA_Padding mode;
-    DIGEST_MODE digestMode;
+    DIGEST_MODE hashMode;
+    DIGEST_MODE maskHashMode;
     ByteArray label;
 };
 
@@ -44,7 +45,7 @@ public:
    ~cRSAKey();
 };
 
-void RSA_SetPaddingMode(cRSAKey &key, RSA_Padding padding_mode, ByteArray label = {}, DIGEST_MODE shaDigest = DIGEST_MODE::NONE);
+void RSA_SetPaddingMode(cRSAKey &key, RSA_Padding padding_mode, ByteArray label = {}, DIGEST_MODE hashMode = DIGEST_MODE::NONE, DIGEST_MODE maskHashMode = DIGEST_MODE::NONE);
 void RSA_GenerateKey(cRSAKey &key, int kBits=4096, std::string N="", std::string E="",
                      std::string D="", std::string ex1="", std::string ex2="",
                      std::string coef="", std::string P="", std::string Q="");

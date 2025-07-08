@@ -25,7 +25,8 @@ int main()
         "0926f3311f15c4d65a732c483116ee3d3d2d0af3549ad9bf7cbfb78ad884f84d5beb04"
         "724dc7369b31def37d0cf539e9cfcdd3de653729ead5d1");
 
-    RSA_SetPaddingMode(key, RSA_Padding::OAEP, {}, DIGEST_MODE::SHA_1);
+    //Key, Padding Mode, Label, Label Digest, MGF Digest
+    RSA_SetPaddingMode(key, RSA_Padding::OAEP, {}, DIGEST_MODE::SHA_1, DIGEST_MODE::SHA_1);
 
     ByteArray str = {0x66, 0x28, 0x19, 0x4e, 0x12, 0x07, 0x3d, 0xb0, 0x3b, 0xa9,
                      0x4c, 0xda, 0x9e, 0xf9, 0x53, 0x23, 0x97, 0xd5, 0x0d, 0xba,

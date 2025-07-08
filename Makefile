@@ -26,7 +26,7 @@ EXAMPLES_DIR = examples
 PREFIX ?= /usr/local
 INSTALLINCLUDEDIR = $(PREFIX)/include/cssl
 INSTALLLIBDIR = $(PREFIX)/lib
-TEST_DIRS = tests/aes tests/ecdsa_siggen tests/ecdsa_sigverif tests/hash
+TEST_DIRS = tests/aes tests/ecdsa_siggen tests/ecdsa_sigverif tests/hash tests/rsa_oaep
 
 # Source files and object files (excluding main.cpp)
 SRCS = $(filter-out $(SRC_DIR)/main.cpp,$(wildcard $(SRC_DIR)/*.cpp))
@@ -60,6 +60,7 @@ clean:
 	$(MAKE) -C tests/ecdsa_siggen clean
 	$(MAKE) -C tests/ecdsa_sigverif clean
 	$(MAKE) -C tests/hash clean
+	$(MAKE) -C tests/rsa_oaep clean
 install: all
 	install -d $(INSTALLINCLUDEDIR)
 	cp -r ./inc/* $(INSTALLINCLUDEDIR)/
