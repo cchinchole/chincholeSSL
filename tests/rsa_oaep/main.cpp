@@ -105,29 +105,17 @@ BIGNUM *hexToBignum(const std::string &hex)
     return bn;
 }
 
-DIGEST_MODE sha_name(std::string s)
-{
-    if (s == "SHA-1")
-    {
-        return DIGEST_MODE::SHA_1;
-    }
-    else if (s == "SHA-224")
-    {
-        return DIGEST_MODE::SHA_224;
-    }
-    else if (s == "SHA-256")
-    {
-        return DIGEST_MODE::SHA_256;
-    }
-    else if (s == "SHA-384")
-    {
-        return DIGEST_MODE::SHA_384;
-    }
-    else if (s == "SHA-512")
-    {
-        return DIGEST_MODE::SHA_512;
-    }
-    return DIGEST_MODE::NONE;
+DIGEST_MODE sha_name(const std::string& s) {
+    static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
+        {"SHA-1", DIGEST_MODE::SHA_1},
+        {"SHA-224", DIGEST_MODE::SHA_224},
+        {"SHA-256", DIGEST_MODE::SHA_256},
+        {"SHA-384", DIGEST_MODE::SHA_384},
+        {"SHA-512", DIGEST_MODE::SHA_512}
+    };
+    
+    auto it = sha_map.find(s);
+    return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
 }
 
 int generateKey(const TestGroup &group, cRSAKey &key)
@@ -223,12 +211,12 @@ int main(int argc, char **argv)
     if(totalfailed > 0)
         retCode = 255;
 
-    PRINT("Total tests: {}\nTests Succeeded: {}\nTests failed: {}", totalTests,
+    printf("Total tests: %d\nTests Succeeded: %d\nTests failed: %d\n", totalTests,
           totalpassed, totalfailed);
 
     if(retCode == 0)
-        PRINT("\e[0;32mSUCCEEDED\e[0;37m");
+        printf("\e[0;32mSUCCEEDED\e[0;37m\n");
     else
-        PRINT("\e[0;31mFAILED\e[0;37m");
+        printf("\e[0;31mFAILED\e[0;37m\n");
     return retCode;
 }

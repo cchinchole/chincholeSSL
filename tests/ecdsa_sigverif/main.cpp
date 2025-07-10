@@ -1,6 +1,7 @@
 #include "../../inc/crypto/ec.hpp"
 #include "../../inc/utils/bytes.hpp"
 #include "../../inc/utils/logger.hpp"
+#include <unordered_map>
 #include <fstream>
 #include <iostream>
 #include <openssl/bn.h>
@@ -141,42 +142,33 @@ int didTestSucceed(std::string s)
         return -1;
 }
 
-DIGEST_MODE haveSHA(std::string name)
-{
-    if (name == "SHA-1")
-    {
-        return DIGEST_MODE::SHA_1;
-    }
-    else if (name == "SHA-256")
-    {
-        return DIGEST_MODE::SHA_256;
-    }
-    else if (name == "SHA-384")
-    {
-        return DIGEST_MODE::SHA_384;
-    }
-    else if (name == "SHA-512")
-    {
-        return DIGEST_MODE::SHA_512;
-    }
-    else if (name == "SHA-224")
-    {
-        return DIGEST_MODE::SHA_224;
-    }
-    return DIGEST_MODE::NONE;
+DIGEST_MODE haveSHA(const std::string& s) {
+    static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
+        {"SHA-1", DIGEST_MODE::SHA_1},
+        {"SHA-224", DIGEST_MODE::SHA_224},
+        {"SHA-256", DIGEST_MODE::SHA_256},
+        {"SHA-384", DIGEST_MODE::SHA_384},
+        {"SHA-512", DIGEST_MODE::SHA_512},
+        {"SHA3_224", DIGEST_MODE::SHA_3_224},
+        {"SHA3_256", DIGEST_MODE::SHA_3_256},
+        {"SHA3_384", DIGEST_MODE::SHA_3_384},
+        {"SHA3_512", DIGEST_MODE::SHA_3_512}
+    };
+    
+    auto it = sha_map.find(s);
+    return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
 }
 
-ECGroup haveCurve(std::string curve)
-{
-    if (curve == "P-224")
-        return ECGroup::P224;
-    else if (curve == "P-256")
-        return ECGroup::P256;
-    else if (curve == "P-384")
-        return ECGroup::P384;
-    else if (curve == "P-521")
-        return ECGroup::P521;
-    return ECGroup::NONE;
+ECGroup haveCurve(std::string s) {
+    static const std::unordered_map<std::string, ECGroup> group_map = {
+        {"P-224", ECGroup::P224}, 
+        {"P-256", ECGroup::P256},
+        {"P-384", ECGroup::P384},
+        {"P-521", ECGroup::P521},
+    };
+    
+    auto it = group_map.find(s);
+    return it != group_map.end() ? it->second : ECGroup::NONE;
 }
 
 int main()

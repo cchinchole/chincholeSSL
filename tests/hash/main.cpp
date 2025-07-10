@@ -9,6 +9,8 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include <unordered_map>
+
 
 #ifndef TEST_SHA_LOG
 #define TEST_SHA_LOG 0
@@ -52,7 +54,6 @@ SHARsp parseFile(const std::string &filename)
 
         std::string key = trim(line.substr(0, eq));
         std::string val = trim(line.substr(eq + 1));
-
         if (key == "Len")
         {
             if (!current.Len.empty())
@@ -97,28 +98,23 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
               << std::endl;
 }
 
-DIGEST_MODE haveSHA(std::string name)
-{
-    if (name == "SHA1")
-        return DIGEST_MODE::SHA_1;
-    else if (name == "SHA224")
-        return DIGEST_MODE::SHA_224;
-    else if (name == "SHA256")
-        return DIGEST_MODE::SHA_256;
-    else if (name == "SHA384")
-        return DIGEST_MODE::SHA_384;
-    else if (name == "SHA512")
-        return DIGEST_MODE::SHA_512;
-    else if (name == "SHA3_224")
-        return DIGEST_MODE::SHA_3_224;
-    else if (name == "SHA3_256")
-        return DIGEST_MODE::SHA_3_256;
-    else if (name == "SHA3_384")
-        return DIGEST_MODE::SHA_3_384;
-    else if (name == "SHA3_512")
-        return DIGEST_MODE::SHA_3_512;
-    return DIGEST_MODE::NONE;
+DIGEST_MODE haveSHA(const std::string& s) {
+    static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
+        {"SHA1", DIGEST_MODE::SHA_1},
+        {"SHA224", DIGEST_MODE::SHA_224},
+        {"SHA256", DIGEST_MODE::SHA_256},
+        {"SHA384", DIGEST_MODE::SHA_384},
+        {"SHA512", DIGEST_MODE::SHA_512},
+        {"SHA3_224", DIGEST_MODE::SHA_3_224},
+        {"SHA3_256", DIGEST_MODE::SHA_3_256},
+        {"SHA3_384", DIGEST_MODE::SHA_3_384},
+        {"SHA3_512", DIGEST_MODE::SHA_3_512}
+    };
+    
+    auto it = sha_map.find(s);
+    return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
 }
+
 
 int main()
 {
