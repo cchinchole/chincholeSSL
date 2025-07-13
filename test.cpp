@@ -40,11 +40,11 @@ int testPrimesBetweenFuncs()
 int testSHA_Shake(char *msg,
                   size_t msg_len,
                   std::string KAT,
-                  int mode,
+                  DIGEST_MODE mode,
                   size_t digestSize,
                   bool quiet)
 {
-    SHA_3_Context *ctx = (SHA_3_Context *)SHA_Context_new(DIGEST_MODE(mode));
+    SHA_3_Context *ctx = (SHA_3_Context *)SHA_Context_new(mode);
     unsigned char rawDigest[digestSize / 8];
     SHA_Update((uint8_t *)msg, msg_len, ctx);
     SHA_3_xof(ctx);
@@ -54,9 +54,9 @@ int testSHA_Shake(char *msg,
     int res = (hexString == KAT);
     if (!quiet)
         res == 0 ? printf("(%s Test) HASH Returned: %s PASSED!\n",
-                          DIGEST_MODE_NAME(DIGEST_MODE(mode)), hexString.c_str())
+                          DIGEST_MODE_NAME(mode), hexString.c_str())
                  : printf("(%s Test) HASH Returned: %s FAILED!\n",
-                          DIGEST_MODE_NAME(DIGEST_MODE(mode)), hexString.c_str());
+                          DIGEST_MODE_NAME(mode), hexString.c_str());
 
     return res;
 }
@@ -90,11 +90,11 @@ int testHMAC(char *msg,
              char *key,
              size_t key_len,
              char *KAT,
-             int mode,
+             DIGEST_MODE mode,
              bool quiet)
 {
-    unsigned char rawDigest[getSHAReturnLengthByMode(DIGEST_MODE(mode))];
-    SHA_Context *ctx = SHA_Context_new(DIGEST_MODE(mode));
+    unsigned char rawDigest[getSHAReturnLengthByMode(mode)];
+    SHA_Context *ctx = SHA_Context_new(mode);
     hmac_sha(ctx, rawDigest, (unsigned char *)msg, msg_len,
              (unsigned char *)key, key_len);
 

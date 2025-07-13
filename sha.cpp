@@ -50,8 +50,8 @@ SHA_3_Context::SHA_3_Context(DIGEST_MODE mode)
 
 void SHA_3_Context::clear()
 {
-    memset(&sponge, 0, sizeof(sponge));
-    blockCur = 0;
+    memset(&this->sponge, 0, sizeof(this->sponge));
+    this->blockCur = 0;
 }
 
 SHA_1_Context::SHA_1_Context()
@@ -189,6 +189,24 @@ int getSHABlockLengthByMode(DIGEST_MODE mode)
     case DIGEST_MODE::SHA_512:
         return SHA2_384512_BLOCK_SIZE_BYTES;
         break;
+    case DIGEST_MODE::SHA_3_224:
+        return 1152/8;
+        break;
+    case DIGEST_MODE::SHA_3_256:
+        return 1088/8;
+        break;
+    case DIGEST_MODE::SHA_3_384:
+        return 832/8;
+        break;
+    case DIGEST_MODE::SHA_3_512:
+        return 576/8;
+        break;
+    case DIGEST_MODE::SHA_3_SHAKE_128:
+        return 1344/8;
+        break;
+    case DIGEST_MODE::SHA_3_SHAKE_256:
+        return 1088/8;
+        break;
     default:
         return 0;
         break;
@@ -202,27 +220,19 @@ int getSHAReturnLengthByMode(DIGEST_MODE mode)
     case DIGEST_MODE::SHA_1:
         return 160 / 8;
         break;
+    case DIGEST_MODE::SHA_3_224:
     case DIGEST_MODE::SHA_224:
         return 224 / 8;
         break;
+    case DIGEST_MODE::SHA_3_256:
     case DIGEST_MODE::SHA_256:
         return 256 / 8;
         break;
+    case DIGEST_MODE::SHA_3_384:
     case DIGEST_MODE::SHA_384:
         return 384 / 8;
         break;
     case DIGEST_MODE::SHA_512:
-        return 512 / 8;
-        break;
-    case DIGEST_MODE::SHA_3_224:
-        return 224 / 8;
-        break;
-    case DIGEST_MODE::SHA_3_256:
-        return 256 / 8;
-        break;
-    case DIGEST_MODE::SHA_3_384:
-        return 384 / 8;
-        break;
     case DIGEST_MODE::SHA_3_512:
         return 512 / 8;
         break;

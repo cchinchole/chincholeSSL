@@ -12,10 +12,12 @@ int hmac_sha(SHA_Context *ctx,
              size_t key_len)
 {
 
+    /*
     if (ctx->mode != DIGEST_MODE::SHA_1 && ctx->mode != DIGEST_MODE::SHA_224 &&
         ctx->mode != DIGEST_MODE::SHA_256 && ctx->mode != DIGEST_MODE::SHA_384 &&
         ctx->mode != DIGEST_MODE::SHA_512)
         return -1;
+    */
 
     int blockLen = getSHABlockLengthByMode(ctx->mode);
     int retLen = getSHAReturnLengthByMode(ctx->mode);

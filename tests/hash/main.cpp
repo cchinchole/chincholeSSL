@@ -18,9 +18,9 @@
 
 struct SHATest
 {
-    std::string MD;  /* Digest expected in hex */
-    std::string Len; /* Msg len in hex (bytes) */
-    std::string Msg; /* Msg in hex */
+    std::string MD;             /* Digest expected in hex */
+    std::string Len;            /* Msg len in hex (bytes) */
+    std::string Msg;            /* Msg in hex */
 };
 
 struct SHARsp
@@ -54,6 +54,7 @@ SHARsp parseFile(const std::string &filename)
 
         std::string key = trim(line.substr(0, eq));
         std::string val = trim(line.substr(eq + 1));
+
         if (key == "Len")
         {
             if (!current.Len.empty())
@@ -65,7 +66,7 @@ SHARsp parseFile(const std::string &filename)
         }
         else if (key == "Msg")
             current.Msg = val;
-        else if (key == "MD")
+        else if (key == "MD" || key == "Output")
             current.MD = val;
     }
     if (!current.MD.empty())
@@ -85,8 +86,7 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
         std::cout << "Msg = (" << t.Msg << ")\n";
         std::cout << "MD = (" << t.MD << ")\n";
 #endif
-        if (testSHA((char *)hexToBytes(t.Msg).data(), std::stoi(t.Len) / 8,
-                    (char *)t.MD.c_str(), shaMode) == 0)
+        if (testSHA((char *)hexToBytes(t.Msg).data(), std::stoi(t.Len) / 8, (char *)t.MD.c_str(), shaMode) == 0)
             p++;
         else
             f++;
