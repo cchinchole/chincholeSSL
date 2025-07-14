@@ -1,5 +1,4 @@
-#include "../../inc/hash/sha.hpp"
-#include "../../inc/tests/test.hpp"
+#include "../../inc/hash/hash.hpp"
 #include "../../inc/utils/bytes.hpp"
 #include "../../inc/utils/logger.hpp"
 #include <filesystem>
@@ -87,17 +86,11 @@ SHARsp parseFile(const std::string &filename)
 /* Returns 0 on success */
 int test_Shake(ByteArray msg, size_t inputLen, ByteArray MD, DIGEST_MODE mode, size_t digestSize, bool quiet)
 {
-    SHA_Context *ctx = (SHA_Context *)SHA_Context_new(mode);
-    unsigned char rawDigest[digestSize];
-    SHA_SHAKE_DIGEST_BYTES(ctx, digestSize);
-    SHA_Update((uint8_t *)msg.data(), inputLen, ctx);
-    SHA_3_xof(ctx);
-    SHA_Digest(rawDigest, ctx);
-
-    int res = (memcmp(rawDigest, MD.data(), MD.size()));
+    ByteArray rawDigest = Hasher::xof(msg, digestSize, mode);
+    int res = (memcmp(rawDigest.data(), MD.data(), MD.size()));
     if (!quiet)
         //PRINT("({} Test) Hash Return: {} {}!", DIGEST_MODE_NAME(mode), bytePtrToVector(rawDigest, digestSize), res == 0 ? "Passed" : "Failed");
-        if(res != 0)PRINT("Failed!\nExpected: {}\nRecieved: {}", MD, bytePtrToVector(rawDigest, digestSize));
+        if(res != 0)PRINT("Failed!\nExpected: {}\nRecieved: {}", MD, rawDigest);
     return res;
 }
 
@@ -136,7 +129,7 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
             inputLen = shaMode==DIGEST_MODE::SHA_3_SHAKE_128 ? 128/8 : 256/8;
         }
         
-        if (test_Shake(hexToBytes(t.Msg), inputLen, hexToBytes(t.MD), shaMode, digestLen, false) == 0)
+        if (test_Shake(hexToBytes(t.Msg, inputLen), inputLen, hexToBytes(t.MD), shaMode, digestLen, false) == 0)
             p++;
         else
         {

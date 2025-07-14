@@ -1,4 +1,4 @@
-#include "inc/hash/sha.hpp"
+#include "sha.hpp"
 #include "inc/utils/logger.hpp"
 #include <math.h>
 
@@ -116,7 +116,7 @@ int SHA_224256_Process(SHA_Context *ctx)
     return 0;
 }
 
-int SHA_224256_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
+int SHA_224256_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
 {
     uint64_t *bMsg_len = ((uint64_t *)ctx->bMsg_lenP);
     uint8_t *block = (uint8_t *)(ctx->blockP);

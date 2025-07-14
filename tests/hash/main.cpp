@@ -1,5 +1,4 @@
-#include "../../inc/hash/sha.hpp"
-#include "../../inc/tests/test.hpp"
+#include "../../inc/hash/hash.hpp"
 #include "../../inc/utils/bytes.hpp"
 #include "../../inc/utils/logger.hpp"
 #include <filesystem>
@@ -74,6 +73,15 @@ SHARsp parseFile(const std::string &filename)
     return rsp;
 }
 
+/* Returns 0 on success */
+int test_sha(ByteArray msg, ByteArray MD, DIGEST_MODE mode)
+{
+    ByteArray rawDigest = Hasher::hash(msg, mode);
+    int res = (memcmp(rawDigest.data(), MD.data(), MD.size()));
+    if(res != 0)PRINT("Failed!\nExpected: {}\nRecieved: {}", MD, rawDigest);
+    return res;
+}
+
 void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
              int *passed, int *failed)
 {
@@ -81,21 +89,14 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
     int p = 0, f = 0;
     for (const auto &t : rsp.tests)
     {
-#if TEST_SHA_LOG
-        std::cout << "Len: " << t.Len << "\n";
-        std::cout << "Msg = (" << t.Msg << ")\n";
-        std::cout << "MD = (" << t.MD << ")\n";
-#endif
-        if (testSHA((char *)hexToBytes(t.Msg).data(), std::stoi(t.Len) / 8, (char *)t.MD.c_str(), shaMode) == 0)
+        if (test_sha(hexToBytes(t.Msg, std::stoi(t.Len)/8), hexToBytes(t.MD), shaMode) == 0)
             p++;
         else
             f++;
     }
     *passed += p;
     *failed += f;
-    std::cout << "Results [ " << fileName << " ]" << p << " passed " << " f "
-              << f << std::endl
-              << std::endl;
+    PRINT("[ {} ]: {} passed {} failed.", fileName, p, f);
 }
 
 DIGEST_MODE haveSHA(const std::string& s) {
@@ -125,7 +126,6 @@ int main()
     int test_files = 0;
     namespace fs = std::filesystem;
     std::string path = "./vectors/"; // Current directory, change as needed
-
     try
     {
 
@@ -157,8 +157,7 @@ int main()
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    std::cout << "Results: " << passed << " passed " << failed << " failed."
-              << std::endl;
+    PRINT("Results: {} passed {} failed", passed, failed);
     if (failed > 0)
         ret = -1;
     if (ret == 0)

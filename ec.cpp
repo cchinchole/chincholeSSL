@@ -9,24 +9,8 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
 
-#include "inc/hash/sha.hpp"
 #include "inc/math/primes.hpp"
-#include "inc/tests/test.hpp"
-
-int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret);
-int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig,
-                                       uint8_t *msg,
-                                       size_t msg_len,
-                                       cECKey &key,
-                                       DIGEST_MODE shaMode = DIGEST_MODE::SHA_512,
-                                       char *KSecret = NULL);
-int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig,
-                                     uint8_t *msg,
-                                     size_t msg_len,
-                                     cECKey &key,
-                                     DIGEST_MODE shaMode = DIGEST_MODE::SHA_512);
 
 /* SP 800-186: Domain parameters source */
 /* Easily access: https://neuromancer.sk/std/nist/ */
@@ -166,8 +150,8 @@ void ECdouble(cECPrimeField *g,
 {
     BN_CTX_start(ctx);
 
-    /* Our return point so we do not mess with the final point until we are
-     * finished */
+    // Our return point so we do not mess with the final point until we are
+    // finished
     cECPoint *ret = new cECPoint();
     ECCopyPoint(ret, a);
 
@@ -334,10 +318,8 @@ void ECScalarMult(cECPrimeField *g,
 }
 
 /* FIPS 186-5 6.4.1 */
-int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig,
-                                       uint8_t *msg,
-                                       size_t msg_len,
-                                       cECKey &key,
+int EC_GenerateSignature(cECKey &key, cECSignature &sig,
+                                       const ByteArray &msg,
                                        DIGEST_MODE shaMode,
                                        char *KSecret)
 {
@@ -353,13 +335,10 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig,
     cECPoint *RPoint = new cECPoint();
 
     /* Step 1 - 2 */
-    SHA_Context *shaCtx = SHA_Context_new(shaMode);
-    uint8_t hash[getSHAReturnLengthByMode(shaCtx->mode)];
-    SHA_Update(msg, msg_len, shaCtx);
-    SHA_Digest(hash, shaCtx);
+    ByteArray hash = Hasher::hash(msg, shaMode);
     int NLen = BN_num_bits(group->n); /* N = len(n) */
-    int HLen = getSHAReturnLengthByMode(shaCtx->mode) * 8;
-    BN_bin2bn(hash, getSHAReturnLengthByMode(shaCtx->mode), tmp);
+    int HLen = Hasher::getReturnLength(shaMode) * 8;
+    BN_bin2bn(hash.data(), Hasher::getReturnLength(shaMode), tmp);
     if (HLen > NLen)
         BN_rshift(E, tmp, HLen - NLen);
     else
@@ -401,17 +380,14 @@ int FIPS_186_5_6_4_1_GenerateSignature(cECSignature &sig,
     retCode = 0;
 ending:
     delete RPoint;
-    delete shaCtx;
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     return retCode;
 }
 
 /* FIPS 186-5 6.4.2 */
-int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig,
-                                     uint8_t *msg,
-                                     size_t msg_len,
-                                     cECKey &key,
+int EC_VerifySignature(cECKey &key, cECSignature &sig,
+                                     const ByteArray msg,
                                      DIGEST_MODE shaMode)
 {
     int retCode = -1;
@@ -432,22 +408,18 @@ int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig,
     cECPoint *RPoint = new cECPoint();
 
     // Step 2 - 3: Hash the message
-    SHA_Context *shaCtx = SHA_Context_new(shaMode);
-    uint8_t hash[getSHAReturnLengthByMode(shaCtx->mode)];
-    SHA_Update((uint8_t *)msg, msg_len, shaCtx);
-    SHA_Digest(hash, shaCtx);
+    ByteArray hash = Hasher::hash(msg, shaMode);
 
     if (BN_is_zero(sig.R) || BN_is_zero(sig.S) || BN_ucmp(sig.R, D->n) >= 0 ||
         BN_ucmp(sig.S, D->n) >= 0)
-        return -1; /* Either R or S is not within 0, n-1 */
+        return -1; // Either R or S is not within 0, n-1
 
     // Step 3: Convert leftmost N bits of hash to integer
-    int NLen = BN_num_bits(D->n); /* N = len(n) */
-    int HLen =
-        getSHAReturnLengthByMode(shaCtx->mode) * 8; /* hash length in bits */
+    int NLen = BN_num_bits(D->n); // N = len(n)
+    int HLen = Hasher::getReturnLength(shaMode) * 8; // hash length in bits
 
     // Store hash in tmp
-    BN_bin2bn(hash, getSHAReturnLengthByMode(shaCtx->mode), tmp);
+    BN_bin2bn(hash.data(), Hasher::getReturnLength(shaMode), tmp);
 
     // If the Hash bits > Order bits then only copy the higher order bits to E
     //  else fully copy the hash into E
@@ -456,10 +428,10 @@ int FIPS_186_5_6_4_2_VerifySignature(cECSignature &sig,
     else
         BN_copy(E, tmp);
 
-    /* Step 4: Compute s⁻¹ mod n */
+    // Step 4: Compute s⁻¹ mod n
     BN_mod_inverse(sInv, sig.S, D->n, ctx);
 
-    /* Step 5: Compute u = e⋅s⁻¹ mod n, v = r⋅s⁻¹ mod n */
+    // Step 5: Compute u = e⋅s⁻¹ mod n, v = r⋅s⁻¹ mod n 
     BN_mod_mul(u, E, sInv, D->n, ctx);
     BN_mod_mul(v, sig.R, sInv, D->n, ctx);
 
@@ -490,14 +462,13 @@ ending:
     delete addend1;
     delete addend2;
     delete RPoint;
-    delete shaCtx;
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     return retCode;
 }
 
-/* FIPS 186-4 B.4.2 */
-int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey &ret)
+// FIPS 186-4 B.4.2
+int EC_GenerateKeyPair(cECKey &ret)
 {
     BN_CTX *ctx = BN_CTX_new();
     BN_CTX_start(ctx);
@@ -546,27 +517,3 @@ std::string ECGroupString(ECGroup group)
     return "";
 }
 
-/* TODO Make msg const */
-
-int EC_GenerateSignature(cECKey &key,
-                         cECSignature &sig,
-                         std::vector<uint8_t> msg,
-                         DIGEST_MODE shaMode)
-{
-    return FIPS_186_5_6_4_1_GenerateSignature(sig, msg.data(), msg.size(), key,
-                                              shaMode);
-}
-
-int EC_VerifySignature(cECKey &key,
-                       cECSignature &sig,
-                       std::vector<uint8_t> msg,
-                       DIGEST_MODE shaMode)
-{
-    return FIPS_186_5_6_4_2_VerifySignature(sig, msg.data(), msg.size(), key,
-                                            shaMode);
-}
-
-int EC_Generate_KeyPair(cECKey &key)
-{
-    return FIPS_186_4_B_4_2_KeyPairGeneration(key);
-}

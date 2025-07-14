@@ -1,15 +1,13 @@
-#include "inc/hash/hmac.hpp"
-#include "inc/hash/sha.hpp"
+#include "inc/hash/hash.hpp"
+#include "hmac.hpp"
 #include "inc/utils/logger.hpp"
 #include <math.h>
 
 /* FIPS 198-1 */
-int hmac_sha(SHA_Context *ctx,
+int hmac_sha(DIGEST_MODE digestMode,
              uint8_t *hmac_out,
-             uint8_t *msg,
-             size_t msg_len,
-             uint8_t *key,
-             size_t key_len)
+             const ByteArray msg,
+             const ByteArray key)
 {
 
     /*
@@ -19,40 +17,44 @@ int hmac_sha(SHA_Context *ctx,
         return -1;
     */
 
-    int blockLen = getSHABlockLengthByMode(ctx->mode);
-    int retLen = getSHAReturnLengthByMode(ctx->mode);
+    Hasher h(digestMode);
+
+    int blockLen = getSHABlockLengthByMode(digestMode);
+    int retLen = getSHAReturnLengthByMode(digestMode);
 
     /* Init and clear the keys */
-    uint8_t *outerKey = (uint8_t *)malloc(blockLen + retLen);
-    uint8_t *innerKey = (uint8_t *)malloc(blockLen + msg_len);
-    uint8_t *tmp = (uint8_t *)malloc(getSHAReturnLengthByMode(ctx->mode));
-
-    memset(outerKey, 0, blockLen + retLen);
-    memset(innerKey, 0, blockLen + msg_len);
+    //uint8_t *outerKey = (uint8_t *)malloc(blockLen + retLen);
+    //uint8_t *innerKey = (uint8_t *)malloc(blockLen + msg.size());
+    ByteArray outerKey(blockLen + retLen);
+    ByteArray innerKey(blockLen + msg.size());
+    //memset(outerKey, 0, blockLen + retLen);
+    //memset(innerKey, 0, blockLen + msg.size());
 
     /* If our key takes more than one block then we need to digest this into
      * it's own message */
-    if (key_len > blockLen)
+    if (key.size() > blockLen)
     {
-        SHA_Update(key, key_len, ctx);
-        SHA_Digest(tmp, ctx);
+        //TODO: SHA_Update(key, key_len, ctx);
+        //TODO: SHA_Digest(tmp, ctx);
+        h.update(key);
+        ByteArray tmp = h.digest();
         /* Find the minimum length for the key to be copied with */
         if (blockLen < retLen)
         {
-            memcpy(outerKey, tmp, blockLen);
-            memcpy(innerKey, tmp, blockLen);
+            memcpy(outerKey.data(), tmp.data(), blockLen);
+            memcpy(innerKey.data(), tmp.data(), blockLen);
         }
         else
         {
-            memcpy(outerKey, tmp, retLen);
-            memcpy(innerKey, tmp, retLen);
+            memcpy(outerKey.data(), tmp.data(), retLen);
+            memcpy(innerKey.data(), tmp.data(), retLen);
         }
     }
     else
     {
         /* The key can fit within a message */
-        memcpy(outerKey, key, key_len);
-        memcpy(innerKey, key, key_len);
+        memcpy(outerKey.data(), key.data(), key.size());
+        memcpy(innerKey.data(), key.data(), key.size());
     }
 
     for (int i = 0; i < blockLen; i++)
@@ -61,19 +63,25 @@ int hmac_sha(SHA_Context *ctx,
         innerKey[i] ^= 0x36;
     }
     /* Digest the inner with message */
-    ctx->clear();
-    memcpy(innerKey + blockLen, msg, msg_len);
-    SHA_Update(innerKey, blockLen + msg_len, ctx);
-    SHA_Digest(tmp, ctx);
+    //TODO: ctx->clear();
+    h.reset();
+    memcpy(innerKey.data() + blockLen, msg.data(), msg.size());
+    h.update(innerKey);
+    ByteArray tmp = h.digest();
+    //SHA_Update(innerKey, blockLen + msg.size(), ctx);
+    //SHA_Digest(tmp, ctx);
 
     /* Digest the outer now with the previous result */
-    ctx->clear();
-    memcpy(outerKey + blockLen, tmp, retLen);
-    SHA_Update(outerKey, blockLen + retLen, ctx);
-    SHA_Digest(hmac_out, ctx);
+    //ctx->clear();
+    h.reset();
+    memcpy(outerKey.data() + blockLen, tmp.data(), retLen);
+    h.update(outerKey);
+    memcpy(hmac_out, h.digest().data(), retLen);
+    //SHA_Update(outerKey, blockLen + retLen, ctx);
+    //SHA_Digest(hmac_out, ctx);
 
-    free(outerKey);
-    free(innerKey);
-    free(tmp);
+    //free(outerKey);
+    //free(innerKey);
+    //free(tmp);
     return 0;
 }

@@ -1,5 +1,4 @@
 #include "../../inc/crypto/aes.hpp"
-#include "../../inc/hash/sha.hpp"
 #include "../../inc/utils/bytes.hpp"
 #include "../../inc/utils/logger.hpp"
 #include <cstring>

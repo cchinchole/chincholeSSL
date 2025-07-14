@@ -33,6 +33,24 @@ std::vector<uint8_t> hexToBytes(const std::string &hex)
     return bytes;
 }
 
+std::vector<uint8_t> hexToBytes(const std::string &hex, size_t byteLength)
+{
+    if (hex.size() % 2 != 0)
+        throw std::invalid_argument("Invalid hex string");
+
+    std::vector<uint8_t> bytes;
+    bytes.reserve(byteLength);
+
+    for (size_t i = 0; i < byteLength; ++i)
+    {
+        std::string byteStr = hex.substr(i * 2, 2);
+        uint8_t byte = static_cast<uint8_t>(std::stoul(byteStr, nullptr, 16));
+        bytes.push_back(byte);
+    }
+
+    return bytes;
+}
+
 std::vector<uint8_t> bytePtrToVector(uint8_t *from, size_t len)
 {
     return std::vector<uint8_t>(from, from + len);

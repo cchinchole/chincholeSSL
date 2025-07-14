@@ -1,4 +1,4 @@
-#include "../hash/sha.hpp"
+#include "../hash/hash.hpp"
 #include "../utils/bytes.hpp"
 #include <cstdint>
 #include <openssl/bio.h>

@@ -1,9 +1,4 @@
-#include "inc/tests/test.hpp"
-#include "inc/hash/hmac.hpp"
-#include "inc/hash/sha.hpp"
 #include "inc/math/primes.hpp"
-#include "inc/utils/bytes.hpp"
-#include "inc/utils/logger.hpp"
 #include <math.h>
 #include <openssl/bio.h>
 #include <openssl/bn.h>
@@ -14,6 +9,8 @@
 #include <openssl/ssl.h>
 #include <stdio.h>
 #include <string.h>
+
+// This file is very temporary
 
 /* Returns the discrepancies between the functions */
 int testPrimesBetweenFuncs()
@@ -35,70 +32,4 @@ int testPrimesBetweenFuncs()
     BN_free(testPrime);
 
     return j;
-}
-
-/* Returns 0 on success */
-int testSHA_Shake(ByteArray msg, ByteArray MD, DIGEST_MODE mode, size_t digestSize, bool quiet)
-{
-    SHA_Context *ctx = (SHA_Context *)SHA_Context_new(mode);
-    unsigned char rawDigest[digestSize];
-    SHA_SHAKE_DIGEST_BYTES(ctx, digestSize);
-    SHA_Update((uint8_t *)msg.data(), msg.size(), ctx);
-    SHA_3_xof(ctx);
-    SHA_Digest(rawDigest, ctx);
-
-    int res = (memcmp(rawDigest, MD.data(), MD.size()));
-    if (!quiet)
-        //PRINT("({} Test) Hash Return: {} {}!", DIGEST_MODE_NAME(mode), bytePtrToVector(rawDigest, digestSize), res == 0 ? "Passed" : "Failed");
-        if(res != 0)PRINT("Failed!\nExpected: {}\nRecieved: {}", MD, bytePtrToVector(rawDigest, digestSize));
-    return res;
-}
-
-/* Returns 0 on success */
-int testSHA(char *msg, size_t msg_len, char *KAT, DIGEST_MODE mode, bool quiet)
-{
-    SHA_Context *ctx = SHA_Context_new(mode);
-    unsigned char rawDigest[getSHAReturnLengthByMode(ctx->mode)];
-
-    SHA_Update((uint8_t *)msg, msg_len, ctx);
-    SHA_Digest(rawDigest, ctx);
-
-    std::vector<uint8_t> vec =
-        bytePtrToVector(rawDigest, getSHAReturnLengthByMode(ctx->mode));
-    std::string hexString = bytesToHex(vec);
-    int res = strcasecmp((char *)hexString.c_str(), KAT);
-    if (!quiet)
-        res == 0 ? printf("(%s Test) HASH Returned: %s PASSED!\n",
-                          DIGEST_MODE_NAME(mode), hexString.c_str())
-                 : printf("(%s Test) HASH Returned: %s FAILED!\n",
-                          DIGEST_MODE_NAME(mode), hexString.c_str());
-
-    delete ctx;
-    return res;
-}
-
-/* Returns 0 on success */
-int testHMAC(char *msg,
-             size_t msg_len,
-             char *key,
-             size_t key_len,
-             char *KAT,
-             DIGEST_MODE mode,
-             bool quiet)
-{
-    unsigned char rawDigest[getSHAReturnLengthByMode(mode)];
-    SHA_Context *ctx = SHA_Context_new(mode);
-    hmac_sha(ctx, rawDigest, (unsigned char *)msg, msg_len,
-             (unsigned char *)key, key_len);
-
-    std::string hexString = bytesToHex(
-        bytePtrToVector(rawDigest, getSHAReturnLengthByMode(ctx->mode)));
-    int res = strcasecmp(hexString.c_str(), KAT);
-    if (!quiet)
-    {
-        res == 0 ? printf("(HMAC [ %s ] Test) HASH Returned: %s PASSED!\n",
-                          DIGEST_MODE_NAME(DIGEST_MODE(mode)), hexString.c_str())
-                 : printf("HASH Returned: %s FAILED!\n", hexString.c_str());
-    }
-    return res;
 }

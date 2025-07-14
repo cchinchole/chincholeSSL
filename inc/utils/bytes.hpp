@@ -13,6 +13,7 @@ std::string bytesToHex(const std::vector<uint8_t>& bytes, bool uppercase = false
 std::string asciiToHex(const std::string& ascii, bool uppercase = false);
 std::vector<uint8_t> charToVector(const char* buffer, size_t length);
 std::vector<uint8_t> hexToBytes(const std::string& hex);
+std::vector<uint8_t> hexToBytes(const std::string& hex, size_t byteLength);
 std::vector<uint8_t> convertBignumToVector(BIGNUM* cipherNumber, size_t maxBytes);
 ByteArray stripPadding(const ByteArray &input);
 char *printWord(uint8_t *input, size_t length, size_t blockSize);

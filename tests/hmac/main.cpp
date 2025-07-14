@@ -1,7 +1,5 @@
 #include "../../inc/crypto/rsa.hpp"
-#include "../../inc/hash/sha.hpp"
-#include "../../inc/hash/hmac.hpp"
-#include "../../inc/tests/test.hpp"
+#include "../../inc/hash/hash.hpp"
 #include "../../inc/utils/bytes.hpp"
 #include "../../inc/utils/json.hpp"
 #include "../../inc/utils/logger.hpp"
@@ -59,11 +57,7 @@ TestVector parseJson(const std::string &filename)
 
     TestVector tv;
     tv.algorithm = j["algorithm"];
-    //tv.generatorVersion = j["generatorVersion"];
     tv.numberOfTests = j["numberOfTests"];
-    //tv.header = j["header"].get<std::vector<std::string>>();
-    //tv.notes = j["notes"].get<std::map<std::string, std::string>>();
-    //tv.schema = j["schema"];
 
     for (const auto &group : j["testGroups"])
     {
@@ -115,34 +109,25 @@ DIGEST_MODE sha_name(const std::string& s) {
     return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
 }
 
+// Returns 1 on success
+int test_hmac(ByteArray msg, ByteArray key, ByteArray KAT, DIGEST_MODE digestMode)
+{
+    ByteArray digestOutput = Hasher::hmac(msg, key, digestMode);
+    //Truncate
+    digestOutput.resize(KAT.size());
+    return (std::memcmp(digestOutput.data(), KAT.data(), digestOutput.size()) == 0) ? 1 : 0;
+}
+
+// Returns 1 on success
 int runTestCase(const TestCase &test, DIGEST_MODE mode)
 {
 
     bool passed = false;
     bool expectedPass = false;
-
-    SHA_Context *ctx = SHA_Context_new(mode);
-    uint8_t digestOutput[getSHABlockLengthByMode(mode)];
-    //SHA_Update((uint8_t*)test.msg.data(), test.msg.size(), ctx);
-    //SHA_Digest(digestOutput, ctx);
-
-    hmac_sha(ctx, digestOutput, (uint8_t*)test.msg.data(), test.msg.size(), (uint8_t*)test.key.data(), test.key.size());
-
-    if (std::memcmp(digestOutput, test.tag.data(), test.tag.size()) == 0)
-        passed = true;
+    passed = test_hmac(test.msg, test.key, test.tag, mode);
     if (test.result == "valid" || test.result == "acceptable")
         expectedPass = true;
-    
-    /*
-    if (passed == expectedPass)
-        PRINT("TEST {} passed.", test.tcID);
-    else
-    {
-        PRINT("TEST {} failed.\nReturned: {} Expected: {}\n", test.tcID, passed,
-              expectedPass);
-    }
-    */
-    
+
     return (passed == expectedPass);
 }
 
@@ -167,7 +152,6 @@ int main(int argc, char **argv)
         {
             if (entry.path().extension() == ".json")
             {
-                PRINT("Running: {}", entry.path().filename().string());
                 TestVector tv =
                     parseJson(path + entry.path().filename().string());
                 totalTests += tv.numberOfTests;
@@ -190,7 +174,7 @@ int main(int argc, char **argv)
                 }
                 totalpassed += passed;
                 totalfailed += failed;
-                PRINT("Passed {} Failed {}\n", passed, failed);
+                PRINT("[ {} ]: {} passed {} failed.", entry.path().filename().string(), passed, failed);
             }
         }
     }

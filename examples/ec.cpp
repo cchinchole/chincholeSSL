@@ -1,6 +1,5 @@
 #include "../inc/crypto/ec.hpp"
 #include "../inc/utils/logger.hpp"
-#include "hash/sha.hpp"
 #include "utils/bytes.hpp"
 #include <openssl/bn.h>
 #include <print>
@@ -16,14 +15,14 @@ int main()
     DIGEST_MODE hashMode = DIGEST_MODE::SHA_512;
     ByteArray msg = hexToBytes("aabbccddeeffaabbcceeddeedd11001100");
 
-    EC_Generate_KeyPair(key);
+    EC_GenerateKeyPair(key);
 
     if (EC_GenerateSignature(key, sig, msg, hashMode) != 0)
         printf("Failed to generate signature\n");
 
     std::println("Testing Point {}", *key.getGroup()->G);
 
-    EC_Generate_KeyPair(key2);
+    EC_GenerateKeyPair(key2);
 
     if (EC_GenerateSignature(key2, sig2, msg, hashMode) != 0)
         printf("Failed to generate signature\n");
@@ -43,6 +42,5 @@ int main()
     printf("Verifying against wrong message: %s\n",
            EC_VerifySignature(key, sig, foobar, hashMode) == -1 ? "Passed!"
                                                                 : "Failed!");
-
     return 0;
 }

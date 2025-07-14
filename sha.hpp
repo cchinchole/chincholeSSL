@@ -3,28 +3,13 @@
 #include <openssl/bn.h>
 #include <stdio.h>
 #include <memory.h>
+#include "inc/types.hpp"
 
 #define SHA1_BLOCK_SIZE_BYTES 64
 #define SHA256_BLOCK_SIZE_BYTES 64
 #define SHA2_384512_BLOCK_SIZE_BYTES 128
 #define SHA3_WORDS 25     /* 1600/8 / sizeof(uint64_t) */
 #define SHA3_SPONGE_ARR 5 /* 25 / 5*/
-
-enum class DIGEST_MODE
-{
-    SHA_1,
-    SHA_224,
-    SHA_256,
-    SHA_384,
-    SHA_512,
-    SHA_3_224,
-    SHA_3_256,
-    SHA_3_384,
-    SHA_3_512,
-    SHA_3_SHAKE_128,
-    SHA_3_SHAKE_256,
-    NONE
-};
 
 class SHA_Context
 {
@@ -162,17 +147,17 @@ int getSHAReturnLengthByMode(DIGEST_MODE mode);
 char *DIGEST_MODE_NAME(DIGEST_MODE mode);
 void SHA_SHAKE_DIGEST_BYTES(SHA_Context *ctx_raw, size_t digestBytes);
 
-int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
+int SHA_1_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_1_digest(uint8_t *digest_out, SHA_Context *ctx);
-int SHA_224256_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
+int SHA_224256_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_224256_digest(uint8_t *digest_out, SHA_Context *ctx);
-int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
+int SHA_3_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_3_digest(uint8_t *digest_out, SHA_Context *ctx);
 int SHA_3_xof(SHA_Context *ctx);
 int SHA_3_shake_digest(uint8_t *digestOut, size_t digestLen, SHA_Context *ctx);
-int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
+int SHA_384512_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_384512_digest(uint8_t *digest_out, SHA_Context *ctx);
 
-int SHA_Update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
+int SHA_Update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_Digest(uint8_t *digest_out, SHA_Context *ctx);
 #endif

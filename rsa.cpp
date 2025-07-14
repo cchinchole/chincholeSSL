@@ -1,5 +1,5 @@
 #include "inc/crypto/rsa.hpp"
-#include "inc/hash/sha.hpp"
+#include "inc/hash/hash.hpp"
 #include "inc/math/primes.hpp"
 #include "inc/utils/bytes.hpp"
 #include "inc/utils/logger.hpp"
@@ -269,23 +269,11 @@ void RSA_GenerateKey(cRSAKey &key,
     }
 }
 
-/* TODO : Move this to more suitable place */
-std::vector<uint8_t> sha_hash(std::vector<uint8_t> &input, DIGEST_MODE mode)
-{
-    std::vector<uint8_t> hash;
-    hash.resize(getSHAReturnLengthByMode(mode));
-    SHA_Context *ctx = SHA_Context_new(mode);
-    SHA_Update(input.data(), input.size(), ctx);
-    SHA_Digest(hash.data(), ctx);
-    delete ctx;
-    return hash;
-}
-
 std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed,
                           size_t maskLen,
                           DIGEST_MODE shaMode)
 {
-    const size_t hLen = getSHAReturnLengthByMode(shaMode);
+    const size_t hLen = Hasher::getReturnLength(shaMode);
     std::vector<uint8_t> mask;
     mask.reserve(maskLen);
 
@@ -301,7 +289,7 @@ std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed,
         T.push_back(static_cast<uint8_t>((counter >> 8) & 0xFF));
         T.push_back(static_cast<uint8_t>((counter & 0xFF)));
 
-        std::vector<uint8_t> hash = sha_hash(T, shaMode);
+        std::vector<uint8_t> hash = Hasher::hash(T, shaMode);
         mask.insert(mask.end(), hash.begin(), hash.end());
 
         counter++;
@@ -463,7 +451,7 @@ ByteArray OAEP_Encode(cRSAKey &key,
 {
     const size_t kLen = msg.size(); // Msg length
     const size_t nLen = key.kBits / 8;
-    const size_t hLen = getSHAReturnLengthByMode(key.padding.hashMode);
+    const size_t hLen = Hasher::getReturnLength(key.padding.hashMode);
 
     if (kLen > (nLen - (2 * hLen) - 2))
     {
@@ -472,7 +460,7 @@ ByteArray OAEP_Encode(cRSAKey &key,
     }
 
     // Step A
-    ByteArray lHash = sha_hash(key.padding.label, key.padding.hashMode);
+    ByteArray lHash = Hasher::hash(key.padding.label, key.padding.hashMode);
 
     // Step B
     size_t psLen = nLen - kLen - (2 * hLen) - 2;
@@ -527,7 +515,7 @@ ByteArray OAEP_Encode(cRSAKey &key,
 ByteArray OAEP_Decode(cRSAKey &key, const ByteArray &EM)
 {
     const size_t nLen = key.kBits / 8;
-    const size_t hLen = getSHAReturnLengthByMode(key.padding.hashMode);
+    const size_t hLen = Hasher::getReturnLength(key.padding.hashMode);
     bool decryptionError = false;
 
     //Initial check to see if Decrypt failed
@@ -549,7 +537,7 @@ ByteArray OAEP_Decode(cRSAKey &key, const ByteArray &EM)
     }
 
     // Step A
-    ByteArray HA = sha_hash(key.padding.label, key.padding.hashMode);
+    ByteArray HA = Hasher::hash(key.padding.label, key.padding.hashMode);
 
     // Step B
     const uint8_t *pMaskedSeed = EM.data() + 1; // Pulls the masked MGFSeed disregarding the 0x00

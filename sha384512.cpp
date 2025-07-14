@@ -1,4 +1,4 @@
-#include "inc/hash/sha.hpp"
+#include "sha.hpp"
 #include "inc/utils/logger.hpp"
 #include <math.h>
 
@@ -135,7 +135,7 @@ int SHA_384512_process(SHA_Context *ctx)
     return 0;
 }
 
-int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
+int SHA_384512_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
 {
     if (ctx->mode != DIGEST_MODE::SHA_512 && ctx->mode != DIGEST_MODE::SHA_384)
         return -1;

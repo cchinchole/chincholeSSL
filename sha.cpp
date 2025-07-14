@@ -1,4 +1,4 @@
-#include "inc/hash/sha.hpp"
+#include "sha.hpp"
 
 uint32_t SHA_1_H0[5] = {0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476,
                         0xc3d2e1f0};
@@ -296,7 +296,7 @@ char *DIGEST_MODE_NAME(DIGEST_MODE mode)
     }
     return (char *)"";
 }
-int SHA_Update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
+int SHA_Update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
 {
     switch (ctx->mode)
     {

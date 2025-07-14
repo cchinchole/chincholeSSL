@@ -1,4 +1,4 @@
-#include "inc/hash/sha.hpp"
+#include "sha.hpp"
 #include "inc/utils/logger.hpp"
 #include <math.h>
 
@@ -110,7 +110,7 @@ int SHA3_keccakf(uint64_t sponge[SHA3_SPONGE_ARR][SHA3_SPONGE_ARR])
     return 0;
 }
 
-int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx_raw)
+int SHA_3_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx_raw)
 {
     SHA_3_Context *ctx = (SHA_3_Context*)ctx_raw;
     if (!msg || byMsg_len == 0)
