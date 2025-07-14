@@ -43,7 +43,7 @@ class SHA_3_Context : public SHA_Context
 {
 private:
 public:
-    uint8_t digestBytes = 0;
+    size_t digestBytes = 0;
     uint32_t r = 0;
 
     union
@@ -160,15 +160,16 @@ SHA_Context *SHA_Context_new(DIGEST_MODE mode);
 int getSHABlockLengthByMode(DIGEST_MODE mode);
 int getSHAReturnLengthByMode(DIGEST_MODE mode);
 char *DIGEST_MODE_NAME(DIGEST_MODE mode);
+void SHA_SHAKE_DIGEST_BYTES(SHA_Context *ctx_raw, size_t digestBytes);
 
 int SHA_1_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_1_digest(uint8_t *digest_out, SHA_Context *ctx);
 int SHA_224256_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_224256_digest(uint8_t *digest_out, SHA_Context *ctx);
-int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx);
-int SHA_3_digest(uint8_t *digest_out, SHA_3_Context *ctx);
-int SHA_3_xof(SHA_3_Context *ctx);
-int SHA_3_shake_digest(uint8_t *digestOut, size_t digestLen, SHA_3_Context *ctx);
+int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
+int SHA_3_digest(uint8_t *digest_out, SHA_Context *ctx);
+int SHA_3_xof(SHA_Context *ctx);
+int SHA_3_shake_digest(uint8_t *digestOut, size_t digestLen, SHA_Context *ctx);
 int SHA_384512_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx);
 int SHA_384512_digest(uint8_t *digest_out, SHA_Context *ctx);
 

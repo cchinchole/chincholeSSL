@@ -42,10 +42,27 @@ SHA_3_Context::SHA_3_Context(DIGEST_MODE mode)
     }
     memset(&sponge, 0, sizeof(sponge));
     this->blockCur = 0;
-    r = (SHA3_WORDS * 8) - (2 * (digestBytes));
+    switch(mode)
+    {
+        case DIGEST_MODE::SHA_3_SHAKE_128:
+            r = 1344/8;
+            break;
+        case DIGEST_MODE::SHA_3_SHAKE_256:
+            r = 1088/8;
+            break;
+        default:
+            r = (SHA3_WORDS * 8) - (2 * (digestBytes));
+            break;
+    }
     this->HP = nullptr;
     this->bMsg_lenP = nullptr;
     this->blockP = nullptr;
+}
+
+void SHA_SHAKE_DIGEST_BYTES(SHA_Context *ctx_raw, size_t digestBytes)
+{
+    SHA_3_Context *ctx = (SHA_3_Context*)ctx_raw;
+    ctx->digestBytes = digestBytes;
 }
 
 void SHA_3_Context::clear()
@@ -304,7 +321,7 @@ int SHA_Update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
     case DIGEST_MODE::SHA_3_512:
     case DIGEST_MODE::SHA_3_SHAKE_128:
     case DIGEST_MODE::SHA_3_SHAKE_256:
-        SHA_3_update(msg, byMsg_len, (SHA_3_Context *)ctx);
+        SHA_3_update(msg, byMsg_len, ctx);
         break;
     default:
         break;
@@ -334,7 +351,11 @@ int SHA_Digest(uint8_t *digest_out, SHA_Context *ctx)
     case DIGEST_MODE::SHA_3_256:
     case DIGEST_MODE::SHA_3_384:
     case DIGEST_MODE::SHA_3_512:
-        SHA_3_digest(digest_out, (SHA_3_Context *)ctx);
+        SHA_3_digest(digest_out, ctx);
+        break;
+    case DIGEST_MODE::SHA_3_SHAKE_128:
+    case DIGEST_MODE::SHA_3_SHAKE_256:
+        SHA_3_shake_digest(digest_out, ((SHA_3_Context*)ctx)->digestBytes, ctx);
         break;
     default:
         break;

@@ -110,8 +110,9 @@ int SHA3_keccakf(uint64_t sponge[SHA3_SPONGE_ARR][SHA3_SPONGE_ARR])
     return 0;
 }
 
-int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx)
+int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_Context *ctx_raw)
 {
+    SHA_3_Context *ctx = (SHA_3_Context*)ctx_raw;
     if (!msg || byMsg_len == 0)
         return -1;
     for (int i = 0; i < byMsg_len; i++)
@@ -126,8 +127,9 @@ int SHA_3_update(uint8_t *msg, size_t byMsg_len, SHA_3_Context *ctx)
     return 0;
 }
 
-int SHA_3_digest(uint8_t *digestOut, SHA_3_Context *ctx)
+int SHA_3_digest(uint8_t *digestOut, SHA_Context *ctx_raw)
 {
+    SHA_3_Context *ctx = (SHA_3_Context*)ctx_raw;
     /* Padding and setting the last bits to 11 */
     ctx->sponge.bytes[ctx->blockCur] ^= 0x06;
     ctx->sponge.bytes[ctx->r - 1] ^= 0x80;
@@ -141,8 +143,9 @@ int SHA_3_digest(uint8_t *digestOut, SHA_3_Context *ctx)
     return 0;
 }
 
-int SHA_3_xof(SHA_3_Context *ctx)
+int SHA_3_xof(SHA_Context *ctx_raw)
 {
+    SHA_3_Context *ctx = (SHA_3_Context*)ctx_raw;
     ctx->sponge.bytes[ctx->blockCur] ^= 0x1F;
     ctx->sponge.bytes[ctx->r - 1] ^= 0x80;
     SHA3_keccakf(ctx->sponge.words);
@@ -150,8 +153,9 @@ int SHA_3_xof(SHA_3_Context *ctx)
     return 0;
 }
 
-int SHA_3_shake_digest(uint8_t *digestOut, size_t digestLen, SHA_3_Context *ctx)
+int SHA_3_shake_digest(uint8_t *digestOut, size_t digestLen, SHA_Context *ctx_raw)
 {
+    SHA_3_Context *ctx = (SHA_3_Context*)ctx_raw;
     int j = ctx->blockCur;
     for (int i = 0; i < digestLen; i++)
     {

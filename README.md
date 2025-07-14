@@ -65,4 +65,5 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
 
 ## Future Plans ##
 1. Update SHA to using ByteArray for definitions.
-2. Input PEM files
+2. Update all interfaces to use a more C++ style.
+3. Input PEM files

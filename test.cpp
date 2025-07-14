@@ -3,6 +3,7 @@
 #include "inc/hash/sha.hpp"
 #include "inc/math/primes.hpp"
 #include "inc/utils/bytes.hpp"
+#include "inc/utils/logger.hpp"
 #include <math.h>
 #include <openssl/bio.h>
 #include <openssl/bn.h>
@@ -37,27 +38,19 @@ int testPrimesBetweenFuncs()
 }
 
 /* Returns 0 on success */
-int testSHA_Shake(char *msg,
-                  size_t msg_len,
-                  std::string KAT,
-                  DIGEST_MODE mode,
-                  size_t digestSize,
-                  bool quiet)
+int testSHA_Shake(ByteArray msg, ByteArray MD, DIGEST_MODE mode, size_t digestSize, bool quiet)
 {
-    SHA_3_Context *ctx = (SHA_3_Context *)SHA_Context_new(mode);
-    unsigned char rawDigest[digestSize / 8];
-    SHA_Update((uint8_t *)msg, msg_len, ctx);
+    SHA_Context *ctx = (SHA_Context *)SHA_Context_new(mode);
+    unsigned char rawDigest[digestSize];
+    SHA_SHAKE_DIGEST_BYTES(ctx, digestSize);
+    SHA_Update((uint8_t *)msg.data(), msg.size(), ctx);
     SHA_3_xof(ctx);
-    SHA_3_shake_digest(rawDigest, digestSize / 8, ctx);
-    std::string hexString = bytesToHex(bytePtrToVector(rawDigest, digestSize));
+    SHA_Digest(rawDigest, ctx);
 
-    int res = (hexString == KAT);
+    int res = (memcmp(rawDigest, MD.data(), MD.size()));
     if (!quiet)
-        res == 0 ? printf("(%s Test) HASH Returned: %s PASSED!\n",
-                          DIGEST_MODE_NAME(mode), hexString.c_str())
-                 : printf("(%s Test) HASH Returned: %s FAILED!\n",
-                          DIGEST_MODE_NAME(mode), hexString.c_str());
-
+        //PRINT("({} Test) Hash Return: {} {}!", DIGEST_MODE_NAME(mode), bytePtrToVector(rawDigest, digestSize), res == 0 ? "Passed" : "Failed");
+        if(res != 0)PRINT("Failed!\nExpected: {}\nRecieved: {}", MD, bytePtrToVector(rawDigest, digestSize));
     return res;
 }
 
