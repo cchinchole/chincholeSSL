@@ -18,24 +18,36 @@ public:
 
     ~Impl() {
         if (ctx_) {
+            ctx_->clear();
             delete ctx_;
         }
     }
 
     void reset() {
         if (ctx_) {
-            delete ctx_;
+            ctx_->clear();
         }
-        ctx_ = SHA_Context_new(toInternalMode(mode_));
+        else
+        {
+            ctx_ = SHA_Context_new(toInternalMode(mode_));
+        }
         finalized_ = false;
     }
 
-    void update(const ByteArray& data) {
+    void update(std::span<const uint8_t> data) {
         if (finalized_) {
             reset();
         }
         SHA_Update(const_cast<uint8_t*>(data.data()), data.size(), ctx_);
     }
+
+    void update(std::unique_ptr<uint8_t[]>&& data, size_t length) {
+        if (finalized_) {
+            reset();
+        }
+        SHA_Update(data.get(), length, ctx_);
+    }
+
 
     ByteArray digest() {
         if (finalized_) {
@@ -49,7 +61,7 @@ public:
 
     ByteArray xof(size_t length) {
         if (mode_ != DIGEST_MODE::SHA_3_SHAKE_128 && mode_ != DIGEST_MODE::SHA_3_SHAKE_256) {
-            return ByteArray();
+            return ByteArray(0);
         }
         if (finalized_) {
             reset();
@@ -65,9 +77,11 @@ public:
 
 Hasher::Hasher(DIGEST_MODE mode) : impl_(new Impl(mode)) {}
 
+
 Hasher::~Hasher() {
     delete impl_;
 }
+
 
 Hasher::Hasher(Hasher&& other) noexcept : impl_(other.impl_) {
     other.impl_ = nullptr;
@@ -86,8 +100,13 @@ void Hasher::reset() {
     impl_->reset();
 }
 
-Hasher& Hasher::update(const ByteArray& data) {
+Hasher& Hasher::update(std::span<const uint8_t> data) {
     impl_->update(data);
+    return *this;
+}
+
+Hasher& Hasher::update(std::unique_ptr<uint8_t[]>&& data, size_t length) {
+    impl_->update(std::move(data), length);
     return *this;
 }
 
@@ -99,19 +118,19 @@ ByteArray Hasher::xof(size_t length) {
     return impl_->xof(length);
 }
 
-ByteArray Hasher::hash(const ByteArray& data, DIGEST_MODE mode) {
+ByteArray Hasher::hash(std::span<const uint8_t> data, DIGEST_MODE mode) {
     Hasher hasher(mode);
     hasher.update(data);
     return hasher.digest();
 }
 
-ByteArray Hasher::xof(const ByteArray& data, size_t BDigestLength, DIGEST_MODE mode) {
+ByteArray Hasher::xof(std::span<const uint8_t> data, size_t BDigestLength, DIGEST_MODE mode) {
     Hasher hasher(mode);
     hasher.update(data);
     return hasher.xof(BDigestLength);
 }
 
-ByteArray Hasher::hmac(const ByteArray& data, const ByteArray& key, DIGEST_MODE mode) {
+ByteArray Hasher::hmac(std::span<const uint8_t> data, std::span<const uint8_t> key, DIGEST_MODE mode) {
     SHA_Context* ctx = SHA_Context_new(toInternalMode(mode));
     ByteArray result(getSHAReturnLengthByMode(toInternalMode(mode)));
     hmac_sha(ctx->mode, result.data(), data, key);
@@ -119,6 +138,7 @@ ByteArray Hasher::hmac(const ByteArray& data, const ByteArray& key, DIGEST_MODE 
     return result;
 }
 
-int Hasher::getReturnLength(DIGEST_MODE mode) {
-    return getSHAReturnLengthByMode(toInternalMode(mode));
+size_t Hasher::returnLength()
+{
+    return getSHAReturnLengthByMode(toInternalMode(impl_->ctx_->mode));
 }

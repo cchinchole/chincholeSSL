@@ -56,7 +56,7 @@ public:
 //int CBC_Encrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
 //int CBC_Decrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
 //int CTR_xcrypt(AES_CTX *ctx, uint8_t *out, uint8_t *buf, size_t buf_len);
-int AES_KeyExpansion(AES_CTX &ctx, ByteArray key);
-int AES_SetIV(AES_CTX &ctx, ByteArray iv);
-ByteArray AES_Encrypt(AES_CTX &ctx, ByteArray &buf);
-ByteArray AES_Decrypt(AES_CTX &ctx, ByteArray &buf);
+int AES_KeyExpansion(AES_CTX &ctx, ByteSpan key);
+int AES_SetIV(AES_CTX &ctx, ByteSpan iv);
+ByteArray AES_Encrypt(AES_CTX &ctx, ByteSpan buf);
+ByteArray AES_Decrypt(AES_CTX &ctx, ByteSpan buf);

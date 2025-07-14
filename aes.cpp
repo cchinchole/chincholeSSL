@@ -296,7 +296,7 @@ int InvMixColumns(uint8_t state[4][4])
 }
 
 // TODO Fix the debugging in this.
-int FIPS_197_5_2_KeyExpansion(AES_CTX &ctx, uint8_t *key)
+int FIPS_197_5_2_KeyExpansion(AES_CTX &ctx, const uint8_t *key)
 {
     int retCode = 0;
     uint8_t temp[4];
@@ -421,7 +421,7 @@ int FIPS_197_5_3_InvCipher(AES_CTX &ctx)
 }
 
 // SP800-38A  6.1
-int ECB_Encrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
+int ECB_Encrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
 {
     for (size_t i = 0; i < buf_len; i += AES_BlockSize)
     {
@@ -435,7 +435,7 @@ int ECB_Encrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
 }
 
 // SP800-38A  6.1
-int ECB_Decrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
+int ECB_Decrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
 {
     for (size_t i = 0; i < buf_len; i += AES_BlockSize)
     {
@@ -449,7 +449,7 @@ int ECB_Decrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
 }
 
 // SP800-38A  6.2
-int CBC_Encrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
+int CBC_Encrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv, 16);
@@ -472,7 +472,7 @@ int CBC_Encrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
 }
 
 // SP800-38A 6.2
-int CBC_Decrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
+int CBC_Decrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv, 16);
@@ -498,7 +498,7 @@ int CBC_Decrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
 
 // SP800-38A 6.3
 // Current implementation only works for 128mode.
-int CFB_XCrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
+int CFB_XCrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv, 16);
@@ -523,7 +523,7 @@ int CFB_XCrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
 }
 
 // SP800-38A 6.4
-int OFB_XCrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
+int OFB_XCrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv, 16);
@@ -549,7 +549,7 @@ int OFB_XCrypt(AES_CTX &ctx, uint8_t *output, uint8_t *buf, size_t buf_len)
 /* Uses the IV as the Tcounter, properly set the IV using the standard counter
  * method */
 // SP800-38A 6.5
-int CTR_xcrypt(AES_CTX &ctx, uint8_t *out, uint8_t *buf, size_t buf_len)
+int CTR_xcrypt(AES_CTX &ctx, uint8_t *out, const uint8_t *buf, size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv, 16);
@@ -578,19 +578,19 @@ int CTR_xcrypt(AES_CTX &ctx, uint8_t *out, uint8_t *buf, size_t buf_len)
     return 0;
 }
 
-int AES_SetIV(AES_CTX &ctx, ByteArray iv)
+int AES_SetIV(AES_CTX &ctx, ByteSpan iv)
 {
     memcpy(ctx.iv, iv.data(), AES_BlockSize);
     return 0;
 }
 
 // Wrapped for better naming
-int AES_KeyExpansion(AES_CTX &ctx, ByteArray key)
+int AES_KeyExpansion(AES_CTX &ctx, ByteSpan key)
 {
     return FIPS_197_5_2_KeyExpansion(ctx, key.data());
 }
 
-ByteArray AES_Encrypt(AES_CTX &ctx, ByteArray &buf)
+ByteArray AES_Encrypt(AES_CTX &ctx, ByteSpan buf)
 {
     ByteArray output;
     output.resize(buf.size());
@@ -624,7 +624,7 @@ ByteArray AES_Encrypt(AES_CTX &ctx, ByteArray &buf)
     return output;
 }
 
-ByteArray AES_Decrypt(AES_CTX &ctx, ByteArray &buf)
+ByteArray AES_Decrypt(AES_CTX &ctx, ByteSpan buf)
 {
     ByteArray output;
     output.resize(buf.size());

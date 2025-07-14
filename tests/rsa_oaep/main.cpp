@@ -125,12 +125,13 @@ int generateKey(const TestGroup &group, cRSAKey &key)
     return 0;
 }
 
+//Returns 1 on success
 int runTestCase(cRSAKey &key, const TestGroup &group, const TestCase &test)
 {
 
     bool passed = false;
     bool expectedPass = false;
-    RSA_SetPaddingMode(key, RSA_Padding::OAEP, test.label, sha_name(group.sha),
+    RSA_AddOAEP(key, test.label, sha_name(group.sha),
                        sha_name(group.mgfSha));
     ByteArray decrypted = RSA_Decrypt(key, test.ct);
 
@@ -139,15 +140,7 @@ int runTestCase(cRSAKey &key, const TestGroup &group, const TestCase &test)
 
     if (test.result == "valid" || test.result == "acceptable")
         expectedPass = true;
-    /*
-    if (passed == expectedPass)
-        PRINT("TEST {} passed.", test.tcID);
-    else
-    {
-        PRINT("TEST {} failed.\nReturned: {} Expected: {}\n", test.tcID, passed,
-              expectedPass);
-    }
-    */
+
     return (passed == expectedPass);
 }
 
@@ -184,14 +177,14 @@ int main(int argc, char **argv)
                     generateKey(group, key);
                     for (const auto &test : group.testCases)
                     {
-                        if (!runTestCase(key, group, test))
+                        if (runTestCase(key, group, test))
                         {
-                            retCode = -1;
-                            failed++;
+                            passed++;
                         }
                         else
                         {
-                            passed++;
+                            retCode = -1;
+                            failed++;
                         }
                     }
                 }

@@ -1,1 +1,0 @@
-CFB Mode: Full-block mode implementation will not work bitwise

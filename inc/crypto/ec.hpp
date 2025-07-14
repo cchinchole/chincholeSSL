@@ -90,12 +90,12 @@ class cECSignature {
 // NULL); int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, uint8_t *msg,
 // size_t msg_len, cECPrimeField *D, cECPoint *Q, DIGEST_MODE shaMode = SHA_512);
 std::string ECGroupString(ECGroup group);
-int EC_VerifySignature(cECKey &key, cECSignature &sig, const std::vector<uint8_t> msg,
-                       DIGEST_MODE shaMode = DIGEST_MODE::SHA_512);
 int EC_GenerateKeyPair(cECKey &ret);
+int EC_VerifySignature(cECKey &key, cECSignature &sig, std::span<const uint8_t> msg,
+                       DIGEST_MODE shaMode = DIGEST_MODE::SHA_512);
 
 int EC_GenerateSignature(cECKey &key, cECSignature &sig,
-                                       const ByteArray &msg,
+                                       std::span<const uint8_t> msg,
                                        DIGEST_MODE shaMode = DIGEST_MODE::SHA_512,
                                        char *KSecret = NULL);
 

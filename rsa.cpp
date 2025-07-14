@@ -49,6 +49,14 @@ cRSAKey::cRSAKey()
     this->padding.mode = RSA_Padding::NONE;
 }
 
+void cRSAKey::reset()
+{
+    this->padding.mode = RSA_Padding::NONE;
+    this->padding.hashMode = DIGEST_MODE::NONE;
+    this->padding.maskHashMode = DIGEST_MODE::NONE;
+    this->padding.label.clear();
+}
+
 /* Make sure that k = (k^e)^d mod n ; for some int k where 1 < k < n-1 */
 int rsa_sp800_56b_pairwise_test(cRSAKey &key)
 {
@@ -170,15 +178,13 @@ void BN_strtobn(BIGNUM *bn, std::string &str)
     BN_free(bnVal);
 }
 
-void RSA_SetPaddingMode(cRSAKey &key, RSA_Padding padding_mode, ByteArray label, DIGEST_MODE hashMode, DIGEST_MODE maskHashMode)
+void RSA_AddOAEP(cRSAKey &key, std::span<const uint8_t> label, DIGEST_MODE hashMode, DIGEST_MODE maskHashMode)
 {
-    key.padding.mode = padding_mode;
+    key.padding.mode = RSA_Padding::OAEP;
     key.padding.label.clear();
     std::copy(label.begin(), label.end(), std::back_inserter(key.padding.label));
-    if(hashMode != DIGEST_MODE::NONE)
-        key.padding.hashMode = hashMode;
-    if(maskHashMode != DIGEST_MODE::NONE)
-        key.padding.maskHashMode = maskHashMode;
+    key.padding.hashMode = hashMode;
+    key.padding.maskHashMode = maskHashMode;
 }
 
 // Permanently setting to auxMode for now.
@@ -269,11 +275,10 @@ void RSA_GenerateKey(cRSAKey &key,
     }
 }
 
-std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed,
+std::vector<uint8_t> mgf1(std::span<const uint8_t> seed,
                           size_t maskLen,
                           DIGEST_MODE shaMode)
 {
-    const size_t hLen = Hasher::getReturnLength(shaMode);
     std::vector<uint8_t> mask;
     mask.reserve(maskLen);
 
@@ -283,7 +288,7 @@ std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed,
     while (mask.size() < maskLen)
     {
 
-        std::vector<uint8_t> T = seed;
+        std::vector<uint8_t> T(seed.begin(), seed.end());
         T.push_back(static_cast<uint8_t>((counter >> 24) & 0xFF));
         T.push_back(static_cast<uint8_t>((counter >> 16) & 0xFF));
         T.push_back(static_cast<uint8_t>((counter >> 8) & 0xFF));
@@ -304,7 +309,7 @@ std::vector<uint8_t> mgf1(const std::vector<uint8_t> &seed,
 }
 
 std::vector<uint8_t> RSA_Encrypt_Primative(cRSAKey &key,
-                                           const std::vector<uint8_t> &src)
+                                           std::span<const uint8_t> src)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
 
@@ -348,7 +353,7 @@ std::vector<uint8_t> RSA_Encrypt_Primative(cRSAKey &key,
 }
 
 std::vector<uint8_t> RSA_Decrypt_Primative(cRSAKey &key,
-                                           const std::vector<uint8_t> &cipher)
+                                           std::span<const uint8_t> cipher)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
     bool errorRaised = false;
@@ -445,13 +450,17 @@ Error:
 
 // NIST SP800-56B 7.2.2.3
 ByteArray OAEP_Encode(cRSAKey &key,
-                      const ByteArray &msg,
-                      ByteArray &seed,
+                      std::span<const uint8_t> msg,
+                      std::span<uint8_t> seed,
                       bool givenSeed)
 {
     const size_t kLen = msg.size(); // Msg length
     const size_t nLen = key.kBits / 8;
-    const size_t hLen = Hasher::getReturnLength(key.padding.hashMode);
+
+    // Step A
+    ByteArray lHash = Hasher::hash(key.padding.label, key.padding.hashMode);
+
+    const size_t hLen = lHash.size(); 
 
     if (kLen > (nLen - (2 * hLen) - 2))
     {
@@ -459,8 +468,6 @@ ByteArray OAEP_Encode(cRSAKey &key,
         std::print("{} {} error occured.", __FILE_NAME__, __LINE__);
     }
 
-    // Step A
-    ByteArray lHash = Hasher::hash(key.padding.label, key.padding.hashMode);
 
     // Step B
     size_t psLen = nLen - kLen - (2 * hLen) - 2;
@@ -477,8 +484,10 @@ ByteArray OAEP_Encode(cRSAKey &key,
     // Step D
     if (!givenSeed)
     {
-        seed.resize(hLen);
-        RAND_bytes(seed.data(), hLen);
+        //seed.resize(hLen);
+        ByteArray _seed(hLen);
+        RAND_bytes(_seed.data(), hLen);
+        seed = _seed;
     }
 
     // Step E
@@ -512,10 +521,14 @@ ByteArray OAEP_Encode(cRSAKey &key,
 
 
 // NIST SP800-56B 7.2.2.4
-ByteArray OAEP_Decode(cRSAKey &key, const ByteArray &EM)
+ByteArray OAEP_Decode(cRSAKey &key, std::span<const uint8_t> EM)
 {
     const size_t nLen = key.kBits / 8;
-    const size_t hLen = Hasher::getReturnLength(key.padding.hashMode);
+
+    // Step A
+    ByteArray HA = Hasher::hash(key.padding.label, key.padding.hashMode);
+
+    const size_t hLen =  HA.size();
     bool decryptionError = false;
 
     //Initial check to see if Decrypt failed
@@ -536,8 +549,6 @@ ByteArray OAEP_Decode(cRSAKey &key, const ByteArray &EM)
         decryptionError = true;
     }
 
-    // Step A
-    ByteArray HA = Hasher::hash(key.padding.label, key.padding.hashMode);
 
     // Step B
     const uint8_t *pMaskedSeed = EM.data() + 1; // Pulls the masked MGFSeed disregarding the 0x00
@@ -609,7 +620,7 @@ ByteArray OAEP_Decode(cRSAKey &key, const ByteArray &EM)
     }
 }
 
-std::vector<uint8_t> RSA_Encrypt(cRSAKey &key, const std::vector<uint8_t> &src)
+std::vector<uint8_t> RSA_Encrypt(cRSAKey &key, std::span<const uint8_t> src)
 {
     if (key.padding.mode == RSA_Padding::OAEP)
     {
@@ -623,8 +634,7 @@ std::vector<uint8_t> RSA_Encrypt(cRSAKey &key, const std::vector<uint8_t> &src)
     }
 }
 
-std::vector<uint8_t> RSA_Decrypt(cRSAKey &key,
-                                 const std::vector<uint8_t> &cipher)
+std::vector<uint8_t> RSA_Decrypt(cRSAKey &key, std::span<const uint8_t> cipher)
 {
     if (key.padding.mode == RSA_Padding::OAEP)
     {

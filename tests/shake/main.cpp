@@ -89,7 +89,6 @@ int test_Shake(ByteArray msg, size_t inputLen, ByteArray MD, DIGEST_MODE mode, s
     ByteArray rawDigest = Hasher::xof(msg, digestSize, mode);
     int res = (memcmp(rawDigest.data(), MD.data(), MD.size()));
     if (!quiet)
-        //PRINT("({} Test) Hash Return: {} {}!", DIGEST_MODE_NAME(mode), bytePtrToVector(rawDigest, digestSize), res == 0 ? "Passed" : "Failed");
         if(res != 0)PRINT("Failed!\nExpected: {}\nRecieved: {}", MD, rawDigest);
     return res;
 }
@@ -105,20 +104,14 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
     PRINT("Total tests: {}", rsp.tests.size());
     for (const auto &t : rsp.tests)
     {
-        #if TEST_SHA_LOG
-        std::cout << "Len: " << t.Len << "\n";
-        std::cout << "Msg = (" << t.Msg << ")\n";
-        std::cout << "MD = (" << t.MD << ")\n";
-        #endif
         int digestLen = 0;
         size_t inputLen = 0;
         if(t.OutLen.empty())
+        {
             digestLen = shaMode==DIGEST_MODE::SHA_3_SHAKE_128 ? 128/8 : 256/8;
+        }
         else
         {
-            PRINT("Output Length: {}", t.OutLen);
-            PRINT("Msg: {}", t.Msg);
-            PRINT("Output: {}", t.MD);
             digestLen = std::stoi(t.OutLen)/8;
         }
 

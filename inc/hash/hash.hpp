@@ -2,6 +2,8 @@
 #define HASH_HPP
 #include "../utils/bytes.hpp"
 #include "../types.hpp"
+#include <span>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -22,18 +24,19 @@ public:
 
     void reset();
 
-    Hasher& update(const ByteArray& data);
+    Hasher& update(std::span<const uint8_t> data);
+    Hasher& update(std::unique_ptr<uint8_t[]>&& data, size_t length);
 
     ByteArray digest();
 
+    size_t returnLength();
+
     ByteArray xof(size_t length);
 
-    static ByteArray hash(const ByteArray& data, DIGEST_MODE mode);
+    static ByteArray hash(std::span<const uint8_t> data, DIGEST_MODE mode);
 
-    static ByteArray xof(const ByteArray& data, size_t BDigestLength, DIGEST_MODE mode);
+    static ByteArray xof(std::span<const uint8_t> data, size_t BDigestLength, DIGEST_MODE mode);
 
-    static ByteArray hmac(const ByteArray& data, const ByteArray& key, DIGEST_MODE mode);
-
-    static int getReturnLength(DIGEST_MODE mode);
+    static ByteArray hmac(std::span<const uint8_t> data, std::span<const uint8_t> key, DIGEST_MODE mode);
 };
 #endif

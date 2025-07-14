@@ -58,6 +58,12 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
     EC_GenerateSignature(key, sig, msg, DIGEST_MODE::SHA_512);
     EC_VerifySignature(key, sig, msg, DIGEST_MODE::SHA_512); //Returns 0 on success
 ```
+### Building an application ###
+```
+	g++ -std=c++23 -L/usr/local/lib -lcssl -lcrypto -lssl -I/usr/local/include main.cpp -o main 
+    LD_LIBRARY_PATH=/usr/local/lib ./main
+```
+
 
 ## Tests ##
 1. To run a test, for example sha hashing, enter the directory and run "make run". (Ensure you have already built the library with make all in the root directory)

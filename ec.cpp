@@ -319,7 +319,7 @@ void ECScalarMult(cECPrimeField *g,
 
 /* FIPS 186-5 6.4.1 */
 int EC_GenerateSignature(cECKey &key, cECSignature &sig,
-                                       const ByteArray &msg,
+                                       std::span<const uint8_t> msg,
                                        DIGEST_MODE shaMode,
                                        char *KSecret)
 {
@@ -337,8 +337,9 @@ int EC_GenerateSignature(cECKey &key, cECSignature &sig,
     /* Step 1 - 2 */
     ByteArray hash = Hasher::hash(msg, shaMode);
     int NLen = BN_num_bits(group->n); /* N = len(n) */
-    int HLen = Hasher::getReturnLength(shaMode) * 8;
-    BN_bin2bn(hash.data(), Hasher::getReturnLength(shaMode), tmp);
+    int HLen = hash.size() * 8;
+    BN_bin2bn(hash.data(), hash.size(), tmp);
+    hash.clear();
     if (HLen > NLen)
         BN_rshift(E, tmp, HLen - NLen);
     else
@@ -387,7 +388,7 @@ ending:
 
 /* FIPS 186-5 6.4.2 */
 int EC_VerifySignature(cECKey &key, cECSignature &sig,
-                                     const ByteArray msg,
+                                     std::span<const uint8_t> msg,
                                      DIGEST_MODE shaMode)
 {
     int retCode = -1;
@@ -416,10 +417,10 @@ int EC_VerifySignature(cECKey &key, cECSignature &sig,
 
     // Step 3: Convert leftmost N bits of hash to integer
     int NLen = BN_num_bits(D->n); // N = len(n)
-    int HLen = Hasher::getReturnLength(shaMode) * 8; // hash length in bits
+    int HLen = hash.size() * 8; // hash length in bits
 
     // Store hash in tmp
-    BN_bin2bn(hash.data(), Hasher::getReturnLength(shaMode), tmp);
+    BN_bin2bn(hash.data(), hash.size(), tmp);
 
     // If the Hash bits > Order bits then only copy the higher order bits to E
     //  else fully copy the hash into E

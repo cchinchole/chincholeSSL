@@ -6,8 +6,10 @@
 #include <string>
 #include <cstdint>
 #include <openssl/bn.h>
+#include <span>
 
 typedef std::vector<uint8_t> ByteArray;
+typedef std::span<const uint8_t> ByteSpan;
 std::vector<uint8_t> bytePtrToVector(uint8_t *from, size_t len);
 std::string bytesToHex(const std::vector<uint8_t>& bytes, bool uppercase = false);
 std::string asciiToHex(const std::string& ascii, bool uppercase = false);
