@@ -23,6 +23,8 @@ class cECPoint {
         BN_free(x);
         BN_free(y);
     }
+    bool isAtInfinity();
+    void setInfinity();
 };
 
 class cECPrimeField {

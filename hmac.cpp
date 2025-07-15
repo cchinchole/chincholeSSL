@@ -1,14 +1,12 @@
-#include "inc/hash/hash.hpp"
 #include "hmac.hpp"
+#include "inc/hash/hash.hpp"
 #include "inc/utils/logger.hpp"
 #include <algorithm>
 #include <math.h>
 
 /* FIPS 198-1 */
-int hmac_sha(DIGEST_MODE digestMode,
-             uint8_t *hmac_out,
-             std::span<const uint8_t> msg,
-             std::span<const uint8_t> key)
+void hmac_sha(DIGEST_MODE digestMode, uint8_t *hmac_out,
+             ByteSpan msg, ByteSpan key)
 {
     Hasher h(digestMode);
 
@@ -19,14 +17,8 @@ int hmac_sha(DIGEST_MODE digestMode,
     size_t innerKeySize = blockLen + msg.size();
 
     /* Init and clear the keys */
-    ByteArray outerKey;
-    outerKey.reserve(blockLen + retLen);
-    outerKey.resize(blockLen + retLen);
-
-    ByteArray innerKey(blockLen + msg.size());
-    innerKey.reserve(blockLen  + msg.size());
-    innerKey.resize(blockLen  + msg.size());
-
+    auto outerKey = std::make_unique<uint8_t[]>(outerKeySize);
+    auto innerKey = std::make_unique<uint8_t[]>(innerKeySize);
 
     /* If our key takes more than one block then we need to digest this into
      * it's own message */
@@ -38,20 +30,20 @@ int hmac_sha(DIGEST_MODE digestMode,
         /* Find the minimum length for the key to be copied with */
         if (blockLen < retLen)
         {
-            memcpy(outerKey.data(), tmp.data(), blockLen);
-            memcpy(innerKey.data(), tmp.data(), blockLen);
+            std::copy_n(tmp.data(), blockLen, outerKey.get());
+            std::copy_n(tmp.data(), blockLen, innerKey.get());
         }
         else
         {
-            memcpy(outerKey.data(), tmp.data(), retLen);
-            memcpy(innerKey.data(), tmp.data(), retLen);
+            std::copy_n(tmp.data(), retLen, outerKey.get());
+            std::copy_n(tmp.data(), retLen, innerKey.get());
         }
     }
     else
     {
         /* The key can fit within a message */
-        memcpy(outerKey.data(), key.data(), key.size());
-        memcpy(innerKey.data(), key.data(), key.size());
+        std::copy_n(key.data(), key.size(), outerKey.get());
+        std::copy_n(key.data(), key.size(), innerKey.get());
     }
 
     for (int i = 0; i < blockLen; i++)
@@ -61,14 +53,13 @@ int hmac_sha(DIGEST_MODE digestMode,
     }
 
     /* Digest the inner with message */
-    memcpy(innerKey.data() + blockLen, msg.data(), msg.size());
-    h.update(innerKey);
+    std::copy_n(msg.data(), msg.size(), innerKey.get() + blockLen);
+    h.update(innerKey, innerKeySize);
     ByteArray tmp = h.digest();
 
     /* Digest the outer now with the previous result */
-    memcpy(outerKey.data() + blockLen, tmp.data(), retLen);
-    h.update(outerKey);
+    std::copy_n(tmp.data(), retLen, outerKey.get() + blockLen);
+    h.update(outerKey, outerKeySize);
 
-    memcpy(hmac_out, h.digest().data(), retLen);
-    return 0;
+    std::copy_n(h.digest().data(), retLen, hmac_out);
 }

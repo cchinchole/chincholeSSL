@@ -1,6 +1,8 @@
 # Compiler and flags
+DEBUG = 0
+OPT_LEVEL = 3
 CXX = g++
-CXXFLAGS = -std=c++23 -g -O0 -fdiagnostics-color=always -I../../inc
+CXXFLAGS = -std=c++23 -g -O$(OPT_LEVEL) -DDEBUG=$(DEBUG) -fdiagnostics-color=always -I../../inc
 LDFLAGS = -L../../ -l:libcssl.a
 
 # OpenSSL flags

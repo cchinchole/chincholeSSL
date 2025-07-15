@@ -126,15 +126,15 @@ cECPrimeField *cECKey::getGroup()
     return CurveRegistry::GetCurve(ECGroupString(this->group)).get();
 }
 
-bool isPointAtInfinity(cECPoint *p)
+bool cECPoint::isAtInfinity()
 {
-    return (BN_is_zero(p->x) && BN_is_zero(p->y));
+    return (BN_is_zero(this->x) && BN_is_zero(this->y));
 }
 
-void setPointToInfinity(cECPoint *p)
+void cECPoint::setInfinity()
 {
-    BN_zero(p->x);
-    BN_zero(p->y);
+    BN_zero(this->x);
+    BN_zero(this->y);
 }
 
 void ECCopyPoint(cECPoint *to, cECPoint *from)
@@ -172,21 +172,21 @@ void ECdouble(cECPrimeField *g,
     BN_mul_word(x2, 2);
     BN_mul_word(y2, 2);
 
-    /* (3x * x + Acurve) * modinv( 2y, Pcurve ) % Pcurve */
+    // (3x * x + Acurve) * modinv( 2y, Pcurve ) % Pcurve 
     BN_mul(tmp, x3, ret->x, ctx);
-    BN_add(tmp, tmp, g->a);              /* tmp holds 3x^2+Acurve  */
-    BN_mod_inverse(tmp2, y2, g->p, ctx); /* tmp2 holds 2y^-1 mod( pCurve )*/
+    BN_add(tmp, tmp, g->a);              // tmp holds 3x^2+Acurve  
+    BN_mod_inverse(tmp2, y2, g->p, ctx); // tmp2 holds 2y^-1 mod( pCurve )
     BN_mod(tmp2, tmp2, g->p, ctx);
-    BN_mul(tmp, tmp, tmp2, ctx); /* tmp now holds lambda */
-    BN_mul(tmp2, tmp, tmp, ctx); /* tmp2 now holds lambda^2 */
+    BN_mul(tmp, tmp, tmp2, ctx); // tmp now holds lambda 
+    BN_mul(tmp2, tmp, tmp, ctx); // tmp2 now holds lambda^2 
     BN_sub(tmp3, tmp2, x2);
     BN_mod(ret->x, tmp3, g->p, ctx);
 
-    BN_sub(tmp2, a->x, ret->x);  /* tmp2 now holds X - ret.x */
-    BN_mul(tmp, tmp, tmp2, ctx); /* tmp now holds lambda * (X - ret.x) */
-    BN_sub(tmp, tmp, a->y);      /* tmp now holds lambda * (X - ret.x) - Y */
+    BN_sub(tmp2, a->x, ret->x);  // tmp2 now holds X - ret.x 
+    BN_mul(tmp, tmp, tmp2, ctx); // tmp now holds lambda * (X - ret.x) 
+    BN_sub(tmp, tmp, a->y);      // tmp now holds lambda * (X - ret.x) - Y 
     BN_mod(ret->y, tmp, g->p,
-           ctx); /* ret->y now holds ( lambda * (X - ret.x) - Y ) mod P */
+           ctx); // ret->y now holds ( lambda * (X - ret.x) - Y ) mod P 
 
     if (BN_cmp(ret->x, zero) == -1)
         BN_add(ret->x, ret->x, g->p);
@@ -214,17 +214,17 @@ void ECadd(cECPrimeField *g,
     BIGNUM *tmpMul = BN_CTX_get(ctx);
     BIGNUM *zero = BN_CTX_get(ctx);
     BN_set_word(zero, 0);
-    if (isPointAtInfinity(a) && isPointAtInfinity(b))
+    if (a->isAtInfinity() && b->isAtInfinity())
     {
-        setPointToInfinity(res);
+        res->setInfinity();
         goto ending;
     }
-    else if (isPointAtInfinity(a))
+    else if (a->isAtInfinity())
     {
         ECCopyPoint(res, b);
         goto ending;
     }
-    else if (isPointAtInfinity(b))
+    else if (b->isAtInfinity())
     {
         ECCopyPoint(res, a);
         goto ending;
@@ -234,7 +234,7 @@ void ECadd(cECPrimeField *g,
         BN_mod(tmp, a->y, (g->p), ctx);
         if (BN_is_zero(tmp))
         {
-            setPointToInfinity(res);
+            res->setInfinity();
             goto ending;
         }
         ECdouble(g, res, a);
@@ -246,7 +246,7 @@ void ECadd(cECPrimeField *g,
         BN_mod(tmp, tmp, g->p, ctx);
         if (BN_is_zero(tmp))
         {
-            setPointToInfinity(res);
+            res->setInfinity();
             goto ending;
         }
 
@@ -280,6 +280,92 @@ ending:
     delete res;
 }
 
+
+void ECScalarMult(cECPrimeField *g, cECPoint *Q_output, BIGNUM *scalar, cECPoint *Point, BN_CTX *ctx = NULL) {
+    if (!g || !Q_output || !scalar || !Point) {
+        throw std::invalid_argument("Null pointer provided");
+    }
+    bool providedCtx = true;
+
+    // Initialize context and temporary variables
+    if(ctx == NULL)
+    {
+        ctx = BN_CTX_new();
+        BN_CTX_start(ctx);
+        providedCtx = false;
+    }
+    cECPoint *result = new cECPoint();
+    result->setInfinity(); // Initialize result as point at infinity
+
+    // Precomputation table (window size 4, so 2^4 = 16 points)
+    const int window_size = 4;
+    const int table_size = 1 << window_size; // 16
+    cECPoint *table[table_size];
+    for (int i = 0; i < table_size; i++) {
+        table[i] = new cECPoint();
+        table[i]->setInfinity();
+    }
+
+    // Set table[1] = Point
+    ECCopyPoint(table[1], Point);
+
+    // Precompute multiples: table[i] = i * Point
+    for (int i = 2; i < table_size; i++) {
+        if (i % 2 == 0) {
+            // table[i] = 2 * table[i/2]
+            ECdouble(g, table[i], table[i/2]);
+        } else {
+            // table[i] = table[i-1] + table[1]
+            ECadd(g, table[i], table[i-1], table[1]);
+        }
+    }
+
+    // Process scalar in windows
+    int bits = BN_num_bits(scalar);
+    int windows = (bits + window_size - 1) / window_size;
+
+    for (int i = windows - 1; i >= 0; i--) {
+        // Perform 4 point doublings
+        for (int j = 0; j < window_size; j++) {
+            cECPoint *temp = new cECPoint();
+            ECdouble(g, temp, result);
+            ECCopyPoint(result, temp);
+            delete temp;
+        }
+
+        // Extract window bits
+        int wvalue = 0;
+        for (int j = window_size - 1; j >= 0; j--) {
+            int bit = BN_is_bit_set(scalar, i * window_size + j);
+            wvalue = (wvalue << 1) | bit;
+        }
+
+        // Add precomputed point if wvalue > 0
+        if (wvalue > 0 && !table[wvalue]->isAtInfinity()) {
+            cECPoint *temp = new cECPoint();
+            ECadd(g, temp, result, table[wvalue]);
+            ECCopyPoint(result, temp);
+            delete temp;
+        }
+    }
+
+    // Copy result to output
+    ECCopyPoint(Q_output, result);
+
+    // Clean up
+    for (int i = 0; i < table_size; i++) {
+        delete table[i];
+    }
+    delete result;
+    if(!providedCtx)
+    {
+        BN_CTX_end(ctx);
+        BN_CTX_free(ctx);
+    }
+}
+
+/*
+ * Original
 void ECScalarMult(cECPrimeField *g,
                   cECPoint *Q_output,
                   BIGNUM *scalar,
@@ -292,7 +378,7 @@ void ECScalarMult(cECPrimeField *g,
     cECPoint *PointCopy = new cECPoint();
     cECPoint *QRes = new cECPoint();
     ECCopyPoint(PointCopy, Point);
-    setPointToInfinity(QRes);
+    QRes->setInfinity();
     for (i = BN_num_bits(scalar); i >= 0; i--)
     {
         if (BN_is_bit_set(scalar, i))
@@ -316,6 +402,7 @@ void ECScalarMult(cECPrimeField *g,
     delete PointCopy;
     delete QRes;
 }
+*/
 
 /* FIPS 186-5 6.4.1 */
 int EC_GenerateSignature(cECKey &key, cECSignature &sig,
@@ -335,7 +422,7 @@ int EC_GenerateSignature(cECKey &key, cECSignature &sig,
     cECPoint *RPoint = new cECPoint();
 
     /* Step 1 - 2 */
-    ByteArray hash = Hasher::hash(msg, shaMode);
+    auto hash = Hasher::hash(msg, shaMode);
     int NLen = BN_num_bits(group->n); /* N = len(n) */
     int HLen = hash.size() * 8;
     BN_bin2bn(hash.data(), hash.size(), tmp);
@@ -440,7 +527,7 @@ int EC_VerifySignature(cECKey &key, cECSignature &sig,
     ECScalarMult(D, addend2, v, Q);
     ECadd(D, RPoint, addend1, addend2);
 
-    if (isPointAtInfinity(RPoint))
+    if (RPoint->isAtInfinity())
     {
         retCode = -1;
         goto ending;

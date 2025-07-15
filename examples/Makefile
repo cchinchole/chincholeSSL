@@ -1,8 +1,9 @@
 # Compiler and flags
+DEBUG = 0
+OPT_LEVEL = 3
 CXX = g++
+CXXFLAGS = -std=c++23 -g -O$(OPT_LEVEL) -DDEBUG=$(DEBUG) -fdiagnostics-color=always -I../inc
 LDFLAGS = -L../ -l:libcssl.a
-DEBUG = 1
-CXXFLAGS =-std=c++23 -g -O0 -DDEBUG=$(DEBUG) -fdiagnostics-color=always -I../inc
 
 # Use pkg-config to get OpenSSL flags
 OPENSSL_PKG = libssl3

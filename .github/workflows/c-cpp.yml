@@ -1,10 +1,7 @@
 name: CI
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -29,17 +26,17 @@ jobs:
     # Build project
     - name: Build project
       run: |
-        make
+        make -j2
 
     # Run tests
-    - name: Run NIST tests
+    - name: Run tests (NIST and Wycheproof)
       run: make test
 
     # Run examples
     - name: Run examples
       run: |
           cd examples
-          make
+          make -j2
           cd bin
           for exe in *; do
             if [[ -x "$exe" ]]; then
