@@ -164,16 +164,23 @@ void runTest(std::string path, std::string fileName, std::string sMode,
         {
             if (ch.state == "ENCRYPT")
             {
-                AES_CTX ctx(mode, kSize);
+                //AES_CTX ctx(mode, kSize);
 
                 // ctx->mode = mode
-                AES_KeyExpansion(ctx, hexToBytes(t.KEY));
+                //AES_KeyExpansion(ctx, hexToBytes(t.KEY));
 
-                if (ctx.mode != AES_MODE::ECB)
-                    AES_SetIV(ctx, hexToBytes(t.IV));
+                //if (ctx.mode != AES_MODE::ECB)
+                //    AES_SetIV(ctx, hexToBytes(t.IV));
+
+                AES aes(mode, kSize);
+
+                if(mode != AES_MODE::ECB)
+                    aes.addKey(t.KEY, t.IV);
+                else
+                    aes.addKey(t.KEY);
 
                 std::vector<uint8_t> buffer = hexToBytes(t.PLAINTEXT);
-                std::vector<uint8_t> output = AES_Encrypt(ctx, buffer);
+                std::vector<uint8_t> output = aes.encrypt(buffer);//AES_Encrypt(ctx, buffer);
                 std::string hexOutput = bytesToHex(output);
                 if (std::memcmp(output.data(), hexToBytes(t.CIPHERTEXT).data(),
                                 output.size()) == 0)
@@ -183,14 +190,14 @@ void runTest(std::string path, std::string fileName, std::string sMode,
             }
             else if (ch.state == "DECRYPT")
             {
-                AES_CTX ctx(mode, kSize);
-
-                AES_KeyExpansion(ctx, hexToBytes(t.KEY));
-                if (ctx.mode != AES_MODE::ECB)
-                    AES_SetIV(ctx, hexToBytes(t.IV));
+                AES aes(mode, kSize);
+                if(mode != AES_MODE::ECB)
+                    aes.addKey(t.KEY, t.IV);
+                else
+                    aes.addKey(t.KEY);
 
                 std::vector<uint8_t> buffer = hexToBytes(t.CIPHERTEXT);
-                std::vector<uint8_t> output = AES_Decrypt(ctx, buffer);
+                std::vector<uint8_t> output = aes.decrypt(buffer);
 
                 if (std::memcmp(output.data(), hexToBytes(t.PLAINTEXT).data(),
                                 output.size()) == 0)

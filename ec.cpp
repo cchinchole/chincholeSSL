@@ -1,4 +1,4 @@
-#include "inc/crypto/ec.hpp"
+#include "internal/ec.hpp"
 
 #include <linux/random.h>
 #include <math.h>
@@ -10,7 +10,8 @@
 #include <memory>
 #include <string>
 
-#include "inc/math/primes.hpp"
+#include "inc/utils/logger.hpp"
+
 
 /* SP 800-186: Domain parameters source */
 /* Easily access: https://neuromancer.sk/std/nist/ */
@@ -586,16 +587,16 @@ std::string ECGroupString(ECGroup group)
 {
     switch (group)
     {
-    case P224:
+        case ECGroup::P224:
         return "P-224";
         break;
-    case P256:
+        case ECGroup::P256:
         return "P-256";
         break;
-    case P384:
+        case ECGroup::P384:
         return "P-384";
         break;
-    case P521:
+        case ECGroup::P521:
         return "P-521";
         break;
     default:

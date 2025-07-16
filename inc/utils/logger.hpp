@@ -45,6 +45,7 @@ struct std::formatter<BIGNUM*> : std::formatter<std::string> {
   }
 };
 
+/*
 template <>
 struct std::formatter<cECPoint> : std::formatter<std::string> {
   auto format(const cECPoint &point, format_context& ctx) const {
@@ -52,6 +53,7 @@ struct std::formatter<cECPoint> : std::formatter<std::string> {
     return out;
   }
 };
+*/
 
 template <>
 struct std::formatter<ByteArray> : std::formatter<std::string> {

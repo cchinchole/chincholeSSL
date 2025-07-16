@@ -1,104 +1,60 @@
-#ifndef ECDH_HPP
-#define ECDH_HPP
+#pragma once
 #include "../hash/hash.hpp"
 #include "../utils/bytes.hpp"
-#include <openssl/bn.h>
+#include <span>
 #include <string>
-#include <vector>
+#include <utility>
 
-enum ECGroup { P224, P256, P384, P521, NONE };
-
-class cECPoint {
-  public:
-    BIGNUM *x, *y;
-    cECPoint();
-    cECPoint &operator=(const cECPoint &other) {
-        if (this != &other) {
-            BN_copy(x, other.x);
-            BN_copy(y, other.y);
-        }
-        return *this;
-    }
-    ~cECPoint() {
-        BN_free(x);
-        BN_free(y);
-    }
-    bool isAtInfinity();
-    void setInfinity();
+enum class ECGroup
+{
+    P224,
+    P256,
+    P384,
+    P521,
+    NONE
 };
 
-class cECPrimeField {
-  public:
-    BIGNUM *p, *a, *b, *n;
-    int h;
-    cECPoint *G;
-    ECGroup group;
-    cECPrimeField(const char *p, const char *a,const char *b,const char *n,const  char *gx,const  char *gy, ECGroup group) {
-        this->p = BN_secure_new();
-        this->a = BN_secure_new();
-        this->b = BN_secure_new();
-        this->n = BN_secure_new();
-        this->group = group;
-        G = new cECPoint();
-        BN_hex2bn(&this->p, p);
-        BN_hex2bn(&this->a, a);
-        BN_hex2bn(&this->b, b);
-        BN_hex2bn(&this->n, n);
-        BN_hex2bn(&(this->G->x), gx);
-        BN_hex2bn(&(this->G->y), gy);
-    }
-    virtual ~cECPrimeField() {
-        BN_free(p);
-        BN_free(a);
-        BN_free(b);
-        BN_free(n);
-        delete G;
-    }
+class ECSignature
+{
+    friend class ECKeyPair;
+
+public:
+    static ECSignature From(const std::string &hexR, const std::string &hexS);
+
+    ECSignature(const ECSignature &) = default;
+    ECSignature(ECSignature &&) = default;
+    ECSignature &operator=(const ECSignature &) = default;
+    ECSignature &operator=(ECSignature &&) = default;
+    ~ECSignature();
+    ECSignature();
+    std::pair<std::string, std::string> getPairRS();
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> pImpl;
 };
 
-class cECKey {
-  public:
-    ECGroup group;
-    BIGNUM *priv; /* d */
-    cECPoint pub; /* Q */
-    cECKey(ECGroup group);
-    cECKey &operator=(const cECKey &from) {
-        if (this != &from) {
-            BN_copy(this->priv, from.priv);
-            this->group = from.group;
-            this->pub = from.pub;
-        }
-        return *this;
-    }
-    cECPrimeField *getGroup();
-    ~cECKey() { BN_free(priv); }
+class ECKeyPair
+{
+public:
+    static ECKeyPair Generate(ECGroup group);
+    static ECKeyPair From(ECGroup group, const std::string &hexPriv,
+                          const std::string &hexPubX,
+                          const std::string &hexPubY);
+
+    ECSignature sign(std::span<const uint8_t> message,
+                     DIGEST_MODE shaMode = DIGEST_MODE::SHA_512) const;
+    bool verify(const ECSignature &sig, std::span<const uint8_t> message,
+                DIGEST_MODE shaMode = DIGEST_MODE::SHA_512) const;
+
+    ECKeyPair(const ECKeyPair &) = delete;
+    ECKeyPair &operator=(const ECKeyPair &) = delete;
+    ECKeyPair(ECKeyPair &&) noexcept;
+    ECKeyPair &operator=(ECKeyPair &&) noexcept;
+    ~ECKeyPair();
+    ECKeyPair(ECGroup group);
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> pImpl;
 };
-
-class cECSignature {
-  public:
-    BIGNUM *R;
-    BIGNUM *S;
-    cECSignature();
-    ~cECSignature() {
-        BN_free(R);
-        BN_free(S);
-    }
-};
-
-// Hiding these functions
-// int FIPS_186_4_B_4_2_KeyPairGeneration(cECKey *ret, std::string group);
-// int FIPS_186_5_6_4_1_GenerateSignature(cECSignature *sig, uint8_t *msg,
-// size_t msg_len, cECKey *key, DIGEST_MODE shaMode = SHA_512, char *KSecret =
-// NULL); int FIPS_186_5_6_4_2_VerifySignature(cECSignature *sig, uint8_t *msg,
-// size_t msg_len, cECPrimeField *D, cECPoint *Q, DIGEST_MODE shaMode = SHA_512);
-std::string ECGroupString(ECGroup group);
-int EC_GenerateKeyPair(cECKey &ret);
-int EC_VerifySignature(cECKey &key, cECSignature &sig, std::span<const uint8_t> msg,
-                       DIGEST_MODE shaMode = DIGEST_MODE::SHA_512);
-
-int EC_GenerateSignature(cECKey &key, cECSignature &sig,
-                                       std::span<const uint8_t> msg,
-                                       DIGEST_MODE shaMode = DIGEST_MODE::SHA_512,
-                                       char *KSecret = NULL);
-
-#endif

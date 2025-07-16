@@ -210,6 +210,7 @@ int main()
                 std::cout << "Signature (S) = (" << t.S << ")\n";
                 */
 
+                /*
                 cECKey key(group);
                 cECSignature sig;
                 BN_hex2bn(&key.pub.x, t.Qx.c_str());
@@ -218,40 +219,36 @@ int main()
                 std::vector<uint8_t> msg = hexToBytes(t.msg_hex);
 
                 EC_GenerateSignature(key, sig, msg, shaMode);
+                */
 
-                char *bn1 = BN_bn2hex(sig.R);
-                char *bn2 = BN_bn2hex(sig.S);
+                //char *bn1 = BN_bn2hex(sig.R);
+                //char *bn2 = BN_bn2hex(sig.S);
 
-                if (strcmp(bn1, t.R.c_str()) && strcmp(bn2, t.S.c_str()))
+                ECKeyPair keyPair = ECKeyPair::From(group, t.d, t.Qx, t.Qy);
+                std::vector<uint8_t> msg = hexToBytes(t.msg_hex);
+                ECSignature sig = keyPair.sign(msg, shaMode);
+                std::string R = sig.getPairRS().first;
+                std::string S = sig.getPairRS().second;
+                if (strcmp(R.c_str(), t.R.c_str()) && strcmp(S.c_str(), t.S.c_str()))
                 {
-                    // printf("\033[1;33m Signature generated correctly, now
-                    // verifying "
-                    //        "signature!\n");
-                    // std::cout << "\033[0m";
-                    if (EC_VerifySignature(key, sig, msg, shaMode) == 0)
+                    if (keyPair.verify(sig, msg, shaMode))
                     {
-                        // printf("\033[1;32m Test Succeeded!\n");
                         p++;
-                        // std::cout << "\033[0m";
                     }
                     else
                     {
                         f++;
-                        // printf("\033[31m Signature verification Failed!\n");
-                        // std::cout << "\033[0m";
                     }
                 }
                 else
                 {
-                    // printf("\033[31m Signature generation Failed!\n");
-                    // std::cout << "\033[0m";
                     f++;
                 }
 
                 // printf("\n\n");
                 //  Clean up allocated memory
-                OPENSSL_free(bn1);
-                OPENSSL_free(bn2);
+                //OPENSSL_free(bn1);
+                //OPENSSL_free(bn2);
             }
         }
 

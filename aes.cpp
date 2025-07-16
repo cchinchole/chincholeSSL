@@ -1,4 +1,4 @@
-#include "inc/crypto/aes.hpp"
+#include "internal/aes.hpp"
 
 #include <stdio.h>
 

@@ -1,11 +1,6 @@
-#include "inc/hash/hash.hpp"
-#include "hmac.hpp"
-#include "sha.hpp"
-
-static DIGEST_MODE toInternalMode(DIGEST_MODE mode)
-{
-    return static_cast<DIGEST_MODE>(mode);
-}
+#include "../inc/hash/hash.hpp"
+#include "../internal/hmac.hpp"
+#include "../internal/sha.hpp"
 
 class Hasher::Impl
 {
@@ -16,7 +11,7 @@ public:
 
     Impl(DIGEST_MODE mode) : mode_(mode), finalized_(false)
     {
-        ctx_ = SHA_Context_new(toInternalMode(mode));
+        ctx_ = SHA_Context_new(mode);
     }
 
     ~Impl()
@@ -36,7 +31,7 @@ public:
         }
         else
         {
-            ctx_ = SHA_Context_new(toInternalMode(mode_));
+            ctx_ = SHA_Context_new(mode_);
         }
         finalized_ = false;
     }
@@ -65,7 +60,7 @@ public:
         {
             reset();
         }
-        ByteArray result(getSHAReturnLengthByMode(toInternalMode(mode_)));
+        ByteArray result(getSHAReturnLengthByMode(mode_));
         SHA_Digest(result.data(), ctx_);
         finalized_ = true;
         return result;
@@ -145,8 +140,8 @@ ByteArray Hasher::xof(ByteSpan data, size_t BDigestLength, DIGEST_MODE mode)
 
 ByteArray Hasher::hmac(ByteSpan data, ByteSpan key, DIGEST_MODE mode)
 {
-    SHA_Context *ctx = SHA_Context_new(toInternalMode(mode));
-    ByteArray result(getSHAReturnLengthByMode(toInternalMode(mode)));
+    SHA_Context *ctx = SHA_Context_new(mode);
+    ByteArray result(getSHAReturnLengthByMode(mode));
     hmac_sha(ctx->mode, result.data(), data, key);
     delete ctx;
     return result;
@@ -154,5 +149,5 @@ ByteArray Hasher::hmac(ByteSpan data, ByteSpan key, DIGEST_MODE mode)
 
 size_t Hasher::returnLength()
 {
-    return getSHAReturnLengthByMode(toInternalMode(impl_->ctx_->mode));
+    return getSHAReturnLengthByMode(impl_->ctx_->mode);
 }

@@ -1,4 +1,4 @@
-#include "sha.hpp"
+#include "internal/sha.hpp"
 #include "inc/utils/logger.hpp"
 #include <math.h>
 

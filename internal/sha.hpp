@@ -3,7 +3,7 @@
 #include <openssl/bn.h>
 #include <stdio.h>
 #include <memory.h>
-#include "inc/types.hpp"
+#include "../inc/types.hpp"
 
 #define SHA1_BLOCK_SIZE_BYTES 64
 #define SHA256_BLOCK_SIZE_BYTES 64

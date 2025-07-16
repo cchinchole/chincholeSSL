@@ -1,4 +1,4 @@
-#include "hmac.hpp"
+#include "internal/hmac.hpp"
 #include "inc/hash/hash.hpp"
 #include "inc/utils/logger.hpp"
 #include <algorithm>
@@ -6,7 +6,7 @@
 
 /* FIPS 198-1 */
 void hmac_sha(DIGEST_MODE digestMode, uint8_t *hmac_out,
-             ByteSpan msg, ByteSpan key)
+              ByteSpan msg, ByteSpan key)
 {
     Hasher h(digestMode);
 

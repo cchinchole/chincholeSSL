@@ -7,40 +7,20 @@
 
 int main()
 {
-    cECKey key(ECGroup::P256);
-    cECKey key2(ECGroup::P256);
-    cECSignature sig;
-    cECSignature sig2;
+    ECKeyPair keypair = ECKeyPair::Generate(ECGroup::P256);
+    ECKeyPair keypair2 = ECKeyPair::Generate(ECGroup::P256);
 
-    DIGEST_MODE hashMode = DIGEST_MODE::SHA_512;
-    ByteArray msg = hexToBytes("aabbccddeeffaabbcceeddeedd11001100");
+    ByteArray message = {'h', 'e', 'l', 'l', 'o'};
+    ByteArray message2 = {'h', 'e', 'l', 'l', 'a'};
+    ECSignature sig = keypair.sign(message, DIGEST_MODE::SHA_256);
+    ECSignature sig2 = keypair.sign(message2, DIGEST_MODE::SHA_256);
+    ECSignature sig3 = keypair2.sign(message, DIGEST_MODE::SHA_256);
+    ECSignature sig4 = keypair.sign(message, DIGEST_MODE::SHA_512);
+    bool valid = keypair.verify(sig, message, DIGEST_MODE::SHA_256);
 
-    EC_GenerateKeyPair(key);
-
-    if (EC_GenerateSignature(key, sig, msg, hashMode) != 0)
-        printf("Failed to generate signature\n");
-
-    std::println("Testing Point {}", *key.getGroup()->G);
-
-    EC_GenerateKeyPair(key2);
-
-    if (EC_GenerateSignature(key2, sig2, msg, hashMode) != 0)
-        printf("Failed to generate signature\n");
-
-    printf("Verifying against correct signature: %s\n",
-           EC_VerifySignature(key, sig, msg, hashMode) == 0 ? "Passed!"
-                                                            : "Failed!");
-    printf("Verifying against wrong signature: %s\n",
-           EC_VerifySignature(key, sig2, msg, hashMode) == -1 ? "Passed!"
-                                                              : "Failed!");
-
-    printf("Verifying against wrong key: %s\n",
-           EC_VerifySignature(key2, sig, msg, hashMode) == -1 ? "Passed!"
-                                                              : "Failed!");
-
-    std::vector<uint8_t> foobar = hexToBytes("11aa00bb00ee11cc");
-    printf("Verifying against wrong message: %s\n",
-           EC_VerifySignature(key, sig, foobar, hashMode) == -1 ? "Passed!"
-                                                                : "Failed!");
-    return 0;
+    PRINT("Status of signature 1: {} expected true", valid); //Valid signature
+    PRINT("Status of signature 2: {} expected false", keypair.verify(sig2, message, DIGEST_MODE::SHA_256)); //Incorrect message
+    PRINT("Status of signature 3: {} expected false", keypair.verify(sig3, message, DIGEST_MODE::SHA_256)); //Incorrect keypair
+    PRINT("Status of signature 4: {} expected false", keypair.verify(sig4, message, DIGEST_MODE::SHA_256)); //Hashing mismatch
+    return valid ? 0 : 1;
 }

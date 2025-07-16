@@ -137,9 +137,9 @@ SiggenRsp parseSigGen(const std::string &filename)
 int didTestSucceed(std::string s)
 {
     if (s == "P")
-        return 0;
+        return 1;
     else
-        return -1;
+        return 0;
 }
 
 DIGEST_MODE haveSHA(const std::string& s) {
@@ -197,6 +197,7 @@ int main()
                  std::cout << "Expected Result =(" << t.Result << ")\n";
                */
 
+                /*
                 cECKey key(group);
                 BN_hex2bn(&key.pub.x, t.Qx.c_str());
                 BN_hex2bn(&key.pub.y, t.Qy.c_str());
@@ -204,8 +205,16 @@ int main()
                 cECSignature sig;
                 BN_hex2bn(&sig.R, t.R.c_str());
                 BN_hex2bn(&sig.S, t.S.c_str());
+                */
 
-                std::vector<uint8_t> msgBytes = hexToBytes(t.msg_hex);
+               ECKeyPair keyPair = ECKeyPair::From(group, "00", t.Qx, t.Qy); 
+               ECSignature sig = ECSignature::From(t.R, t.S);
+               std::vector<uint8_t> msgBytes = hexToBytes(t.msg_hex);
+               if(keyPair.verify(sig, msgBytes, shaMode) == didTestSucceed(t.Result))
+                   p++;
+               else
+                   f++;
+                /*
                 if (EC_VerifySignature(key, sig, msgBytes, shaMode) ==
                     didTestSucceed(t.Result))
                 {
@@ -219,6 +228,7 @@ int main()
                     // printf("\033[31m Test Failed!\n");
                     // std::cout << "\033[0m";
                 }
+                */
 
                 // printf("\n\n");
 

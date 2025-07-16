@@ -21,18 +21,21 @@ LDFLAGS += $(OPENSSL_LIBS)
 
 # Directories
 SRC_DIR = .
+SRC_INTERNAL_DIR = interfaces
 BUILD_DIR = build
 LIB_DIR = .
 EXAMPLES_DIR = examples
 PREFIX ?= /usr/local
 INSTALLINCLUDEDIR = $(PREFIX)/include/cssl
 INSTALLLIBDIR = $(PREFIX)/lib
-TEST_DIRS = tests/aes tests/ecdsa_siggen tests/ecdsa_sigverif tests/hash tests/shake tests/hmac tests/rsa_oaep
+TEST_DIRS = tests/aes tests/ecdsa_siggen tests/ecdsa_sigverif tests/hash tests/shake tests/hmac tests/rsa_oaep tests/rsa_decryption
 
 # Source files and object files (excluding main.cpp)
 SRCS = $(filter-out $(SRC_DIR)/main.cpp,$(wildcard $(SRC_DIR)/*.cpp))
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
 
+SRCS2 = $(filter-out $(SRC_INTERNAL_DIR)/main.cpp,$(wildcard $(SRC_INTERNAL_DIR)/*.cpp))
+OBJS2 = $(patsubst $(SRC_INTERNAL_DIR)/%.cpp,$(BUILD_DIR)/i%.o,$(SRCS2))
 # Output objects
 SHARED_LIB = $(LIB_DIR)/libcssl.so
 STATIC_LIB = $(LIB_DIR)/libcssl.a
@@ -42,13 +45,16 @@ all: $(SHARED_LIB) $(STATIC_LIB) examples
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
-$(SHARED_LIB): $(OBJS)
-	$(CXX) -shared -o $@ $(OBJS) $(LDFLAGS)
+$(SHARED_LIB): $(OBJS) $(OBJS2)
+	$(CXX) -shared -o $@ $(OBJS) $(OBJS2) $(LDFLAGS)
 
-$(STATIC_LIB): $(OBJS)
+$(STATIC_LIB): $(OBJS) $(OBJS2)
 	ar rcs $@ $^
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -fPIC -c $< -o $@
+
+$(BUILD_DIR)/i%.o: $(SRC_INTERNAL_DIR)/%.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -fPIC -c $< -o $@
 
 examples:
@@ -64,6 +70,7 @@ clean:
 	$(MAKE) -C tests/rsa_oaep clean
 	$(MAKE) -C tests/hmac clean
 	$(MAKE) -C tests/shake clean
+	$(MAKE) -C tests/rsa_decryption clean
 install: all
 	install -d $(INSTALLINCLUDEDIR)
 	cp -r ./inc/* $(INSTALLINCLUDEDIR)/

@@ -1,7 +1,7 @@
-#include "../../inc/crypto/rsa.hpp"
 #include "../../inc/utils/bytes.hpp"
 #include "../../inc/utils/json.hpp"
 #include "../../inc/utils/logger.hpp"
+#include "../../inc/math/primes.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -16,22 +16,13 @@ struct TestCase
 {
     int tcID;
     std::string comment;
-    ByteArray msg;
-    ByteArray ct;
-    ByteArray label;
+    std::string value;
     std::string result;
     std::vector<std::string> flags;
 };
 
 struct TestGroup
 {
-    std::string keyD;
-    std::string keyE;
-    std::string keyN;
-    int keySize;
-    std::string mgf; // Should be only MGF1
-    std::string mgfSha;
-    std::string sha;
     std::string type;
     std::vector<TestCase> testCases;
 };
@@ -68,13 +59,6 @@ TestVector parseJson(const std::string &filename)
     for (const auto &group : j["testGroups"])
     {
         TestGroup tg;
-        tg.keyD = group["d"];
-        tg.keyE = group["e"];
-        tg.keySize = group["keysize"];
-        tg.mgf = group["mgf"];
-        tg.mgfSha = group["mgfSha"];
-        tg.keyN = group["n"];
-        tg.sha = group["sha"];
         tg.type = group["type"];
 
         for (const auto &test : group["tests"])
@@ -82,9 +66,7 @@ TestVector parseJson(const std::string &filename)
             TestCase tc;
             tc.tcID = test["tcId"];
             tc.comment = test["comment"];
-            tc.msg = hexToBytes(test["msg"]);
-            tc.ct = hexToBytes(test["ct"]);
-            tc.label = hexToBytes(test["label"]);
+            tc.value = test["value"];
             tc.result = test["result"];
             tc.flags = test["flags"].get<std::vector<std::string>>();
             tg.testCases.push_back(tc);
@@ -103,33 +85,23 @@ BIGNUM *hexToBignum(const std::string &hex)
     return bn;
 }
 
-DIGEST_MODE sha_name(const std::string& s) {
-    static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
-        {"SHA-1", DIGEST_MODE::SHA_1},
-        {"SHA-224", DIGEST_MODE::SHA_224},
-        {"SHA-256", DIGEST_MODE::SHA_256},
-        {"SHA-384", DIGEST_MODE::SHA_384},
-        {"SHA-512", DIGEST_MODE::SHA_512}
-    };
-    
-    auto it = sha_map.find(s);
-    return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
-}
-
 //Returns 1 on success
-int runTestCase(cSSL::RSA &key, const TestGroup &group, const TestCase &test)
+int runTestCase(const TestCase &test)
 {
 
     bool passed = false;
     bool expectedPass = false;
-    key.addOAEP(test.label, sha_name(group.sha), sha_name(group.mgfSha));
-    ByteArray decrypted = key.decrypt(test.ct);
 
-    passed = (std::equal(decrypted.begin(), decrypted.end(), test.msg.begin(),
-                         test.msg.end()));
+    BIGNUM *check = BN_new();
+    BN_hex2bn(&check, test.value.c_str());
+    passed = miller_rabin_is_prime(check, 1024);
+    BN_free(check);
 
     if (test.result == "valid" || test.result == "acceptable")
         expectedPass = true;
+
+    if(passed != expectedPass)
+        PRINT("Recieved {} Expected {}", passed, expectedPass);
 
     return (passed == expectedPass);
 }
@@ -163,12 +135,9 @@ int main(int argc, char **argv)
                 int failed = 0;
                 for (const auto &group : tv.testGroups)
                 {
-                    cSSL::RSA rsa(group.keySize);
-                    rsa.loadPublicKey(group.keyN, group.keyE);
-                    rsa.loadPrivateKey(group.keyN, group.keyD);
                     for (const auto &test : group.testCases)
                     {
-                        if (runTestCase(rsa, group, test))
+                        if (runTestCase(test))
                         {
                             passed++;
                         }

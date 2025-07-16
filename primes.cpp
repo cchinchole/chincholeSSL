@@ -40,17 +40,17 @@ bool miller_rabin_is_prime(BIGNUM *w, int iterations, BN_CTX *ctx)
     BIGNUM *w1, *w2, *w4, *m, *b, *x, *z;
     int a = 1;
 
-    /* Confirm odd first */
+    // Confirm odd first
     if (!BN_is_odd(w))
         return false;
 
-    /* Need to be atleast > 3 else (n-1)=2*/
+    // Need to be atleast > 3 else (n-1)=2
     if (!(BN_get_word(w) > 3))
         return false;
 
-    /* s > 0 and d odd > 0 such that (n-1) = (2^s)*d # by factoring out powers
-     * of 2 from n-1
-     * (https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test)*/
+    // s > 0 and d odd > 0 such that (n-1) = (2^s)*d # by factoring out powers
+    // of 2 from n-1
+    // (https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test)
     BN_CTX_start(ctx);
     w1 = BN_CTX_get(ctx);
     w2 = BN_CTX_get(ctx);
@@ -65,25 +65,25 @@ bool miller_rabin_is_prime(BIGNUM *w, int iterations, BN_CTX *ctx)
     BN_sub(w4, w2, BN_value_one());
     BN_sub(w4, w4, BN_value_one());
 
-    /* Calculate s by checking largest number we can divide n-1 by 2^s */
+    // Calculate s by checking largest number we can divide n-1 by 2^s 
     while (!BN_is_bit_set(w1, a))
         a++;
 
-    /* (n-1)/(2^s) = d */
+    // (n-1)/(2^s) = d
     BN_rshift(m, w1, a);
 
-    /* Repeat 'k' times where k=iterations */
+    // Repeat 'k' times where k=iterations
     for (int i = 0; i < iterations; i++)
     {
         BN_rand_range(b, w4);
         BN_add(b, b, BN_value_one());
         BN_add(b, b, BN_value_one());
-        BN_mod_exp(x, b, m, w, ctx); /* a^m mod n */
-                                     /* Repeat 's' times */
+        BN_mod_exp(x, b, m, w, ctx); // a^m mod n
+                                     // Repeat 's' times
 
         for (int j = 0; j < a; j++)
         {
-            BN_mod_sqr(z, x, w, ctx); /* x^2 mod n */
+            BN_mod_sqr(z, x, w, ctx); // x^2 mod n
             if (BN_is_one(z) && !BN_is_one(x) && BN_cmp(x, w1) != 0)
                 goto failure;
             BN_copy(x, z); // Previously used x = BN_dup(z) TODO: REMOVE
@@ -638,7 +638,7 @@ int FIPS186_5_MR_ROUNDS_PRIME(int nLen)
     else if (nLen >= 2048)
         return 2;
     else
-        return -1;
+        return 4;
 }
 
 /* Minimum length of an auxilary prime from FIPS 186-5-A.1 */
