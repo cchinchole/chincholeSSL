@@ -31,6 +31,13 @@ const dataSqrt ossl_bn_inv_sqrt_2 = {
     (BN_ULONG *)inv_sqrt_2_val, OSSL_NELEM(inv_sqrt_2_val),
     OSSL_NELEM(inv_sqrt_2_val), 0, BN_FLG_STATIC_DATA};
 
+static int bn_mr_min_checks(int bits)
+{
+    if (bits > 2048)
+        return 128;
+    return 64;
+}
+
 /* Using Miller-Rabin */
 /* FIPS 186-4 C.3.1 */
 /* Returns true for PROBABLY PRIME and false for COMPOSITE */
@@ -39,19 +46,23 @@ bool miller_rabin_is_prime(BIGNUM *w, int iterations, BN_CTX *ctx)
 {
     BIGNUM *w1, *w2, *w4, *m, *b, *x, *z;
     int a = 1;
+    BN_CTX_start(ctx);
 
     // Confirm odd first
     if (!BN_is_odd(w))
-        return false;
+    {
+        goto failure;
+    }
 
     // Need to be atleast > 3 else (n-1)=2
     if (!(BN_get_word(w) > 3))
-        return false;
+    {
+        goto failure;
+    }
 
     // s > 0 and d odd > 0 such that (n-1) = (2^s)*d # by factoring out powers
     // of 2 from n-1
     // (https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test)
-    BN_CTX_start(ctx);
     w1 = BN_CTX_get(ctx);
     w2 = BN_CTX_get(ctx);
     w4 = BN_CTX_get(ctx);
@@ -65,12 +76,15 @@ bool miller_rabin_is_prime(BIGNUM *w, int iterations, BN_CTX *ctx)
     BN_sub(w4, w2, BN_value_one());
     BN_sub(w4, w4, BN_value_one());
 
-    // Calculate s by checking largest number we can divide n-1 by 2^s 
+    // Calculate s by checking largest number we can divide n-1 by 2^s
     while (!BN_is_bit_set(w1, a))
         a++;
 
     // (n-1)/(2^s) = d
     BN_rshift(m, w1, a);
+
+    if (iterations == 0)
+        iterations = bn_mr_min_checks(BN_num_bits(w));
 
     // Repeat 'k' times where k=iterations
     for (int i = 0; i < iterations; i++)
@@ -101,6 +115,104 @@ failure:
     return false;
 }
 
+static const BN_ULONG small_prime_factors[] = {BN_DEF(0x3ef4e3e1, 0xc4309333),
+                                               BN_DEF(0xcd2d655f, 0x71161eb6),
+                                               BN_DEF(0x0bf94862, 0x95e2238c),
+                                               BN_DEF(0x24f7912b, 0x3eb233d3),
+                                               BN_DEF(0xbf26c483, 0x6b55514b),
+                                               BN_DEF(0x5a144871, 0x0a84d817),
+                                               BN_DEF(0x9b82210a, 0x77d12fee),
+                                               BN_DEF(0x97f050b3, 0xdb5b93c2),
+                                               BN_DEF(0x4d6c026b, 0x4acad6b9),
+                                               BN_DEF(0x54aec893, 0xeb7751f3),
+                                               BN_DEF(0x36bc85c4, 0xdba53368),
+                                               BN_DEF(0x7f5ec78e, 0xd85a1b28),
+                                               BN_DEF(0x6b322244, 0x2eb072d8),
+                                               BN_DEF(0x5e2b3aea, 0xbba51112),
+                                               BN_DEF(0x0e2486bf, 0x36ed1a6c),
+                                               BN_DEF(0xec0c5727, 0x5f270460),
+                                               (BN_ULONG)0x000017b1};
+
+static int calc_trial_divisions(int bits)
+{
+    if (bits <= 512)
+        return 64;
+    else if (bits <= 1024)
+        return 128;
+    else if (bits <= 2048)
+        return 384;
+    else if (bits <= 4096)
+        return 1024;
+    return NUMPRIMES;
+}
+
+int check_prime(BIGNUM *w, bool do_trial_division)
+{
+    int ret = 0;
+    BIGNUM *value_one = BN_new();
+
+    if (BN_cmp(w, value_one) <= 0)
+    {
+        ret = 0;
+        goto end;
+    }
+
+    if (BN_is_odd(w))
+    {
+        if (BN_is_word(w, 3))
+        {
+            ret = 1;
+            goto end;
+        }
+    }
+    else
+    {
+        ret = BN_is_word(w, 2);
+        goto end;
+    }
+
+    if (do_trial_division)
+    {
+        int trial_divisions = calc_trial_divisions(BN_num_bits(w));
+        for (int i = 1; i < trial_divisions; i++)
+        {
+            BN_ULONG mod = BN_mod_word(w, primes[i]);
+            if (mod == (BN_ULONG)-1)
+            {
+                ret = -1;
+                goto end;
+            }
+
+            if (mod == 0)
+            {
+                ret = BN_is_word(w, primes[i]);
+                goto end;
+            }
+        }
+    }
+
+    if (!miller_rabin_is_prime(w, 0))
+    {
+        ret = -1;
+        goto end;
+    }
+    else
+    {
+        ret = 1;
+        goto end;
+    }
+
+end:
+    BN_free(value_one);
+    return ret;
+}
+
+/* Main exposed function */
+//bool checkIfPrime(BIGNUM *w) { return (check_prime(w, true) == 1); }
+bool checkIfPrime(BIGNUM *w) {
+    return (check_prime(w, true) == 1);
+   //return (miller_rabin_is_prime(w, 0));
+}
 /* These functions do not support auxiliary primes. */
 int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
 {
@@ -268,14 +380,9 @@ end:
 }
 
 /* FIPS 186-4-C.9 */
-int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR,
-                                          BIGNUM *X,
-                                          BIGNUM *Xin,
-                                          BIGNUM *r1,
-                                          BIGNUM *r2,
-                                          int nLen,
-                                          BIGNUM *e,
-                                          BN_CTX *ctx)
+int FIPS186_4_COMPUTE_PROB_PRIME_FROM_AUX(BIGNUM *PRIV_PRIME_FACTOR, BIGNUM *X,
+                                          BIGNUM *Xin, BIGNUM *r1, BIGNUM *r2,
+                                          int nLen, BIGNUM *e, BN_CTX *ctx)
 {
     BIGNUM *R, *r1mul2, *r1_mul2_r2, *temp, *tempPrivFactor, *range, *base;
     int bits = nLen >> 1;
@@ -410,9 +517,7 @@ ending:
 }
 
 /* FIPS 186-4-B.3.6 */
-int FIPS186_4_FIND_AUX_PRIME(const BIGNUM *Xn1,
-                             BIGNUM *n1,
-                             int kbits,
+int FIPS186_4_FIND_AUX_PRIME(const BIGNUM *Xn1, BIGNUM *n1, int kbits,
                              BN_CTX *ctx)
 {
     int status = RET_NOSTATUS;
@@ -436,17 +541,9 @@ int FIPS186_4_FIND_AUX_PRIME(const BIGNUM *Xn1,
 }
 
 /* FIPS 186-4-B.3.6 */
-int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p,
-                             BIGNUM *Xpout,
-                             BIGNUM *p1,
-                             BIGNUM *p2,
-                             BIGNUM *Xp,
-                             BIGNUM *Xp1,
-                             BIGNUM *Xp2,
-                             BIGNUM *e,
-                             int nlen,
-                             bool testParamsFilled,
-                             BN_CTX *ctx)
+int FIPS186_4_GEN_PROB_PRIME(BIGNUM *p, BIGNUM *Xpout, BIGNUM *p1, BIGNUM *p2,
+                             BIGNUM *Xp, BIGNUM *Xp1, BIGNUM *Xp2, BIGNUM *e,
+                             int nlen, bool testParamsFilled, BN_CTX *ctx)
 {
     int status = RET_NOSTATUS;
     BIGNUM *p1i = NULL, *p2i = NULL, *xp1i = NULL, *xp2i = NULL;
@@ -513,10 +610,8 @@ ending:
 }
 
 /* FIPS 186-4-B.3.6 */
-int FIPS186_4_PRIME_EQUALITY_CHECK(BIGNUM *diff,
-                                   const BIGNUM *p,
-                                   const BIGNUM *q,
-                                   int nbits)
+int FIPS186_4_PRIME_EQUALITY_CHECK(BIGNUM *diff, const BIGNUM *p,
+                                   const BIGNUM *q, int nbits)
 {
     int bitlen = (nbits >> 1) - 100;
 
@@ -533,11 +628,7 @@ int FIPS186_4_PRIME_EQUALITY_CHECK(BIGNUM *diff,
 }
 
 /* FIPS 186-4-B.3.6 */
-int FIPS186_4_GEN_PRIMES(BIGNUM *p,
-                         BIGNUM *q,
-                         BIGNUM *e,
-                         int bits,
-                         bool doACVP,
+int FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP,
                          ACVP_TEST *testParams)
 {
     BIGNUM *Xpo = NULL, *Xqo = NULL, *tmp = NULL, *p1 = NULL, *p2 = NULL,

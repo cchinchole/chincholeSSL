@@ -1,7 +1,7 @@
+#include "../../inc/math/primes.hpp"
 #include "../../inc/utils/bytes.hpp"
 #include "../../inc/utils/json.hpp"
 #include "../../inc/utils/logger.hpp"
-#include "../../inc/math/primes.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -85,23 +85,27 @@ BIGNUM *hexToBignum(const std::string &hex)
     return bn;
 }
 
-//Returns 1 on success
+// Returns 1 on success
 int runTestCase(const TestCase &test)
 {
 
     bool passed = false;
     bool expectedPass = false;
 
-    BIGNUM *check = BN_new();
-    BN_hex2bn(&check, test.value.c_str());
-    passed = miller_rabin_is_prime(check, 1024);
-    BN_free(check);
+    if (std::find(test.flags.begin(), test.flags.end(), "NegativeOfPrime") !=
+        test.flags.end())
+    {
+        return 2;
+    }
 
+    BIGNUM *check = hexToBignum(test.value);
+    passed = checkIfPrime(check);
+    BN_free(check);
     if (test.result == "valid" || test.result == "acceptable")
         expectedPass = true;
 
-    if(passed != expectedPass)
-        PRINT("Recieved {} Expected {}", passed, expectedPass);
+    if (passed != expectedPass)
+        PRINT("{} Recieved {} Expected {}", test.tcID, passed, expectedPass);
 
     return (passed == expectedPass);
 }
@@ -133,24 +137,33 @@ int main(int argc, char **argv)
                 totalTests += tv.numberOfTests;
                 int passed = 0;
                 int failed = 0;
+                int skipped = 0;
                 for (const auto &group : tv.testGroups)
                 {
                     for (const auto &test : group.testCases)
                     {
-                        if (runTestCase(test))
+                        int r = runTestCase(test);
+                        switch(r)
                         {
-                            passed++;
-                        }
-                        else
-                        {
-                            retCode = -1;
-                            failed++;
+                            case 0:
+                                retCode = -1;
+                                failed++;
+                                break;
+                            case 1:
+                                passed++;
+                                break;
+                            case 2:
+                                skipped++;
+                                PRINT("[ {} ]: Skipped negative of a prime", test.tcID);
+                                break;
+                            default:
+                                break;
                         }
                     }
                 }
                 totalpassed += passed;
                 totalfailed += failed;
-                PRINT("Passed {} Failed {}\n", passed, failed);
+                PRINT("Passed {} Failed {} Skipped {}", passed, failed, skipped);
             }
         }
     }
@@ -159,13 +172,13 @@ int main(int argc, char **argv)
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    if(totalfailed > 0)
+    if (totalfailed > 0)
         retCode = 255;
 
-    printf("Total tests: %d\nTests Succeeded: %d\nTests failed: %d\n", totalTests,
-          totalpassed, totalfailed);
+    printf("Total tests: %d\nTests Succeeded: %d\nTests failed: %d\n",
+           totalTests, totalpassed, totalfailed);
 
-    if(retCode == 0)
+    if (retCode == 0)
         printf("\e[0;32mSUCCEEDED\e[0;37m\n");
     else
         printf("\e[0;31mFAILED\e[0;37m\n");
