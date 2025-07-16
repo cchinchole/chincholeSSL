@@ -211,8 +211,8 @@ void RSA_GenerateKey(cRSAKey &key, int kBits)
     bool auxMode = true;
 
     // Nothing is provided
-    FIPS186_4_GEN_PRIMES(key.crt.p, key.crt.q, key.e,
-                         kBits); // true, &ACVP_TEST
+    BN_set_word(key.e, 65537);
+    FIPS186_4_GEN_PRIMES(key.crt.p, key.crt.q, key.e, kBits); // true, &ACVP_TEST
     if (gen_rsa_sp800_56b(key, true))
     {
         LOG_ERROR("FAILED TO GENERATE CRT {}", __LINE__);

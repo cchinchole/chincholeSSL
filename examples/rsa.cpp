@@ -18,17 +18,17 @@ int main()
     cSSL::RSA rsaOAEP(1024);
 
     // Can either load the key like this
-    rsaOAEP.loadPublicKey(modulus, publicExponent);
-    rsaOAEP.loadPrivateKey(modulus, privateExponent);
+    //rsaOAEP.loadPublicKey(modulus, publicExponent);
+    //rsaOAEP.loadPrivateKey(modulus, privateExponent);
 
     // Additionally add and enable CRT
-    rsaOAEP.loadCRT(P, Q, ex1, ex2, coe);
+    //rsaOAEP.loadCRT(P, Q, ex1, ex2, coe);
 
     // Or generate the key using the primes
     //rsaOAEP.fromPrimes(P, Q, publicExponent);
 
     // Or completely generate a new key.
-    //rsaOAEP.generateKey();
+    rsaOAEP.generateKey();
     
     //No need to specify the label can leave it empty, same with the seed. This is mostly for ensuring a constant Encode.
     rsaOAEP.addOAEP({}, hexToBytes("18b776ea21069d69776a33e96bad48e1dda0a5ef"), DIGEST_MODE::SHA_1, DIGEST_MODE::SHA_1);
