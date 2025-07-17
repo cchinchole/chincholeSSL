@@ -76,9 +76,8 @@ SHARsp parseFile(const std::string &filename)
 /* Returns 0 on success */
 int test_sha(ByteArray msg, ByteArray MD, DIGEST_MODE mode)
 {
-    ByteArray rawDigest = Hasher::hash(msg, mode);
+    ByteArray rawDigest = cSSL::Hasher::hash(msg, mode);
     int res = (memcmp(rawDigest.data(), MD.data(), MD.size()));
-    if(res != 0)PRINT("Failed!\nExpected: {}\nRecieved: {}", MD, rawDigest);
     return res;
 }
 
@@ -96,7 +95,7 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
     }
     *passed += p;
     *failed += f;
-    PRINT("[ {} ]: {} passed {} failed.", fileName, p, f);
+    PRINT("[ \e[34m{}\e[0m ]: Passed: {} Failed: {}", fileName,  p, f);
 }
 
 DIGEST_MODE haveSHA(const std::string& s) {
@@ -119,10 +118,12 @@ DIGEST_MODE haveSHA(const std::string& s) {
 
 int main()
 {
-    int ret = 0;
+    printf("\n\n\n\n");
+    PRINT("BEGINNING HASH");
+    int retCode = 0;
     int tests_performed = 0;
-    int passed = 0;
-    int failed = 0;
+    int totalPassed = 0;
+    int totalFailed = 0;
     int test_files = 0;
     namespace fs = std::filesystem;
     std::string path = "./vectors/"; // Current directory, change as needed
@@ -147,8 +148,7 @@ int main()
                     continue; /* Invalid file */
 
                 std::string sha_type = fileName.substr(0, pos);
-                runTest(path, fileName, haveSHA(sha_type), &passed, &failed);
-                tests_performed++;
+                runTest(path, fileName, haveSHA(sha_type), &totalPassed, &totalFailed);
             }
         }
     }
@@ -157,13 +157,21 @@ int main()
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    PRINT("Results: {} passed {} failed", passed, failed);
-    if (failed > 0)
-        ret = -1;
-    if (ret == 0)
-        PRINT("\e[0;32mSUCCEEDED\e[0;37m");
-    else
-        PRINT("\e[0;31mFAILED\e[0;37m");
+    if (totalFailed > 0)
+        retCode = 255;
 
-    return ret;
+    int totalTests = totalPassed + totalFailed;
+
+    if (retCode == 0)
+    {
+        PRINT_TEST_PASS("{}/{}", totalPassed, totalTests);
+    }
+    else
+    {
+        PRINT_TEST_FAILED("{}/{} Failed: {}", totalPassed, totalTests,
+                          totalFailed);
+    }
+
+
+    return retCode;
 }

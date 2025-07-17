@@ -67,25 +67,19 @@ static constexpr std::array<int, 3> tNR = {10, 12, 14};
 static constexpr std::array<int, 3> tNK = {4, 6, 8};
 
 /* FOR (nk,nr) AES256: 8,14 , 192: 6,12; 128: 4, 10*/
-int getNR(AES_CTX &ctx)
-{
-    return tNR[static_cast<int>(ctx.ksize)];
-}
+int getNR(AES_CTX &ctx) { return tNR[static_cast<int>(ctx.ksize)]; }
 
-int getNK(AES_CTX &ctx)
-{
-    return tNK[static_cast<int>(ctx.ksize)];
-}
+int getNK(AES_CTX &ctx) { return tNK[static_cast<int>(ctx.ksize)]; }
 
 std::string roundkeyToString(const uint8_t *w)
 {
     std::ostringstream oss;
     oss << std::hex << std::setfill('0');
-    
+
     for (size_t i = 0; i < nB; i++)
         for (size_t j = 0; j < nB; j++)
             oss << std::setw(2) << static_cast<unsigned>(w[(j * nB) + i]);
-            
+
     return oss.str();
 }
 
@@ -236,10 +230,7 @@ int InvShiftRows(uint8_t state[4][4])
     return 0;
 }
 
-uint8_t xtime(uint8_t x)
-{
-    return (x << 1) ^ (((x >> 7) & 1) * 0x1b);
-}
+uint8_t xtime(uint8_t x) { return (x << 1) ^ (((x >> 7) & 1) * 0x1b); }
 
 int MixColumns(uint8_t state[4][4])
 {
@@ -421,7 +412,8 @@ int FIPS_197_5_3_InvCipher(AES_CTX &ctx)
 }
 
 // SP800-38A  6.1
-int ECB_Encrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
+int ECB_Encrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf,
+                size_t buf_len)
 {
     for (size_t i = 0; i < buf_len; i += AES_BlockSize)
     {
@@ -435,7 +427,8 @@ int ECB_Encrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_le
 }
 
 // SP800-38A  6.1
-int ECB_Decrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
+int ECB_Decrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf,
+                size_t buf_len)
 {
     for (size_t i = 0; i < buf_len; i += AES_BlockSize)
     {
@@ -449,7 +442,8 @@ int ECB_Decrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_le
 }
 
 // SP800-38A  6.2
-int CBC_Encrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
+int CBC_Encrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf,
+                size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv, 16);
@@ -472,7 +466,8 @@ int CBC_Encrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_le
 }
 
 // SP800-38A 6.2
-int CBC_Decrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
+int CBC_Decrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf,
+                size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv, 16);
@@ -498,7 +493,8 @@ int CBC_Decrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_le
 
 // SP800-38A 6.3
 // Current implementation only works for 128mode.
-int CFB_XCrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
+int CFB_XCrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf,
+               size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv, 16);
@@ -523,7 +519,8 @@ int CFB_XCrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len
 }
 
 // SP800-38A 6.4
-int OFB_XCrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf, size_t buf_len)
+int OFB_XCrypt(AES_CTX &ctx, uint8_t *output, const uint8_t *buf,
+               size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv, 16);

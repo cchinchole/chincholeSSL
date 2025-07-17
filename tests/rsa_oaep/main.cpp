@@ -53,10 +53,13 @@ int runTestCase(cSSL::RSA &key, const DIGEST_MODE sha, const DIGEST_MODE mgfSha,
 
 int main(int argc, char **argv)
 {
-    int totalTests = 0;
+    
+    printf("\n\n\n\n");
+    PRINT("BEGINNING RSA OAEP SIGNATURE");
     int retCode = 0;
-    int totalpassed = 0;
-    int totalfailed = 0;
+    int totalTests = 0;
+    int totalPassed = 0;
+    int totalFailed = 0;
     namespace fs = std::filesystem;
     std::string path = "./vectors/"; // Current directory, change as needed
 
@@ -72,7 +75,6 @@ int main(int argc, char **argv)
         {
             if (entry.path().extension() == ".json")
             {
-                PRINT("Running: {}", entry.path().filename().string());
                 TestVector tv =
                     parseJson(path + entry.path().filename().string());
                 totalTests += tv.numberOfTests;
@@ -108,9 +110,9 @@ int main(int argc, char **argv)
                         }
                     }
                 }
-                totalpassed += passed;
-                totalfailed += failed;
-                PRINT("Passed {} Failed {}\n", passed, failed);
+                totalPassed += passed;
+                totalFailed += failed;
+                PRINT("[ \e[34m{}\e[0m ]: Passed: {} Failed: {}", entry.path().filename().string(), passed, failed);
             }
         }
     }
@@ -119,15 +121,18 @@ int main(int argc, char **argv)
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    if (totalfailed > 0)
+    if (totalFailed > 0)
         retCode = 255;
 
-    printf("Total tests: %d\nTests Succeeded: %d\nTests failed: %d\n",
-           totalTests, totalpassed, totalfailed);
-
     if (retCode == 0)
-        printf("\e[0;32mSUCCEEDED\e[0;37m\n");
+    {
+        PRINT_TEST_PASS("{}/{}", totalPassed, totalTests);
+    }
     else
-        printf("\e[0;31mFAILED\e[0;37m\n");
+    {
+        PRINT_TEST_FAILED("{}/{} Failed: {}", totalPassed, totalTests,
+                          totalFailed);
+    }
+
     return retCode;
 }

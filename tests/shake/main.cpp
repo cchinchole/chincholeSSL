@@ -7,9 +7,8 @@
 #include <openssl/bn.h>
 #include <ostream>
 #include <string>
-#include <vector>
 #include <unordered_map>
-
+#include <vector>
 
 #ifndef TEST_SHA_LOG
 #define TEST_SHA_LOG 0
@@ -17,10 +16,10 @@
 
 struct SHATest
 {
-    std::string MD;             /* Digest expected in hex */
-    std::string Len;            /* Msg len in hex (bytes) */
+    std::string MD;  /* Digest expected in hex */
+    std::string Len; /* Msg len in hex (bytes) */
     std::string OutLen;
-    std::string Msg;            /* Msg in hex */
+    std::string Msg; /* Msg in hex */
 };
 
 struct SHARsp
@@ -84,45 +83,48 @@ SHARsp parseFile(const std::string &filename)
 }
 
 /* Returns 0 on success */
-int test_Shake(ByteArray msg, size_t inputLen, ByteArray MD, DIGEST_MODE mode, size_t digestSize, bool quiet)
+int test_Shake(ByteArray msg, size_t inputLen, ByteArray MD, DIGEST_MODE mode,
+               size_t digestSize, bool quiet)
 {
-    ByteArray rawDigest = Hasher::xof(msg, digestSize, mode);
+    ByteArray rawDigest = cSSL::Hasher::xof(msg, digestSize, mode);
     int res = (memcmp(rawDigest.data(), MD.data(), MD.size()));
     if (!quiet)
-        if(res != 0)PRINT("Failed!\nExpected: {}\nRecieved: {}", MD, rawDigest);
+        if (res != 0)
+            PRINT("Failed!\nExpected: {}\nRecieved: {}", MD, rawDigest);
     return res;
 }
-
 
 void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
              int *passed, int *failed)
 {
-    if(shaMode == DIGEST_MODE::NONE)
+    if (shaMode == DIGEST_MODE::NONE)
         return;
     auto rsp = parseFile(path + fileName);
     int p = 0, f = 0;
-    PRINT("Total tests: {}", rsp.tests.size());
     for (const auto &t : rsp.tests)
     {
         int digestLen = 0;
         size_t inputLen = 0;
-        if(t.OutLen.empty())
+        if (t.OutLen.empty())
         {
-            digestLen = shaMode==DIGEST_MODE::SHA_3_SHAKE_128 ? 128/8 : 256/8;
+            digestLen =
+                shaMode == DIGEST_MODE::SHA_3_SHAKE_128 ? 128 / 8 : 256 / 8;
         }
         else
         {
-            digestLen = std::stoi(t.OutLen)/8;
+            digestLen = std::stoi(t.OutLen) / 8;
         }
 
-        if(!t.Len.empty())
-            inputLen = std::stoi(t.Len)/8;
+        if (!t.Len.empty())
+            inputLen = std::stoi(t.Len) / 8;
         else
         {
-            inputLen = shaMode==DIGEST_MODE::SHA_3_SHAKE_128 ? 128/8 : 256/8;
+            inputLen =
+                shaMode == DIGEST_MODE::SHA_3_SHAKE_128 ? 128 / 8 : 256 / 8;
         }
-        
-        if (test_Shake(hexToBytes(t.Msg, inputLen), inputLen, hexToBytes(t.MD), shaMode, digestLen, false) == 0)
+
+        if (test_Shake(hexToBytes(t.Msg, inputLen), inputLen, hexToBytes(t.MD),
+                       shaMode, digestLen, false) == 0)
             p++;
         else
         {
@@ -131,35 +133,32 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
     }
     *passed += p;
     *failed += f;
-    std::cout << "Results [ " << fileName << " ]" << p << " passed " << " f "
-              << f << std::endl
-              << std::endl;
+    PRINT("[ \e[34m{}\e[0m ]: Passed: {} Failed: {}", fileName,  p, f);
 }
 
-DIGEST_MODE haveSHA(const std::string& s) {
+DIGEST_MODE haveSHA(const std::string &s)
+{
     static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
         {"SHAKE128", DIGEST_MODE::SHA_3_SHAKE_128},
-        {"SHAKE256", DIGEST_MODE::SHA_3_SHAKE_256}
-    };
-    
+        {"SHAKE256", DIGEST_MODE::SHA_3_SHAKE_256}};
+
     auto it = sha_map.find(s);
     return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
 }
 
-
 int main()
 {
-    int ret = 0;
-    int tests_performed = 0;
-    int passed = 0;
-    int failed = 0;
-    int test_files = 0;
+    printf("\n\n\n\n");
+    PRINT("BEGINNING SHAKE");
+    int retCode = 0;
+    int totalTests = 0;
+    int totalPassed = 0;
+    int totalFailed = 0;
     namespace fs = std::filesystem;
     std::string path = "./vectors/"; // Current directory, change as needed
 
     try
     {
-
         if (!fs::exists(path) || !fs::is_directory(path))
         {
             std::cerr << "Wrong directory";
@@ -172,9 +171,8 @@ int main()
             {
                 std::string fileName = entry.path().filename().string();
                 std::string sha_type = fileName.substr(0, 8);
-                PRINT("{} {}", fileName, sha_type);
-                runTest(path, fileName, haveSHA(sha_type), &passed, &failed);
-                tests_performed++;
+                runTest(path, fileName, haveSHA(sha_type), &totalPassed,
+                        &totalFailed);
             }
         }
     }
@@ -183,14 +181,18 @@ int main()
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    std::cout << "Results: " << passed << " passed " << failed << " failed."
-              << std::endl;
-    if (failed > 0)
-        ret = -1;
-    if (ret == 0)
-        PRINT("\e[0;32mSUCCEEDED\e[0;37m");
-    else
-        PRINT("\e[0;31mFAILED\e[0;37m");
+    if (totalFailed > 0)
+        retCode = 255;
 
-    return ret;
+    totalTests = totalPassed + totalFailed;
+    if (retCode == 0)
+    {
+        PRINT_TEST_PASS("{}/{}", totalPassed, totalTests);
+    }
+    else
+    {
+        PRINT_TEST_FAILED("{}/{} Failed: {}", totalPassed, totalTests,
+                          totalFailed);
+    }
+    return retCode;
 }

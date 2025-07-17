@@ -1,6 +1,7 @@
 #include "../../inc/cssl.hpp"
 #include "../common/jsonParser.hpp"
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <openssl/bn.h>
@@ -39,10 +40,13 @@ int runTestCase(const TestCase &test)
 
 int main(int argc, char **argv)
 {
+    printf("\n\n\n\n");
+    PRINT("BEGINNING PRIME VALIDITY");
     int totalTests = 0;
     int retCode = 0;
-    int totalpassed = 0;
-    int totalfailed = 0;
+    int totalPassed = 0;
+    int totalFailed = 0;
+    int totalSkipped = 0;
     namespace fs = std::filesystem;
     std::string path = "./vectors/"; // Current directory, change as needed
 
@@ -58,7 +62,6 @@ int main(int argc, char **argv)
         {
             if (entry.path().extension() == ".json")
             {
-                PRINT("Running: {}", entry.path().filename().string());
                 TestVector tv =
                     parseJson(path + entry.path().filename().string());
                 totalTests += tv.numberOfTests;
@@ -81,16 +84,16 @@ int main(int argc, char **argv)
                                 break;
                             case 2:
                                 skipped++;
-                                PRINT("[ {} ]: Skipped negative of a prime", test.tcID);
+                                //PRINT("[ {} ]: Skipped negative of a prime", test.tcID);
                                 break;
                             default:
                                 break;
                         }
                     }
                 }
-                totalpassed += passed;
-                totalfailed += failed;
-                PRINT("Passed {} Failed {} Skipped {}", passed, failed, skipped);
+                totalPassed += passed;
+                totalFailed += failed;
+                totalSkipped += skipped;
             }
         }
     }
@@ -99,15 +102,17 @@ int main(int argc, char **argv)
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    if (totalfailed > 0)
+    if (totalFailed > 0)
         retCode = 255;
 
-    printf("Total tests: %d\nTests Succeeded: %d\nTests failed: %d\n",
-           totalTests, totalpassed, totalfailed);
-
     if (retCode == 0)
-        printf("\e[0;32mSUCCEEDED\e[0;37m\n");
+    {
+        PRINT_TEST_PASS("{}/{} {}", totalPassed, totalTests, totalSkipped != 0 ? std::format("\e[33m{} skipped\e[0m", totalSkipped) : "");
+    }
     else
-        printf("\e[0;31mFAILED\e[0;37m\n");
+    {
+        PRINT_TEST_FAILED("{}/{} Failed: {} {}", totalPassed, totalTests,
+                          totalFailed, totalSkipped != 0 ? std::format("{} skipped", totalSkipped) : "");
+    }
     return retCode;
 }

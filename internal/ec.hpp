@@ -1,15 +1,14 @@
 #ifndef ECDH_HPP
 #define ECDH_HPP
-#include "../inc/crypto/ec.hpp"
+#include "../inc/types.hpp"
 #include "../inc/hash/hash.hpp"
 #include "../inc/utils/bytes.hpp"
 #include <openssl/bn.h>
 #include <string>
 
-//enum ECGroup { P224, P256, P384, P521, NONE };
-
 std::string ECGroupString(ECGroup group);
 
+// Purely internal classes, no reason to export them.
 class cECPoint {
   public:
     BIGNUM *x, *y;

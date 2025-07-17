@@ -10,6 +10,7 @@
 #include <openssl/ssl.h>
 #include <vector>
 
+// These classes are purely internal no reason to export them.
 enum class RSA_Padding{
     OAEP,
     NONE
@@ -34,9 +35,9 @@ public:
 
 class cRSAKey {
 public:
-    /* Need the N, E, D */
-    /* (N, E) Form the public */
-    /* (N, D) Form the private */
+    // Need the N, E, D
+    // (N, E) Form the public
+    // (N, D) Form the private
     int kBits = 4096; 
     BIGNUM *n, *e, *d;
     RSA_CRT_Params crt;

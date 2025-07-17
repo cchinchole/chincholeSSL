@@ -1,13 +1,13 @@
 #include "../../inc/crypto/ec.hpp"
 #include "../../inc/utils/bytes.hpp"
 #include "../../inc/utils/logger.hpp"
-#include <unordered_map>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <openssl/bn.h>
 #include <openssl/crypto.h>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 struct SiggenTest
@@ -158,37 +158,38 @@ int didTestSucceed(std::string s)
         return -1;
 }
 
-DIGEST_MODE haveSHA(const std::string& s) {
+DIGEST_MODE haveSHA(const std::string &s)
+{
     static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
-        {"SHA-1", DIGEST_MODE::SHA_1},
-        {"SHA-224", DIGEST_MODE::SHA_224},
-        {"SHA-256", DIGEST_MODE::SHA_256},
-        {"SHA-384", DIGEST_MODE::SHA_384},
+        {"SHA-1", DIGEST_MODE::SHA_1},     {"SHA-224", DIGEST_MODE::SHA_224},
+        {"SHA-256", DIGEST_MODE::SHA_256}, {"SHA-384", DIGEST_MODE::SHA_384},
         {"SHA-512", DIGEST_MODE::SHA_512},
     };
-    
+
     auto it = sha_map.find(s);
     return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
 }
 
-ECGroup haveCurve(std::string s) {
+ECGroup haveCurve(std::string s)
+{
     static const std::unordered_map<std::string, ECGroup> group_map = {
-        {"P-224", ECGroup::P224}, 
+        {"P-224", ECGroup::P224},
         {"P-256", ECGroup::P256},
         {"P-384", ECGroup::P384},
         {"P-521", ECGroup::P521},
     };
-    
+
     auto it = group_map.find(s);
     return it != group_map.end() ? it->second : ECGroup::NONE;
 }
 
-
 int main()
 {
-    int ret = 0;
+    printf("\n\n\n\n");
+    PRINT("BEGINNING EC SIGGEN");
+    int retCode = 0;
     auto rsp = parseSigGen("SigGen.txt");
-    int passed = 0, failed = 0;
+    int totalPassed = 0, totalFailed = 0;
     for (const auto &ch : rsp.curve_hash_tests)
     {
         DIGEST_MODE shaMode = haveSHA(ch.hash);
@@ -196,40 +197,18 @@ int main()
         int p = 0, f = 0;
         if (shaMode != DIGEST_MODE::NONE && group != ECGroup::NONE)
         {
-            std::cout << "\033[34mCurve: " << ch.curve << "\n";
-            std::cout << "Hash: " << ch.hash << "\033[0m\n";
+            //std::cout << "\033[34mCurve: " << ch.curve << "\n";
+            //std::cout << "Hash: " << ch.hash << "\033[0m\n";
             for (const auto &t : ch.tests)
             {
-                /*
-                std::cout << "Msg= " << t.msg_hex << "\n";
-                std::cout << "d  = " << t.d << "\n";
-                std::cout << "Qx = (" << t.Qx << ")\n";
-                std::cout << "Qy = (" << t.Qy << ")\n";
-                std::cout << "k  = " << t.k << "\n";
-                std::cout << "Signature (R) = (" << t.R << ")\n";
-                std::cout << "Signature (S) = (" << t.S << ")\n";
-                */
-
-                /*
-                cECKey key(group);
-                cECSignature sig;
-                BN_hex2bn(&key.pub.x, t.Qx.c_str());
-                BN_hex2bn(&key.pub.y, t.Qy.c_str());
-                BN_hex2bn(&key.priv, t.d.c_str());
+                cSSL::ECKeyPair keyPair =
+                    cSSL::ECKeyPair::From(group, t.d, t.Qx, t.Qy);
                 std::vector<uint8_t> msg = hexToBytes(t.msg_hex);
-
-                EC_GenerateSignature(key, sig, msg, shaMode);
-                */
-
-                //char *bn1 = BN_bn2hex(sig.R);
-                //char *bn2 = BN_bn2hex(sig.S);
-
-                ECKeyPair keyPair = ECKeyPair::From(group, t.d, t.Qx, t.Qy);
-                std::vector<uint8_t> msg = hexToBytes(t.msg_hex);
-                ECSignature sig = keyPair.sign(msg, shaMode);
+                cSSL::ECSignature sig = keyPair.sign(msg, shaMode);
                 std::string R = sig.getPairRS().first;
                 std::string S = sig.getPairRS().second;
-                if (strcmp(R.c_str(), t.R.c_str()) && strcmp(S.c_str(), t.S.c_str()))
+                if (strcmp(R.c_str(), t.R.c_str()) &&
+                    strcmp(S.c_str(), t.S.c_str()))
                 {
                     if (keyPair.verify(sig, msg, shaMode))
                     {
@@ -244,31 +223,29 @@ int main()
                 {
                     f++;
                 }
-
-                // printf("\n\n");
-                //  Clean up allocated memory
-                //OPENSSL_free(bn1);
-                //OPENSSL_free(bn2);
             }
+            PRINT("[ \e[34m{} {}\e[0m ]: Passed: {} Failed: {}", ch.curve, ch.hash, p, f);
         }
 
         if (group != ECGroup::NONE)
         {
-            std::cout << "Results: " << p << " passed " << f << " failed"
-                      << std::endl
-                      << std::endl;
-            passed += p;
-            failed += f;
+            totalPassed += p;
+            totalFailed += f;
         }
     }
-    std::cout << "Passed: " << passed << std::endl
-              << "Failed: " << failed << std::endl;
-    if (failed > 0)
-        ret = -1;
-    if (ret == 0)
-        PRINT("\e[0;32mSUCCEEDED\e[0;37m");
-    else
-        PRINT("\e[0;31mFAILED\e[0;37m");
 
-    return ret;
+    if (totalFailed > 0)
+        retCode = 255;
+
+    int totalTests = totalPassed + totalFailed;
+    if (retCode == 0)
+    {
+        PRINT_TEST_PASS("{}/{}", totalPassed, totalTests);
+    }
+    else
+    {
+        PRINT_TEST_FAILED("{}/{} Failed: {}", totalPassed, totalTests,
+                          totalFailed);
+    }
+    return retCode;
 }

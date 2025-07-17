@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <memory>
 #include <cstdint>
-#include "../inc/crypto/aes.hpp"
+#include "../inc/types.hpp"
 #include "../inc/utils/bytes.hpp"
 
 /* using a byte array[4] to act as a word to make shifting data easier */

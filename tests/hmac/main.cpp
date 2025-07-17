@@ -1,5 +1,6 @@
 #include "../../inc/cssl.hpp"
 #include "../common/jsonParser.hpp"
+#include "utils/logger.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -30,7 +31,7 @@ DIGEST_MODE sha_name(const std::string& s) {
 // Returns 1 on success
 int test_hmac(ByteArray msg, ByteArray key, ByteArray KAT, DIGEST_MODE digestMode)
 {
-    ByteArray digestOutput = Hasher::hmac(msg, key, digestMode);
+    ByteArray digestOutput = cSSL::Hasher::hmac(msg, key, digestMode);
     //Truncate
     digestOutput.resize(KAT.size());
     return (std::memcmp(digestOutput.data(), KAT.data(), digestOutput.size()) == 0) ? 1 : 0;
@@ -55,10 +56,12 @@ int runTestCase(const TestCase &test, DIGEST_MODE mode)
 
 int main(int argc, char **argv)
 {
+    printf("\n\n\n\n");
+    PRINT("BEGINNING HMAC");
     int totalTests = 0;
     int retCode = 0;
-    int totalpassed = 0;
-    int totalfailed = 0;
+    int totalPassed = 0;
+    int totalFailed = 0;
     namespace fs = std::filesystem;
     std::string path = "./vectors/"; // Current directory, change as needed
 
@@ -93,9 +96,9 @@ int main(int argc, char **argv)
                         }
                     }
                 }
-                totalpassed += passed;
-                totalfailed += failed;
-                PRINT("[ {} ]: {} passed {} failed.", entry.path().filename().string(), passed, failed);
+                totalPassed += passed;
+                totalFailed += failed;
+                PRINT("[ \e[34m{}\e[0m ]: Passed: {} Failed: {}", entry.path().filename().string(), passed, failed);
             }
         }
     }
@@ -104,15 +107,19 @@ int main(int argc, char **argv)
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    if(totalfailed > 0)
+    if (totalFailed > 0)
         retCode = 255;
 
-    printf("Total tests: %d\nTests Succeeded: %d\nTests failed: %d\n", totalTests,
-          totalpassed, totalfailed);
-
-    if(retCode == 0)
-        printf("\e[0;32mSUCCEEDED\e[0;37m\n");
+    if (retCode == 0)
+    {
+        PRINT_TEST_PASS("{}/{}", totalPassed, totalTests);
+    }
     else
-        printf("\e[0;31mFAILED\e[0;37m\n");
+    {
+        PRINT_TEST_FAILED("{}/{} Failed: {}", totalPassed, totalTests,
+                          totalFailed);
+    }
+
+
     return retCode;
 }

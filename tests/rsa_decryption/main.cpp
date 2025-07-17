@@ -155,27 +155,28 @@ RSADecryptionRsp parseSigGen(const std::string &filename)
 
 int main()
 {
-    int ret = 0;
+    printf("\n\n\n\n");
+    PRINT("BEGINNING RSA DECRYPTION");
+    int retCode = 0;
     auto rsp = parseSigGen("vectors/RSADPComponent800_56B.txt");
-    int passed = 0, failed = 0, ranTest = 0, totalTest = 0;
+    int totalPassed = 0, totalFailed = 0, totalTests = 0, totalSkipped = 0;
     for (const auto &ch : rsp.curve_hash_tests)
     {
         int p = 0, f = 0;
         int kBits = ch.modulo;
         for (const auto &t : ch.tests)
         {
-            totalTest++;
+            totalTests++;
             cSSL::RSA rsa(kBits);
             if(t.n.empty() || t.d.empty())
             {
-                PRINT("Either N or D empty, skipping test.");
+                totalSkipped++;
                 continue;
             }
             rsa.loadPrivateKey(t.n, t.d);
             auto k = rsa.decrypt(hexToBytes(t.c));
             bool expectedRes = t.result == "Pass" ? true : false;
             bool res = !k.empty();
-            ranTest++;
             if(expectedRes)
             {
                 auto expectedK = hexToBytes(t.k);
@@ -193,18 +194,21 @@ int main()
                 res == false ? p++ : f++;
             }
         }
-        passed += p;
-        failed += f;
+        totalPassed += p;
+        totalFailed += f;
     }
-    std::cout << "Passed: " << passed << std::endl
-              << "Failed: " << failed << std::endl;
-    if (failed > 0)
-        ret = -1;
-    if (ret == 0)
-        PRINT("\e[0;32mSUCCEEDED\e[0;37m");
-    else
-        PRINT("\e[0;31mFAILED\e[0;37m");
-    PRINT("Ran: {}/{}", ranTest, totalTest);
 
-    return ret;
+    if (totalFailed > 0)
+        retCode = 255;
+
+    if (retCode == 0)
+    {
+        PRINT_TEST_PASS("{}/{} {}", totalPassed, totalTests, totalSkipped != 0 ? std::format("\e[33m{} skipped\e[0m", totalSkipped) : "");
+    }
+    else
+    {
+        PRINT_TEST_FAILED("{}/{} Failed: {} {}", totalPassed, totalTests,
+                          totalFailed, totalSkipped != 0 ? std::format("{} skipped", totalSkipped) : "");
+    }
+    return retCode;
 }

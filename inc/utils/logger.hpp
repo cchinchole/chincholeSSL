@@ -25,7 +25,7 @@ public:
     }
     
     template <typename... Args>
-    void print_always(const std::format_string<Args...> fmt, Args&&... args) {
+    void printAlways(const std::format_string<Args...> fmt, Args&&... args) {
         std::lock_guard<std::mutex> lock(mutex_);
         std::cout << std::format(fmt, std::forward<Args>(args)...) << '\n';
     }
@@ -44,16 +44,6 @@ struct std::formatter<BIGNUM*> : std::formatter<std::string> {
     return out;
   }
 };
-
-/*
-template <>
-struct std::formatter<cECPoint> : std::formatter<std::string> {
-  auto format(const cECPoint &point, format_context& ctx) const {
-    auto out = formatter<string>::format(std::format("[{}, {}]", point.x, point.y), ctx);
-    return out;
-  }
-};
-*/
 
 template <>
 struct std::formatter<ByteArray> : std::formatter<std::string> {
@@ -109,14 +99,19 @@ struct std::formatter<uint8_t[4][4]> {
     }
 };
 
-//This will always print
-#define PRINT(fmt, ...) Logger->print_always("[{}] " fmt, getCurrentTime(), ##__VA_ARGS__)
+//This will always print, only the named ones such as AES, RSA, EC, etc. will print only if debug mode is enabled.
+#define PRINT(fmt, ...) Logger->printAlways("[{}] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define PRINT_SUCCESS(fmt, ...) Logger->printAlways("[{}] [ \e[32mSUCCEEDED\e[0m ] " fmt, getCurrentTime(), ##__VA_ARGS__);
+#define PRINT_TEST_PASS(fmt, ...) Logger->printAlways("[{}] [ \e[32mTEST SUCCEEDED\e[0m ] " fmt, getCurrentTime(), ##__VA_ARGS__);
+#define PRINT_TEST_FAILED(fmt, ...) Logger->printAlways("[{}] [ \e[31mTEST FAILED\e[0m ] " fmt, getCurrentTime(), ##__VA_ARGS__);
 
 //Following below only print if the DEBUG flag is passed
-#define LOG_INFO(fmt, ...) Logger->print("[{}] [Info] " fmt, getCurrentTime(), ##__VA_ARGS__)
-#define LOG_AES(fmt, ...) Logger->print("[{}] [AES] " fmt, getCurrentTime(), ##__VA_ARGS__)
-#define LOG_RSA(fmt, ...) Logger->print("[{}] [RSA] " fmt, getCurrentTime(), ##__VA_ARGS__)
-#define LOG_WARNING(fmt, ...) Logger->print("[{}] [Warning] " fmt, getCurrentTime(), ##__VA_ARGS__)
-#define LOG_ERROR(fmt, ...) Logger->print("[{}] [Error] " fmt, getCurrentTime(), ## __VA_ARGS__)
+#define LOG_INFO(fmt, ...) Logger->print("[{}] [ INFO ] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define LOG_AES(fmt, ...) Logger->print("[{}] [ AES ] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define LOG_RSA(fmt, ...) Logger->print("[{}] [ RSA ] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define LOG_EC(fmt, ...) Logger->print("[{}] [ EC ] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define LOG_HASH(fmt, ...) Logger->print("[{}] [ HASH ] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define LOG_WARNING(fmt, ...) Logger->print("[{}] [ \e[33mWARNING\e[0m ] " fmt, getCurrentTime(), ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) Logger->print("[{}] [ \e[31mERROR\e[0m ] " fmt, getCurrentTime(), ## __VA_ARGS__)
 
 #endif

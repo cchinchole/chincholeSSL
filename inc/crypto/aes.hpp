@@ -3,22 +3,6 @@
 #include "../utils/bytes.hpp"
 #include "../types.hpp"
 
-enum class AES_MODE
-{
-    ECB,
-    CBC,
-    CFB,
-    OFB,
-    CTR,
-    NONE
-};
-
-enum class AES_KEYSIZE
-{
-    m128 = 0,
-    m192 = 1,
-    m256 = 2
-};
 
 namespace cSSL
 {

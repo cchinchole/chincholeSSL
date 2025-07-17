@@ -156,42 +156,35 @@ void runTest(std::string path, std::string fileName, std::string sMode,
         return;
     }
     auto rsp = parseSigGen(path + fileName);
-    int pe = 0, fe = 0;
-    int pd = 0, fd = 0;
+    int passedEncryption = 0, failedEncryption = 0;
+    int passedDecryption = 0, failedDecryption = 0;
     for (const auto &ch : rsp.curve_hash_tests)
     {
         for (const auto &t : ch.tests)
         {
             if (ch.state == "ENCRYPT")
             {
-                //AES_CTX ctx(mode, kSize);
+                cSSL::AES aes(mode, kSize);
 
-                // ctx->mode = mode
-                //AES_KeyExpansion(ctx, hexToBytes(t.KEY));
-
-                //if (ctx.mode != AES_MODE::ECB)
-                //    AES_SetIV(ctx, hexToBytes(t.IV));
-
-                AES aes(mode, kSize);
-
-                if(mode != AES_MODE::ECB)
+                if (mode != AES_MODE::ECB)
                     aes.addKey(t.KEY, t.IV);
                 else
                     aes.addKey(t.KEY);
 
                 std::vector<uint8_t> buffer = hexToBytes(t.PLAINTEXT);
-                std::vector<uint8_t> output = aes.encrypt(buffer);//AES_Encrypt(ctx, buffer);
+                std::vector<uint8_t> output =
+                    aes.encrypt(buffer); // AES_Encrypt(ctx, buffer);
                 std::string hexOutput = bytesToHex(output);
                 if (std::memcmp(output.data(), hexToBytes(t.CIPHERTEXT).data(),
                                 output.size()) == 0)
-                    pe++;
+                    passedEncryption++;
                 else
-                    fe++;
+                    failedEncryption++;
             }
             else if (ch.state == "DECRYPT")
             {
-                AES aes(mode, kSize);
-                if(mode != AES_MODE::ECB)
+                cSSL::AES aes(mode, kSize);
+                if (mode != AES_MODE::ECB)
                     aes.addKey(t.KEY, t.IV);
                 else
                     aes.addKey(t.KEY);
@@ -201,27 +194,27 @@ void runTest(std::string path, std::string fileName, std::string sMode,
 
                 if (std::memcmp(output.data(), hexToBytes(t.PLAINTEXT).data(),
                                 output.size()) == 0)
-                    pd++;
+                    passedDecryption++;
                 else
-                    fd++;
+                    failedDecryption++;
             }
         }
     }
-    std::cout << "Result [ " << fileName << " ]: " << std::endl
-              << "Enc: " << pe << " passed " << fe << " failed." << std::endl
-              << "Dec: " << pd << " passed " << fd << " failed." << std::endl
-              << std::endl;
-    *passed += (pe + pd);
-    *failed += (fe + fd);
+    PRINT("[ \e[34m{} Encrypt\e[0m ]: Passed: {} Failed: {}", fileName, passedEncryption, failedEncryption);
+    PRINT("[ \e[34m{} Decrypt\e[0m ]: Passed: {} Failed: {}", fileName, passedDecryption, failedDecryption);
+    *passed += (passedEncryption + passedDecryption);
+    *failed += (failedEncryption + failedDecryption);
 }
 
 int main()
 {
 
-    int ret = 0;
-    int tests_performed = 0;
-    int passed = 0;
-    int failed = 0;
+    printf("\n\n\n\n");
+    PRINT("BEGINNING AES");
+    int retCode = 0;
+    int totalTests = 0;
+    int totalPassed = 0;
+    int totalFailed = 0;
     int test_files = 0;
     namespace fs = std::filesystem;
     std::string path = "./vectors/";
@@ -250,11 +243,8 @@ int main()
                     key_size = match[1].str();
                 }
 
-                std::cout << "AES Mode: " << std::string(cipher + key_size)
-                          << " " << fileName << std::endl;
-
-                runTest(path, fileName, cipher, key_size, &passed, &failed);
-                tests_performed++;
+                runTest(path, fileName, cipher, key_size, &totalPassed,
+                        &totalFailed);
             }
         }
     }
@@ -263,16 +253,21 @@ int main()
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    std::cout << "Results: " << passed << " passed " << failed << " failed."
-              << std::endl;
+    if (totalFailed > 0)
+        retCode = 255;
 
-    if (failed > 0)
-        ret = -1;
-    if (ret == 0)
-        PRINT("\e[0;32mSUCCEEDED\e[0;37m");
+    totalTests = totalPassed + totalFailed;
+
+    if (retCode == 0)
+    {
+        PRINT_TEST_PASS("{}/{}", totalPassed, totalTests);
+    }
     else
-        PRINT("\e[0;31mFAILED\e[0;37m");
+    {
+        PRINT_TEST_FAILED("{}/{} Failed: {}", totalPassed, totalTests,
+                          totalFailed);
+    }
 
     OPENSSL_cleanup();
-    return ret;
+    return retCode;
 }
