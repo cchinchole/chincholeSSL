@@ -1,7 +1,5 @@
-#include "../../inc/math/primes.hpp"
-#include "../../inc/utils/bytes.hpp"
-#include "../../inc/utils/json.hpp"
-#include "../../inc/utils/logger.hpp"
+#include "../../inc/cssl.hpp"
+#include "../common/jsonParser.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -10,80 +8,7 @@
 #include <string>
 #include <vector>
 
-using json = nlohmann::json;
-
-struct TestCase
-{
-    int tcID;
-    std::string comment;
-    std::string value;
-    std::string result;
-    std::vector<std::string> flags;
-};
-
-struct TestGroup
-{
-    std::string type;
-    std::vector<TestCase> testCases;
-};
-
-struct TestVector
-{
-    std::string algorithm;
-    int numberOfTests;
-    std::vector<std::string> header;
-    std::map<std::string, std::string> notes;
-    std::string schema;
-    std::vector<TestGroup> testGroups;
-};
-
-// Parse JSON file into TestVector structure
-TestVector parseJson(const std::string &filename)
-{
-    std::ifstream file(filename);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Unable to open JSON file");
-    }
-
-    json j;
-    file >> j;
-
-    TestVector tv;
-    tv.algorithm = j["algorithm"];
-    tv.numberOfTests = j["numberOfTests"];
-    tv.header = j["header"].get<std::vector<std::string>>();
-    tv.notes = j["notes"].get<std::map<std::string, std::string>>();
-    tv.schema = j["schema"];
-
-    for (const auto &group : j["testGroups"])
-    {
-        TestGroup tg;
-        tg.type = group["type"];
-
-        for (const auto &test : group["tests"])
-        {
-            TestCase tc;
-            tc.tcID = test["tcId"];
-            tc.comment = test["comment"];
-            tc.value = test["value"];
-            tc.result = test["result"];
-            tc.flags = test["flags"].get<std::vector<std::string>>();
-            tg.testCases.push_back(tc);
-        }
-        tv.testGroups.push_back(tg);
-    }
-
-    return tv;
-}
-
-// Convert hex string to BIGNUM
-BIGNUM *hexToBignum(const std::string &hex)
-{
-    BIGNUM *bn = nullptr;
-    BN_hex2bn(&bn, hex.c_str());
-    return bn;
-}
+using namespace cSSL::Parser;
 
 // Returns 1 on success
 int runTestCase(const TestCase &test)
@@ -91,17 +16,19 @@ int runTestCase(const TestCase &test)
 
     bool passed = false;
     bool expectedPass = false;
+    std::vector<std::string> flags = test.params.at("flags").get<std::vector<std::string>>();
+    std::string value = test.params.at("value").get<std::string>();
+    std::string result = test.params.at("result").get<std::string>();
 
-    if (std::find(test.flags.begin(), test.flags.end(), "NegativeOfPrime") !=
-        test.flags.end())
+    if (std::find(flags.begin(), flags.end(), "NegativeOfPrime") != flags.end())
     {
         return 2;
     }
 
-    BIGNUM *check = hexToBignum(test.value);
+    BIGNUM *check = hexToBignum(value);
     passed = checkIfPrime(check);
     BN_free(check);
-    if (test.result == "valid" || test.result == "acceptable")
+    if (result == "valid" || result == "acceptable")
         expectedPass = true;
 
     if (passed != expectedPass)

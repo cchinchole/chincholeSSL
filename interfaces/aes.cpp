@@ -3,6 +3,8 @@
 #include "../inc/crypto/aes.hpp"
 #include "../inc/utils/logger.hpp"
 
+namespace cSSL
+{
 class AES::Impl
 {
     public:
@@ -77,3 +79,4 @@ AES::~AES()
     delete this->pImpl;
 }
 
+}

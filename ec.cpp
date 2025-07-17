@@ -15,6 +15,8 @@
 
 /* SP 800-186: Domain parameters source */
 /* Easily access: https://neuromancer.sk/std/nist/ */
+
+using namespace cSSL;
 class CurveRegistry
 {
   private:

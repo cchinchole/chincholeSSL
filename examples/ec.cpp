@@ -1,21 +1,17 @@
-#include "../inc/crypto/ec.hpp"
-#include "../inc/utils/logger.hpp"
-#include "utils/bytes.hpp"
+#include "../inc/cssl.hpp"
 #include <openssl/bn.h>
-#include <print>
-#include <stdio.h>
 
 int main()
 {
-    ECKeyPair keypair = ECKeyPair::Generate(ECGroup::P256);
-    ECKeyPair keypair2 = ECKeyPair::Generate(ECGroup::P256);
+    cSSL::ECKeyPair keypair = cSSL::ECKeyPair::Generate(ECGroup::P256);
+    cSSL::ECKeyPair keypair2 = cSSL::ECKeyPair::Generate(ECGroup::P256);
 
     ByteArray message = {'h', 'e', 'l', 'l', 'o'};
     ByteArray message2 = {'h', 'e', 'l', 'l', 'a'};
-    ECSignature sig = keypair.sign(message, DIGEST_MODE::SHA_256);
-    ECSignature sig2 = keypair.sign(message2, DIGEST_MODE::SHA_256);
-    ECSignature sig3 = keypair2.sign(message, DIGEST_MODE::SHA_256);
-    ECSignature sig4 = keypair.sign(message, DIGEST_MODE::SHA_512);
+    cSSL::ECSignature sig = keypair.sign(message, DIGEST_MODE::SHA_256);
+    cSSL::ECSignature sig2 = keypair.sign(message2, DIGEST_MODE::SHA_256);
+    cSSL::ECSignature sig3 = keypair2.sign(message, DIGEST_MODE::SHA_256);
+    cSSL::ECSignature sig4 = keypair.sign(message, DIGEST_MODE::SHA_512);
     bool valid = keypair.verify(sig, message, DIGEST_MODE::SHA_256);
 
     PRINT("Status of signature 1: {} expected true", valid); //Valid signature

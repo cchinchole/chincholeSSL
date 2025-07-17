@@ -1,5 +1,4 @@
-#ifndef HASH_HPP
-#define HASH_HPP
+#pragma once
 #include "../types.hpp"
 #include "../utils/bytes.hpp"
 #include <memory>
@@ -7,11 +6,15 @@
 #include <string>
 #include <vector>
 
+namespace cSSL
+{
+
 class Hasher
 {
 private:
     class Impl;
     Impl *impl_;
+
 public:
     explicit Hasher(DIGEST_MODE mode = DIGEST_MODE::SHA_1);
 
@@ -39,4 +42,4 @@ public:
 
     static ByteArray hmac(ByteSpan data, ByteSpan key, DIGEST_MODE mode);
 };
-#endif
+} // namespace cSSL

@@ -20,6 +20,8 @@ enum class AES_KEYSIZE
     m256 = 2
 };
 
+namespace cSSL
+{
 class AES {
     private:
         AES_MODE mode;
@@ -42,3 +44,4 @@ class AES {
         ByteArray encrypt(ByteSpan message);
         ByteArray decrypt(ByteSpan cipher);
 };
+}

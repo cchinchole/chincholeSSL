@@ -3,6 +3,8 @@
 #include <memory>
 #include <openssl/bn.h>
 
+namespace cSSL
+{
 struct ECSignature::Impl {
     cECSignature sig;
 };
@@ -63,4 +65,5 @@ bool ECKeyPair::verify(const ECSignature &sig, std::span<const uint8_t> message,
                 DIGEST_MODE shaMode) const
 {
     return EC_VerifySignature(this->pImpl->key, sig.pImpl->sig, message, shaMode) == 0;
+}
 }

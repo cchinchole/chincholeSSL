@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <vector>
 
+using namespace cSSL;
+
 RSA_CRT_Params::RSA_CRT_Params()
 {
     dp = BN_secure_new(), dq = BN_secure_new(), qInv = BN_secure_new(),

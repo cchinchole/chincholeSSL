@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <math.h>
 
+using namespace cSSL;
+
 /* FIPS 198-1 */
 void hmac_sha(DIGEST_MODE digestMode, uint8_t *hmac_out,
               ByteSpan msg, ByteSpan key)

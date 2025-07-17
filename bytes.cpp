@@ -51,12 +51,12 @@ std::vector<uint8_t> hexToBytes(const std::string &hex, size_t byteLength)
     return bytes;
 }
 
-std::vector<uint8_t> bytePtrToVector(uint8_t *from, size_t len)
+std::vector<uint8_t> bytePtrToByteArray(uint8_t *from, size_t len)
 {
     return std::vector<uint8_t>(from, from + len);
 }
 
-std::vector<uint8_t> charToVector(const char *buffer, size_t length)
+std::vector<uint8_t> charToByteArray(const char *buffer, size_t length)
 {
     return std::vector<uint8_t>(buffer, buffer + length);
 }
@@ -67,7 +67,12 @@ std::string asciiToHex(const std::string &ascii, bool uppercase)
                       uppercase);
 }
 
-std::vector<uint8_t> convertBignumToVector(BIGNUM *cipherNumber,
+ByteArray asciiToByteArray(const std::string &ascii)
+{
+    return hexToBytes(asciiToHex(ascii));
+}
+
+std::vector<uint8_t> convertBignumToByteArray(BIGNUM *cipherNumber,
                                            size_t maxBytes)
 {
 
@@ -96,6 +101,13 @@ ByteArray stripPadding(const ByteArray &input)
     return ByteArray(input.begin() + index, input.end());
 }
 
+BIGNUM *hexToBignum(const std::string &hex)
+{
+    BIGNUM *bn = nullptr;
+    BN_hex2bn(&bn, hex.c_str());
+    return bn;
+}
+
 char *printWord(uint8_t *input, size_t length, size_t blockSize)
 {
     int blocks = length / blockSize;
@@ -104,7 +116,7 @@ char *printWord(uint8_t *input, size_t length, size_t blockSize)
     for (int i = 0; i < blocks; i++)
     {
         ptr += sprintf(ptr, "%s",
-                       bytesToHex(bytePtrToVector(input, blockSize)).c_str());
+                       bytesToHex(bytePtrToByteArray(input, blockSize)).c_str());
         ptr += sprintf(ptr, " ");
     }
     return output;

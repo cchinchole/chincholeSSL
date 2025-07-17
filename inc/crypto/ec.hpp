@@ -14,6 +14,8 @@ enum class ECGroup
     NONE
 };
 
+namespace cSSL
+{
 class ECSignature
 {
     friend class ECKeyPair;
@@ -58,3 +60,4 @@ private:
     struct Impl;
     std::unique_ptr<Impl> pImpl;
 };
+}

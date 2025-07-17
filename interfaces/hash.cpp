@@ -2,6 +2,8 @@
 #include "../internal/hmac.hpp"
 #include "../internal/sha.hpp"
 
+namespace cSSL
+{
 class Hasher::Impl
 {
 public:
@@ -150,4 +152,5 @@ ByteArray Hasher::hmac(ByteSpan data, ByteSpan key, DIGEST_MODE mode)
 size_t Hasher::returnLength()
 {
     return getSHAReturnLengthByMode(impl_->ctx_->mode);
+}
 }

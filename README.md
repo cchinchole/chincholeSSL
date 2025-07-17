@@ -18,7 +18,8 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
 4. make install - Installs the libraries to /usr/local/lib and /usr/local/include
 
 ## Example Usage ##
-*For more details, review the examples folder*
+*For more details, review the examples folder*\
+Note: you can use the global include header "cssl/cssl.hpp or include the modules needed directly.\
 ### AES ###
 ```cpp
     #include "cssl/crypto/aes.hpp"
@@ -27,7 +28,7 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
     std::string aes_kat_key = "2b7e151628aed2a6abf7158809cf4f3c";
     std::string aes_iv_key = "000102030405060708090a0b0c0d0e0f";
     std::string cbc_kat = "3243f6a8885a308d313198a2e0370734";
-    AES ctx(AES_MODE::CBC, AES_KEYSIZE::m128);
+    cSSL::AES aes(AES_MODE::CBC, AES_KEYSIZE::m128);
 
     aes.addKey(aes_kat_key, aes_iv_key);
 
@@ -68,28 +69,22 @@ To see more details on which FIPS documents were used, refer to docs/Crypto.pdf 
 ```cpp
     #include "cssl/crypto/ec.hpp"
     #include "cssl/utils/bytes.hpp"
-    ECKeyPair keypair = ECKeyPair::Generate(ECGroup::P256);
+    cSSL::ECKeyPair keypair = cSSL::ECKeyPair::Generate(ECGroup::P256);
     //ECKeyPair keypair = ECKeyPair::From(group, "d", "px", "py");
     ByteArray msg = hexToBytes("aabbccddeeffaabbcceeddeedd11001100");
-    ECSignature sig = keypair.sign(msg, DIGEST_MODE::SHA_256);
+    cSSL::ECSignature sig = keypair.sign(msg, DIGEST_MODE::SHA_256);
     bool verification = keypair.verify(sig, msg, DIGEST_MODE::SHA_256);
 ```
 ### Building an application ###
 ```
-	g++ -std=c++23 -L/usr/local/lib -lcssl -lcrypto -lssl -I/usr/local/include main.cpp -o main 
+    g++ -std=c++23 -I/usr/local/include main.cpp -o main -L/usr/local/lib -lcssl -lssl -lcrypto
     #or statically
-	g++ -std=c++23 -L/usr/local/lib -l:libcssl.a -lcrypto -lssl -I/usr/local/include main.cpp -o main
-    LD_LIBRARY_PATH=/usr/local/lib ./main
+    g++ -std=c++23 -I/usr/local/include main.cpp -o main -L/usr/local/lib -l:libcssl.a -lssl -lcrypto
 ```
 
 ## Tests ##
 1. To run a test, for example sha hashing, enter the directory and run "make run". (Ensure you have already built the library with make all in the root directory)
 2. The tests will access the files in the vectors folder and automatically run what the library is capable of.
-
-## Future Plans ##
-1. Update SHA to using ByteArray for definitions.
-2. Update all interfaces to use a more C++ style.
-3. Input PEM files
 
 ## Libraries Used ##
 - [OpenSSL](https://github.com/openssl/openssl) - Cryptographic library for secure communication.

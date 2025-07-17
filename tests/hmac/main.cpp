@@ -1,8 +1,5 @@
-#include "../../inc/crypto/rsa.hpp"
-#include "../../inc/hash/hash.hpp"
-#include "../../inc/utils/bytes.hpp"
-#include "../../inc/utils/json.hpp"
-#include "../../inc/utils/logger.hpp"
+#include "../../inc/cssl.hpp"
+#include "../common/jsonParser.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -11,86 +8,7 @@
 #include <string>
 #include <vector>
 
-using json = nlohmann::json;
-
-struct TestCase
-{
-    int tcID;
-    std::string comment;
-    ByteArray key;
-    ByteArray msg;
-    ByteArray tag;
-    std::string result;
-    std::vector<std::string> flags;
-};
-
-struct TestGroup
-{
-    int keySize;
-    int tagSize;
-    std::string type;
-    std::vector<TestCase> testCases;
-};
-
-struct TestVector
-{
-    std::string algorithm;
-    //std::string generatorVersion;
-    int numberOfTests;
-    //std::vector<std::string> header;
-    //std::map<std::string, std::string> notes;
-    //std::string schema;
-    std::vector<TestGroup> testGroups;
-};
-
-// Parse JSON file into TestVector structure
-TestVector parseJson(const std::string &filename)
-{
-    std::ifstream file(filename);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Unable to open JSON file");
-    }
-
-    json j;
-    file >> j;
-
-    TestVector tv;
-    tv.algorithm = j["algorithm"];
-    tv.numberOfTests = j["numberOfTests"];
-
-    for (const auto &group : j["testGroups"])
-    {
-        TestGroup tg;
-        tg.keySize = group["keySize"];
-        tg.tagSize = group["tagSize"];
-        tg.type = group["type"];
-
-        for (const auto &test : group["tests"])
-        {
-            TestCase tc;
-            tc.tcID = test["tcId"];
-            tc.comment = test["comment"];
-            tc.key = hexToBytes(test["key"]);
-            tc.msg = hexToBytes(test["msg"]);
-            tc.tag = hexToBytes(test["tag"]);
-            tc.result = test["result"];
-            tc.flags = test["flags"].get<std::vector<std::string>>();
-            tg.testCases.push_back(tc);
-        }
-        tv.testGroups.push_back(tg);
-    }
-
-    return tv;
-}
-
-// Convert hex string to BIGNUM
-BIGNUM *hexToBignum(const std::string &hex)
-{
-    BIGNUM *bn = nullptr;
-    BN_hex2bn(&bn, hex.c_str());
-    return bn;
-}
+using namespace cSSL::Parser;
 
 DIGEST_MODE sha_name(const std::string& s) {
     static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
@@ -121,11 +39,15 @@ int test_hmac(ByteArray msg, ByteArray key, ByteArray KAT, DIGEST_MODE digestMod
 // Returns 1 on success
 int runTestCase(const TestCase &test, DIGEST_MODE mode)
 {
+    ByteArray msg = hexToBytes(test.params.at("msg").get<std::string>());
+    ByteArray key = hexToBytes(test.params.at("key").get<std::string>());
+    ByteArray tag = hexToBytes(test.params.at("tag").get<std::string>());
+    std::string result = test.params.at("result").get<std::string>();
 
     bool passed = false;
     bool expectedPass = false;
-    passed = test_hmac(test.msg, test.key, test.tag, mode);
-    if (test.result == "valid" || test.result == "acceptable")
+    passed = test_hmac(msg, key, tag, mode);
+    if (result == "valid" || result == "acceptable")
         expectedPass = true;
 
     return (passed == expectedPass);
@@ -152,8 +74,7 @@ int main(int argc, char **argv)
         {
             if (entry.path().extension() == ".json")
             {
-                TestVector tv =
-                    parseJson(path + entry.path().filename().string());
+                TestVector tv = parseJson(path + entry.path().filename().string());
                 totalTests += tv.numberOfTests;
                 int passed = 0;
                 int failed = 0;

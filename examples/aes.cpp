@@ -1,6 +1,4 @@
-#include "../inc/crypto/aes.hpp"
-#include "../inc/utils/bytes.hpp"
-#include "../inc/utils/logger.hpp"
+#include "../inc/cssl.hpp"
 #include <memory.h>
 #include <openssl/crypto.h>
 
@@ -11,7 +9,7 @@ int main()
     std::string cbc_kat = "3243f6a8885a308d313198a2e0370734";
     std::string ctr_iv = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
 
-    AES aes(AES_MODE::CBC, AES_KEYSIZE::m128);
+    cSSL::AES aes(AES_MODE::CBC, AES_KEYSIZE::m128);
     
     //In ECB Mode, the IV is not provided. i.e. addKey(key);
     //Can add via a span<uint8_t> or std::string
@@ -26,7 +24,7 @@ int main()
     PRINT("Decrypted Text: {}\n", bytesToHex(decipher));
 
     //Reinitializing against CTR now
-    aes = AES(AES_MODE::CTR, AES_KEYSIZE::m128);
+    aes = cSSL::AES(AES_MODE::CTR, AES_KEYSIZE::m128);
     aes.addKey(aes_kat_key, ctr_iv);
     
     //Can also use encrypt, doesn't matter for CTR, but for simplicity will leave it like this.
