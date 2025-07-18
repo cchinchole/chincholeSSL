@@ -29,97 +29,37 @@ DIGEST_MODE sha_name(const std::string& s) {
 }
 
 // Returns 1 on success
-int test_hmac(ByteArray msg, ByteArray key, ByteArray KAT, DIGEST_MODE digestMode)
+uint8_t runTestCase(const TestVector &vector, const TestGroup &group, const TestCase &test)
 {
-    ByteArray digestOutput = cSSL::Hasher::hmac(msg, key, digestMode);
-    //Truncate
-    digestOutput.resize(KAT.size());
-    return (std::memcmp(digestOutput.data(), KAT.data(), digestOutput.size()) == 0) ? 1 : 0;
-}
-
-// Returns 1 on success
-int runTestCase(const TestCase &test, DIGEST_MODE mode)
-{
+    uint8_t retCode = 0;
+    DIGEST_MODE mode = sha_name(vector.algorithm);
     ByteArray msg = hexToBytes(test.params.at("msg").get<std::string>());
     ByteArray key = hexToBytes(test.params.at("key").get<std::string>());
     ByteArray tag = hexToBytes(test.params.at("tag").get<std::string>());
     std::string result = test.params.at("result").get<std::string>();
 
-    bool passed = false;
     bool expectedPass = false;
-    passed = test_hmac(msg, key, tag, mode);
+
+    ByteArray digestOutput = cSSL::Hasher::hmac(msg, key, mode);
+    //Truncate
+    digestOutput.resize(tag.size());
+
+    bool passed = (std::memcmp(digestOutput.data(), tag.data(), digestOutput.size()) == 0);
     if (result == "valid" || result == "acceptable")
         expectedPass = true;
 
-    return (passed == expectedPass);
+    if(passed == expectedPass)
+        retCode =  CSSL_TEST_PASSED;
+    else
+        retCode = CSSL_TEST_FAILED;
+    return  retCode;
 }
 
 int main(int argc, char **argv)
 {
     printf("\n\n\n\n");
     PRINT("BEGINNING HMAC");
-    int totalTests = 0;
     int retCode = 0;
-    int totalPassed = 0;
-    int totalFailed = 0;
-    namespace fs = std::filesystem;
     std::string path = "./vectors/"; // Current directory, change as needed
-
-    try
-    {
-        if (!fs::exists(path) || !fs::is_directory(path))
-        {
-            std::cerr << "Wrong directory";
-            return 1;
-        }
-
-        for (const auto &entry : fs::directory_iterator(path))
-        {
-            if (entry.path().extension() == ".json")
-            {
-                TestVector tv = parseJson(path + entry.path().filename().string());
-                totalTests += tv.numberOfTests;
-                int passed = 0;
-                int failed = 0;
-                for (const auto &group : tv.testGroups)
-                {
-                    for(const auto &test : group.testCases)
-                    {
-                        if (!runTestCase(test, sha_name(tv.algorithm)))
-                        {
-                            retCode = -1;
-                            failed++;
-                        }
-                        else
-                        {
-                            passed++;
-                        }
-                    }
-                }
-                totalPassed += passed;
-                totalFailed += failed;
-                PRINT("[ \e[34m{}\e[0m ]: Passed: {} Failed: {}", entry.path().filename().string(), passed, failed);
-            }
-        }
-    }
-    catch (const fs::filesystem_error &e)
-    {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-
-    if (totalFailed > 0)
-        retCode = 255;
-
-    if (retCode == 0)
-    {
-        PRINT_TEST_PASS("{}/{}", totalPassed, totalTests);
-    }
-    else
-    {
-        PRINT_TEST_FAILED("{}/{} Failed: {}", totalPassed, totalTests,
-                          totalFailed);
-    }
-
-
-    return retCode;
+    return startTests(path, ".json", runTestCase);
 }

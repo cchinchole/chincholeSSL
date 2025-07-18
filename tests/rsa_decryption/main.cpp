@@ -1,5 +1,5 @@
-#include "../common/jsonParser.hpp"
 #include "../../inc/cssl.hpp"
+#include "../common/jsonParser.hpp"
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -60,7 +60,8 @@ RSADecryptionRsp parseSigGen(const std::string &filename)
             auto equals = line.find('=');
             if (endbracket != std::string::npos && equals != std::string::npos)
             {
-                std::string modulo = trim(line.substr(equals + 1, endbracket - equals - 1));
+                std::string modulo =
+                    trim(line.substr(equals + 1, endbracket - equals - 1));
 
                 // Save the current test if it has data (e.g., n is non-empty)
                 if (!current_test.n.empty())
@@ -168,7 +169,7 @@ int main()
         {
             totalTests++;
             cSSL::RSA rsa(kBits);
-            if(t.n.empty() || t.d.empty())
+            if (t.n.empty() || t.d.empty())
             {
                 totalSkipped++;
                 continue;
@@ -177,10 +178,10 @@ int main()
             auto k = rsa.decrypt(hexToBytes(t.c));
             bool expectedRes = t.result == "Pass" ? true : false;
             bool res = !k.empty();
-            if(expectedRes)
+            if (expectedRes)
             {
                 auto expectedK = hexToBytes(t.k);
-                if(memcmp(expectedK.data(), k.data(), expectedK.size()) == 0)
+                if (memcmp(expectedK.data(), k.data(), expectedK.size()) == 0)
                 {
                     p++;
                 }
@@ -196,6 +197,8 @@ int main()
         }
         totalPassed += p;
         totalFailed += f;
+        PRINT("[ \e[34mKeySize: {}\e[0m ]: Passed: {} Failed: {}", ch.modulo, p,
+              f);
     }
 
     if (totalFailed > 0)
@@ -203,12 +206,16 @@ int main()
 
     if (retCode == 0)
     {
-        PRINT_TEST_PASS("{}/{} {}", totalPassed, totalTests, totalSkipped != 0 ? std::format("\e[33m{} skipped\e[0m", totalSkipped) : "");
+        PRINT_TEST_PASS("{}/{} {}", totalPassed, totalTests,
+                        totalSkipped != 0
+                            ? std::format("\e[33m{} skipped\e[0m", totalSkipped)
+                            : "");
     }
     else
     {
-        PRINT_TEST_FAILED("{}/{} Failed: {} {}", totalPassed, totalTests,
-                          totalFailed, totalSkipped != 0 ? std::format("{} skipped", totalSkipped) : "");
+        PRINT_TEST_FAILED(
+            "{}/{} Failed: {} {}", totalPassed, totalTests, totalFailed,
+            totalSkipped != 0 ? std::format("{} skipped", totalSkipped) : "");
     }
     return retCode;
 }

@@ -1,6 +1,7 @@
 #include "../../inc/hash/hash.hpp"
 #include "../../inc/utils/bytes.hpp"
 #include "../../inc/utils/logger.hpp"
+#include "../common/jsonParser.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -133,7 +134,7 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
     }
     *passed += p;
     *failed += f;
-    PRINT("[ \e[34m{}\e[0m ]: Passed: {} Failed: {}", fileName,  p, f);
+    PRINT("[ \e[34m{:<43}\e[0m ]: Passed: {:>3} Failed: {:>3}", fileName, p, f);
 }
 
 DIGEST_MODE haveSHA(const std::string &s)
@@ -182,10 +183,10 @@ int main()
     }
 
     if (totalFailed > 0)
-        retCode = 255;
+        retCode = CSSL_TEST_FAILED;
 
     totalTests = totalPassed + totalFailed;
-    if (retCode == 0)
+    if (retCode == CSSL_TEST_PASSED)
     {
         PRINT_TEST_PASS("{}/{}", totalPassed, totalTests);
     }

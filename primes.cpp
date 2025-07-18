@@ -1,4 +1,4 @@
-#include "inc/math/primes.hpp"
+#include "internal/primes.hpp"
 #include "inc/utils/logger.hpp"
 #include <math.h>
 #include <openssl/bio.h>
@@ -209,9 +209,8 @@ end:
 
 /* Main exposed function */
 //bool checkIfPrime(BIGNUM *w) { return (check_prime(w, true) == 1); }
-bool checkIfPrime(BIGNUM *w) {
+bool checkPrime(BIGNUM *w) {
     return (check_prime(w, true) == 1);
-   //return (miller_rabin_is_prime(w, 0));
 }
 /* These functions do not support auxiliary primes. */
 int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
