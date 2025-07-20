@@ -201,10 +201,10 @@ int main()
             //std::cout << "Hash: " << ch.hash << "\033[0m\n";
             for (const auto &t : ch.tests)
             {
-                cSSL::ECKeyPair keyPair =
-                    cSSL::ECKeyPair::From(group, t.d, t.Qx, t.Qy);
+                CSSL::ECKeyPair keyPair =
+                    CSSL::ECKeyPair::From(group, t.d, t.Qx, t.Qy);
                 std::vector<uint8_t> msg = hexToBytes(t.msg_hex);
-                cSSL::ECSignature sig = keyPair.sign(msg, shaMode);
+                CSSL::ECSignature sig = keyPair.sign(msg, shaMode);
                 std::string R = sig.getPairRS().first;
                 std::string S = sig.getPairRS().second;
                 if (strcmp(R.c_str(), t.R.c_str()) &&

@@ -3,12 +3,13 @@
 #include <memory>
 #include <openssl/bn.h>
 
-namespace cSSL
+namespace CSSL
 {
 struct ECSignature::Impl {
     cECSignature sig;
 };
 
+//Signature
 ECSignature::~ECSignature() = default;
 ECSignature::ECSignature() : pImpl(std::make_unique<Impl>()) {}
 ECSignature ECSignature::From(const std::string& hexR, const std::string& hexS)
@@ -29,9 +30,10 @@ std::pair<std::string, std::string> ECSignature::getPairRS()
     return std::pair(R, S);
 }
 
+//ECKeyPair
 struct ECKeyPair::Impl {
     cECKey key;
-    Impl(ECGroup group) : key(group) {} //Generate the group
+    Impl(ECGroup group) : key(group) {}
 };
 
 ECKeyPair::~ECKeyPair() = default;

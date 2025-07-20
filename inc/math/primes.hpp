@@ -1,8 +1,8 @@
 #pragma once
 #include <openssl/bn.h>
 
-namespace cSSL
+namespace CSSL
 {
 bool checkIfPrime(BIGNUM *w);
-int genPrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits);
+void genPrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits);
 }

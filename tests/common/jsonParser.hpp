@@ -12,7 +12,7 @@ using ParamMap = std::map<std::string, nlohmann::json>;
 #define CSSL_TEST_SKIPPED 1
 #define CSSL_TEST_FAILED 255
 
-namespace cSSL
+namespace CSSL
 {
 namespace Parser
 {

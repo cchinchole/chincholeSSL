@@ -43,9 +43,9 @@ struct dataSqrt
 #define OSSL_NELEM(x) (sizeof(x) / sizeof((x)[0]))
 
 bool checkPrime(BIGNUM *w);
-int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits = 2048, int testingMR = 0);
-bool miller_rabin_is_prime(BIGNUM *n, int iterations, BN_CTX *ctx = BN_CTX_secure_new());
-int FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP = false, ACVP_TEST *testParams = NULL);
+//int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits = 2048, int testingMR = 0);
+//bool miller_rabin_is_prime(BIGNUM *n, int iterations, BN_CTX *ctx = BN_CTX_secure_new());
+void FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP = false, ACVP_TEST *testParams = NULL);
 
 static const prime_t primes[2048] = {
     2,

@@ -87,7 +87,7 @@ SHARsp parseFile(const std::string &filename)
 int test_Shake(ByteArray msg, size_t inputLen, ByteArray MD, DIGEST_MODE mode,
                size_t digestSize, bool quiet)
 {
-    ByteArray rawDigest = cSSL::Hasher::xof(msg, digestSize, mode);
+    ByteArray rawDigest = CSSL::Hasher::xof(msg, digestSize, mode);
     int res = (memcmp(rawDigest.data(), MD.data(), MD.size()));
     if (!quiet)
         if (res != 0)

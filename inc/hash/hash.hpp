@@ -2,11 +2,8 @@
 #include "../types.hpp"
 #include "../utils/bytes.hpp"
 #include <memory>
-#include <span>
-#include <string>
-#include <vector>
 
-namespace cSSL
+namespace CSSL
 {
 
 class Hasher
@@ -42,4 +39,4 @@ public:
 
     static ByteArray hmac(ByteSpan data, ByteSpan key, DIGEST_MODE mode);
 };
-} // namespace cSSL
+}

@@ -3,7 +3,7 @@
 #include "../utils/bytes.hpp"
 #include "../hash/hash.hpp"
 
-namespace cSSL {
+namespace CSSL {
 class RSA {
     private:
         class Impl_;

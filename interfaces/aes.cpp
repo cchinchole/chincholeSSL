@@ -3,7 +3,7 @@
 #include "../inc/crypto/aes.hpp"
 #include "../inc/utils/logger.hpp"
 
-namespace cSSL
+namespace CSSL
 {
 class AES::Impl
 {
@@ -18,9 +18,6 @@ class AES::Impl
         delete ctx_;
     }
 };
-
-ByteArray encrypt(ByteSpan message);
-ByteArray decrypt(ByteSpan cipher);
 
 AES &AES::operator=(AES &&other) noexcept
 {
@@ -42,14 +39,14 @@ AES::AES(AES_MODE mode, AES_KEYSIZE keySize)
 
 void AES::addKey(ByteSpan key, ByteSpan IV)
 {
-    AES_KeyExpansion(*this->pImpl->ctx_, key);
-    AES_SetIV(*this->pImpl->ctx_, IV);
+    keyExpansion(*this->pImpl->ctx_, key);
+    aSetIV(*this->pImpl->ctx_, IV);
 }
 
 void AES::addKey(ByteSpan key)
 {
     if(this->mode == AES_MODE::ECB)
-        AES_KeyExpansion(*this->pImpl->ctx_, key);
+        keyExpansion(*this->pImpl->ctx_, key);
     else
         LOG_ERROR("Attempting to load only a key in non ECB mode");
 }
@@ -66,17 +63,16 @@ void AES::addKey(std::string key)
 
 ByteArray AES::encrypt(ByteSpan message)
 {
-    return AES_Encrypt(*this->pImpl->ctx_, message);
+    return aEncrypt(*this->pImpl->ctx_, message);
 }
 
 ByteArray AES::decrypt(ByteSpan cipher)
 {
-    return AES_Decrypt(*this->pImpl->ctx_, cipher);
+    return aDecrypt(*this->pImpl->ctx_, cipher);
 }
 
 AES::~AES()
 {
     delete this->pImpl;
 }
-
 }

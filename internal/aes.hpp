@@ -32,15 +32,7 @@ public:
     }
 };
 
-//int getNR(AES_MODE mode);
-//int getNK(AES_MODE mode);
-//int FIPS_197_5_2_KeyExpansion(AES_CTX *ctx, uint8_t *key);
-//int FIPS_197_5_1_Cipher(AES_CTX *ctx); // Using a X to signify this is a two way buffer
-//int FIPS_197_5_3_InvCipher(AES_CTX *ctx);
-//int CBC_Encrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
-//int CBC_Decrypt(AES_CTX *ctx, uint8_t *output, uint8_t *buf, size_t buf_len);
-//int CTR_xcrypt(AES_CTX *ctx, uint8_t *out, uint8_t *buf, size_t buf_len);
-int AES_KeyExpansion(AES_CTX &ctx, ByteSpan key);
-int AES_SetIV(AES_CTX &ctx, ByteSpan iv);
-ByteArray AES_Encrypt(AES_CTX &ctx, ByteSpan buf);
-ByteArray AES_Decrypt(AES_CTX &ctx, ByteSpan buf);
+int keyExpansion(AES_CTX &ctx, ByteSpan key);
+int aSetIV(AES_CTX &ctx, ByteSpan iv);
+ByteArray aEncrypt(AES_CTX &ctx, ByteSpan buf);
+ByteArray aDecrypt(AES_CTX &ctx, ByteSpan buf);

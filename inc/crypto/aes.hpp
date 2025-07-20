@@ -4,12 +4,12 @@
 #include "../types.hpp"
 
 
-namespace cSSL
+namespace CSSL
 {
 class AES {
     private:
-        AES_MODE mode;
         class Impl;
+        AES_MODE m_Mode;
         Impl *pImpl;
     public:
         AES(AES_MODE mode, AES_KEYSIZE keySize);

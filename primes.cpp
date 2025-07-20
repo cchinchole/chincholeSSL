@@ -10,17 +10,17 @@
 #include <openssl/types.h>
 #include <stdio.h>
 
-#define RSA_FIPS1864_MIN_KEYGEN_KEYSIZE 2048
-#define RSA_FIPS1864_MIN_KEYGEN_STRENGTH 112
-int FIPS186_5_MR_ROUNDS_AUX(int nLen);
-int FIPS186_5_MR_ROUNDS_PRIME(int nLen);
-int FIPS186_5_MIN_AUX(int nLen);
-int FIPS186_5_MAX_PROB_LEN(int nLen);
-
-/* Return codes */
 #define RET_NOSTATUS -99999
 #define RET_FAILURE -1
 #define RET_SUCCESS 0
+#define RSA_FIPS1864_MIN_KEYGEN_KEYSIZE 2048
+#define RSA_FIPS1864_MIN_KEYGEN_STRENGTH 112
+
+size_t FIPS186_5_MR_ROUNDS_AUX(int nLen);
+size_t FIPS186_5_MR_ROUNDS_PRIME(int nLen);
+size_t FIPS186_5_MIN_AUX(int nLen);
+size_t FIPS186_5_MAX_PROB_LEN(int nLen);
+
 
 /* 1 / sqrt(2) * 2^256, rounded up */
 static const BN_ULONG inv_sqrt_2_val[] = {
@@ -31,7 +31,7 @@ const dataSqrt ossl_bn_inv_sqrt_2 = {
     (BN_ULONG *)inv_sqrt_2_val, OSSL_NELEM(inv_sqrt_2_val),
     OSSL_NELEM(inv_sqrt_2_val), 0, BN_FLG_STATIC_DATA};
 
-static int bn_mr_min_checks(int bits)
+static size_t bn_mr_min_checks(int bits)
 {
     if (bits > 2048)
         return 128;
@@ -42,10 +42,10 @@ static int bn_mr_min_checks(int bits)
 /* FIPS 186-4 C.3.1 */
 /* Returns true for PROBABLY PRIME and false for COMPOSITE */
 /* Refactored variable names for FIPS: n->w, s->a, a->b, y->z, m->m */
-bool miller_rabin_is_prime(BIGNUM *w, int iterations, BN_CTX *ctx)
+bool miller_rabin_is_prime(BIGNUM *w, int iterations, BN_CTX *ctx = BN_CTX_new())
 {
     BIGNUM *w1, *w2, *w4, *m, *b, *x, *z;
-    int a = 1;
+    size_t a = 1;
     BN_CTX_start(ctx);
 
     // Confirm odd first
@@ -87,7 +87,7 @@ bool miller_rabin_is_prime(BIGNUM *w, int iterations, BN_CTX *ctx)
         iterations = bn_mr_min_checks(BN_num_bits(w));
 
     // Repeat 'k' times where k=iterations
-    for (int i = 0; i < iterations; i++)
+    for (size_t i = 0; i < iterations; i++)
     {
         BN_rand_range(b, w4);
         BN_add(b, b, BN_value_one());
@@ -95,12 +95,12 @@ bool miller_rabin_is_prime(BIGNUM *w, int iterations, BN_CTX *ctx)
         BN_mod_exp(x, b, m, w, ctx); // a^m mod n
                                      // Repeat 's' times
 
-        for (int j = 0; j < a; j++)
+        for (size_t j = 0; j < a; j++)
         {
             BN_mod_sqr(z, x, w, ctx); // x^2 mod n
             if (BN_is_one(z) && !BN_is_one(x) && BN_cmp(x, w1) != 0)
                 goto failure;
-            BN_copy(x, z); // Previously used x = BN_dup(z) TODO: REMOVE
+            BN_copy(x, z);
         }
         if (!BN_is_one(z))
             goto failure;
@@ -146,7 +146,7 @@ static int calc_trial_divisions(int bits)
     return NUMPRIMES;
 }
 
-int check_prime(BIGNUM *w, bool do_trial_division)
+int checkPrimeDivisons(BIGNUM *w, bool do_trial_division)
 {
     int ret = 0;
     BIGNUM *value_one = BN_new();
@@ -174,7 +174,7 @@ int check_prime(BIGNUM *w, bool do_trial_division)
     if (do_trial_division)
     {
         int trial_divisions = calc_trial_divisions(BN_num_bits(w));
-        for (int i = 1; i < trial_divisions; i++)
+        for (size_t i = 1; i < trial_divisions; i++)
         {
             BN_ULONG mod = BN_mod_word(w, primes[i]);
             if (mod == (BN_ULONG)-1)
@@ -210,13 +210,13 @@ end:
 /* Main exposed function */
 //bool checkIfPrime(BIGNUM *w) { return (check_prime(w, true) == 1); }
 bool checkPrime(BIGNUM *w) {
-    return (check_prime(w, true) == 1);
+    return (checkPrimeDivisons(w, true) == 1);
 }
 /* These functions do not support auxiliary primes. */
-int probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
+void probable_prime(BIGNUM *rnd, int bits, prime_t *mods, BN_CTX *ctx)
 {
     BN_ULONG delta = 0;
-    int divisions = 128; /* Divisions for 1024 (OpenSSL) */
+    size_t divisions = 128; /* Divisions for 1024 (OpenSSL) */
     BN_ULONG maxDelta =
         MAXULONGSIZE -
         primes[divisions -
@@ -236,7 +236,7 @@ repeat: /* Used if the rnd number failed */
                */
 
     /* Division test */
-    for (int i = 1; i < divisions; i++)
+    for (size_t i = 1; i < divisions; i++)
     {
         BN_ULONG mod = BN_mod_word(
             rnd, (BN_ULONG)primes[i]); /* Random Generated Num / prime
@@ -244,7 +244,7 @@ repeat: /* Used if the rnd number failed */
         mods[i] = (prime_t)mod;
     }
 loop:
-    for (int i = 1; i < divisions; i++)
+    for (size_t i = 1; i < divisions; i++)
     {
         /* Check that the random number is prime and that the GCD of random-1
          * and prime index is 1 */
@@ -271,18 +271,17 @@ loop:
         delta); /* Add the delta that gave us a prime to our random number */
     if (BN_num_bits(rnd) != bits)
         goto repeat; /* If we didn't generate the correct size then go again. */
-    return 0;
 }
 
-int generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_secure_new())
+void generate_prime(BIGNUM *prime, int bits, BN_CTX *ctx = BN_CTX_secure_new())
 {
     /* Initialize memory with zeroes and temp vars */
     BIGNUM *temp;
     prime_t *mods = (prime_t *)OPENSSL_zalloc(sizeof(*mods) * NUMPRIMES);
     BN_CTX_start(ctx);
     temp = BN_CTX_get(ctx);
-    int checks = FIPS186_5_MR_ROUNDS_PRIME(bits);
-    int attempts = 0;
+    size_t checks = FIPS186_5_MR_ROUNDS_PRIME(bits);
+    size_t attempts = 0;
 loop:
     /* Generate a random number and set top and bottom bits */
     probable_prime(prime, bits, mods, ctx);
@@ -293,11 +292,9 @@ loop:
     OPENSSL_free(mods);
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
-
-    return 0;
 }
 
-int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR)
+void generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR)
 {
     int primes = 2, quo = 0, rmd = 0, bitsr[2];
     quo = bits / primes;
@@ -358,7 +355,6 @@ int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, int testingMR)
     }
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
-    return 0;
 }
 
 int bn_coprime_test(BIGNUM *a, const BIGNUM *b, BN_CTX *ctx)
@@ -627,7 +623,7 @@ int FIPS186_4_PRIME_EQUALITY_CHECK(BIGNUM *diff, const BIGNUM *p,
 }
 
 /* FIPS 186-4-B.3.6 */
-int FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP,
+void FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP,
                          ACVP_TEST *testParams)
 {
     BIGNUM *Xpo = NULL, *Xqo = NULL, *tmp = NULL, *p1 = NULL, *p2 = NULL,
@@ -683,16 +679,8 @@ int FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP,
         break;
     }
 
-#ifdef LOG_PRIME_GEN_B_3_6
-    // TODO FIX THIS
-    // std::string pHex = BN_bn2hex(p);
-    // std::string qHex = BN_bn2hex(q);
-    // printf("Found:\nP: %s\nQ: %s\n", pHex.c_str(), qHex.c_str());
-#endif
-
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
-    return 0;
 }
 
 /* Probable prime generation is within FIPS 186-4.C.7 */
@@ -706,7 +694,7 @@ int FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP,
 
 /* Minimum rounds of M-R testing from 186-5-B-1 */
 /* 2^-100 error probability */
-int FIPS186_5_MR_ROUNDS_AUX(int nLen)
+size_t FIPS186_5_MR_ROUNDS_AUX(int nLen)
 {
     if (nLen >= 1024)
         return 32;
@@ -715,11 +703,11 @@ int FIPS186_5_MR_ROUNDS_AUX(int nLen)
     else if (nLen >= 2048)
         return 22;
     else
-        return -1;
+        return 4; //TODO: Confirm this is a good default
 }
 
 /* Minimum rounds of M-R testing from 186-5-B-1 */
-int FIPS186_5_MR_ROUNDS_PRIME(int nLen)
+size_t FIPS186_5_MR_ROUNDS_PRIME(int nLen)
 {
     if (nLen >= 1024)
         return 4;
@@ -732,7 +720,7 @@ int FIPS186_5_MR_ROUNDS_PRIME(int nLen)
 }
 
 /* Minimum length of an auxilary prime from FIPS 186-5-A.1 */
-int FIPS186_5_MIN_AUX(int nLen)
+size_t FIPS186_5_MIN_AUX(int nLen)
 {
     if (nLen <= 3071)
         return 140;
@@ -741,11 +729,11 @@ int FIPS186_5_MIN_AUX(int nLen)
     else if (nLen >= 4096)
         return 200;
     else
-        return -1;
+        return 200;
 }
 
 /*Maximum size of probable prime bitlength(p1+p2) from FIPS 186-5-A.1 */
-int FIPS186_5_MAX_PROB_LEN(int nLen)
+size_t FIPS186_5_MAX_PROB_LEN(int nLen)
 {
     if (nLen <= 3071)
         return 1007;
@@ -754,5 +742,5 @@ int FIPS186_5_MAX_PROB_LEN(int nLen)
     else if (nLen >= 4096)
         return 2030;
     else
-        return -1;
+        return 2030; //TODO: Confirm this is a good default
 }

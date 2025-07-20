@@ -2,7 +2,7 @@
 #include "../internal/hmac.hpp"
 #include "../internal/sha.hpp"
 
-namespace cSSL
+namespace CSSL
 {
 class Hasher::Impl
 {

@@ -189,9 +189,9 @@ int main()
             int p = 0, f = 0;
             for (const auto &t : ch.tests)
             {
-                cSSL::ECKeyPair keyPair =
-                    cSSL::ECKeyPair::From(group, "00", t.Qx, t.Qy);
-                cSSL::ECSignature sig = cSSL::ECSignature::From(t.R, t.S);
+                CSSL::ECKeyPair keyPair =
+                    CSSL::ECKeyPair::From(group, "00", t.Qx, t.Qy);
+                CSSL::ECSignature sig = CSSL::ECSignature::From(t.R, t.S);
                 std::vector<uint8_t> msgBytes = hexToBytes(t.msg_hex);
                 if (keyPair.verify(sig, msgBytes, shaMode) ==
                     didTestSucceed(t.Result))

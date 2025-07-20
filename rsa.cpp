@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <vector>
 
-using namespace cSSL;
+using namespace CSSL;
 
 RSA_CRT_Params::RSA_CRT_Params()
 {

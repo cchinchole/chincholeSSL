@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-using namespace cSSL::Parser;
+using namespace CSSL::Parser;
 
 DIGEST_MODE sha_name(const std::string& s) {
     static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
@@ -40,7 +40,7 @@ uint8_t runTestCase(const TestVector &vector, const TestGroup &group, const Test
 
     bool expectedPass = false;
 
-    ByteArray digestOutput = cSSL::Hasher::hmac(msg, key, mode);
+    ByteArray digestOutput = CSSL::Hasher::hmac(msg, key, mode);
     //Truncate
     digestOutput.resize(tag.size());
 

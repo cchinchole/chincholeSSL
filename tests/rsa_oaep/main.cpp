@@ -5,7 +5,7 @@
 #include <openssl/bn.h>
 #include <string>
 
-using namespace cSSL::Parser;
+using namespace CSSL::Parser;
 
 DIGEST_MODE sha_name(const std::string &s)
 {
@@ -36,7 +36,7 @@ uint8_t runTestCase(const TestVector &vector, const TestGroup &group, const Test
     ByteArray msg = hexToBytes(test.params.at("msg").get<std::string>());
     ByteArray ct = hexToBytes(test.params.at("ct").get<std::string>());
     ByteArray decrypted;
-    cSSL::RSA rsa(keySize);
+    CSSL::RSA rsa(keySize);
 
     rsa.loadPrivateKey(groupN, groupD);
     rsa.loadPublicKey(groupN, groupE);

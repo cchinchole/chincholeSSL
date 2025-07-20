@@ -76,7 +76,7 @@ SHARsp parseFile(const std::string &filename)
 /* Returns 0 on success */
 int test_sha(ByteArray msg, ByteArray MD, DIGEST_MODE mode)
 {
-    ByteArray rawDigest = cSSL::Hasher::hash(msg, mode);
+    ByteArray rawDigest = CSSL::Hasher::hash(msg, mode);
     int res = (memcmp(rawDigest.data(), MD.data(), MD.size()));
     return res;
 }

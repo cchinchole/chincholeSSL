@@ -4,7 +4,7 @@
 #include <openssl/bn.h>
 
 
-namespace cSSL {
+namespace CSSL {
         
     void BN_strtobn(BIGNUM *bn, std::string &str)
     {

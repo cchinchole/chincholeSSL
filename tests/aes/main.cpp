@@ -164,7 +164,7 @@ void runTest(std::string path, std::string fileName, std::string sMode,
         {
             if (ch.state == "ENCRYPT")
             {
-                cSSL::AES aes(mode, kSize);
+                CSSL::AES aes(mode, kSize);
 
                 if (mode != AES_MODE::ECB)
                     aes.addKey(t.KEY, t.IV);
@@ -183,7 +183,7 @@ void runTest(std::string path, std::string fileName, std::string sMode,
             }
             else if (ch.state == "DECRYPT")
             {
-                cSSL::AES aes(mode, kSize);
+                CSSL::AES aes(mode, kSize);
                 if (mode != AES_MODE::ECB)
                     aes.addKey(t.KEY, t.IV);
                 else

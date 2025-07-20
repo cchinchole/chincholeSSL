@@ -168,7 +168,7 @@ int main()
         for (const auto &t : ch.tests)
         {
             totalTests++;
-            cSSL::RSA rsa(kBits);
+            CSSL::RSA rsa(kBits);
             if (t.n.empty() || t.d.empty())
             {
                 totalSkipped++;

@@ -6,7 +6,7 @@
 #include <utility>
 
 
-namespace cSSL
+namespace CSSL
 {
 class ECSignature
 {
