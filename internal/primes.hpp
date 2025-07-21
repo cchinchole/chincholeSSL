@@ -1,3 +1,4 @@
+#pragma once
 #include <stdio.h>
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
@@ -6,9 +7,6 @@
 #include <openssl/bn.h>
 #include <openssl/evp.h>
 #include <openssl/core_names.h>
-#include <chrono>
-#include <vector>
-#include <iostream>
 
 typedef unsigned short prime_t;
 #define NUMPRIMES 2048

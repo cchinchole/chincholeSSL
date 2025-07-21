@@ -2,77 +2,66 @@
 #include "../internal/aes.hpp"
 #include "../inc/crypto/aes.hpp"
 #include "../inc/utils/logger.hpp"
+#include <memory>
 
-namespace CSSL
+namespace cssl
 {
-class AES::Impl
+
+struct Aes::Impl
 {
-    public:
-    AES_CTX *ctx_;
-    Impl(AES_MODE mode, AES_KEYSIZE keySize)
-    {
-        ctx_ = new AES_CTX(mode, keySize);
-    }
-    ~Impl()
-    {
-        delete ctx_;
-    }
+    AesContext ctx;
 };
 
-AES &AES::operator=(AES &&other) noexcept
+Aes &Aes::operator=(Aes &&other) noexcept
 {
     if (this != &other)
     {
-        delete this->pImpl;
-        this->pImpl = other.pImpl;
-        other.pImpl = nullptr;
-        this->mode = other.mode;
+        this->pimpl_ = std::move(other.pimpl_);
+        this->mode_ = other.mode_;
     }
     return *this;
 }
 
-AES::AES(AES_MODE mode, AES_KEYSIZE keySize)
+Aes::~Aes() = default;
+Aes::Aes(AES_MODE mode, AES_KEYSIZE keySize)
 {
-    this->mode = mode;
-    this->pImpl = new Impl(mode, keySize);
+    this->mode_ = mode;
+    this->pimpl_ = std::make_unique<Impl>();
+    this->pimpl_->ctx.mode_ = mode;
+    this->pimpl_->ctx.key_size_ = keySize;
 }
 
-void AES::addKey(ByteSpan key, ByteSpan IV)
+void Aes::load_key(ByteSpan key, ByteSpan iv)
 {
-    keyExpansion(*this->pImpl->ctx_, key);
-    aSetIV(*this->pImpl->ctx_, IV);
+    aes_key_expansion(this->pimpl_->ctx, key);
+    aes_set_iv(this->pimpl_->ctx, iv);
 }
 
-void AES::addKey(ByteSpan key)
+void Aes::load_key(ByteSpan key)
 {
-    if(this->mode == AES_MODE::ECB)
-        keyExpansion(*this->pImpl->ctx_, key);
+    if(this->mode_ == AES_MODE::ECB)
+        aes_key_expansion(this->pimpl_->ctx, key);
     else
         LOG_ERROR("Attempting to load only a key in non ECB mode");
 }
 
-void AES::addKey(std::string key, std::string IV)
+void Aes::load_key(std::string key, std::string iv)
 {
-    addKey(hexToBytes(key), hexToBytes(IV));
+    load_key(hex_to_bytes(key), hex_to_bytes(iv));
 }
 
-void AES::addKey(std::string key)
+void Aes::load_key(std::string key)
 {
-    addKey(hexToBytes(key));
+    load_key(hex_to_bytes(key));
 }
 
-ByteArray AES::encrypt(ByteSpan message)
+ByteArray Aes::encrypt(ByteSpan message)
 {
-    return aEncrypt(*this->pImpl->ctx_, message);
+    return aes_encrypt(this->pimpl_->ctx, message);
 }
 
-ByteArray AES::decrypt(ByteSpan cipher)
+ByteArray Aes::decrypt(ByteSpan cipher)
 {
-    return aDecrypt(*this->pImpl->ctx_, cipher);
-}
-
-AES::~AES()
-{
-    delete this->pImpl;
+    return aes_decrypt(this->pimpl_->ctx, cipher);
 }
 }

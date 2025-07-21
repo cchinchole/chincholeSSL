@@ -1,94 +1,86 @@
 #include "../inc/crypto/rsa.hpp"
 #include "../internal/rsa.hpp"
-#include "../inc/utils/logger.hpp"
+#include "../inc/utils/bytes.hpp"
 #include <openssl/bn.h>
 
 
-namespace CSSL {
-        
-    void BN_strtobn(BIGNUM *bn, std::string &str)
-    {
-        BIGNUM *bnVal = BN_new();
-        BN_hex2bn(&bnVal, str.c_str());
-        BN_copy(bn, bnVal);
-        BN_free(bnVal);
-    }
-    class RSA::Impl_ {
-        public:
-            cRSAKey key;
+namespace cssl {
+
+    struct Rsa::Impl {
+        RsaKey ctx;
     };
 
-    RSA::RSA(size_t bits)
+    Rsa::Rsa(size_t bits)
     {
-        this->pImpl_ = new Impl_();
-        this->pImpl_->key.kBits = bits;
+        pimpl_ = new Impl();
+        pimpl_->ctx.modulus_bits_ = bits;
     }
 
-    RSA::~RSA()
+    Rsa::~Rsa()
     {
-        delete this->pImpl_;
+        delete pimpl_;
     }
 
-    bool RSA::isCRTEnabled()
+    bool Rsa::is_crt_enabled()
     {
-        return this->pImpl_->key.crt.enabled;
+        return pimpl_->ctx.crt_params_.enabled_;
     }
 
-    void RSA::fromPrimes(std::string hexP, std::string hexQ, std::string hexE)
+    void Rsa::from(std::string hex_p, std::string hex_q, std::string hex_e)
     {
-        BN_strtobn(this->pImpl_->key.crt.p, hexP);
-        BN_strtobn(this->pImpl_->key.crt.q, hexQ);
-        BN_strtobn(this->pImpl_->key.e, hexE);
-        gen_rsa_sp800_56b(this->pImpl_->key, true);
+        hex_to_bignum(pimpl_->ctx.crt_params_.p_, hex_p);
+        hex_to_bignum(pimpl_->ctx.crt_params_.q_, hex_q);
+        hex_to_bignum(pimpl_->ctx.e_, hex_e);
+        rsa_gen_crt_params(pimpl_->ctx, true);
     }
     
-    void RSA::loadPublicKey(std::string hexModulus, std::string hexPublicExponent)
+    void Rsa::load_public_key(std::string hex_n, std::string hex_e)
     {
-        BN_strtobn(this->pImpl_->key.n, hexModulus);
-        BN_strtobn(this->pImpl_->key.e, hexPublicExponent);
+        hex_to_bignum(pimpl_->ctx.n_, hex_n);
+        hex_to_bignum(pimpl_->ctx.e_, hex_e);
     }
-    void RSA::loadPrivateKey(std::string hexModulus, std::string hexPrivateExponent)
+    void Rsa::load_private_key(std::string hex_n, std::string hex_d)
     {
-        BN_strtobn(this->pImpl_->key.n, hexModulus);
-        BN_strtobn(this->pImpl_->key.d, hexPrivateExponent);
+        hex_to_bignum(pimpl_->ctx.n_, hex_n);
+        hex_to_bignum(pimpl_->ctx.d_, hex_d);
     }
-    void RSA::loadCRT(std::string hexP, std::string hexQ, std::string hexDP, std::string hexDQ, std::string hexQinv)
+    void Rsa::load_crt(std::string hex_p, std::string hex_q, std::string hex_dp, std::string hex_dq, std::string hex_qinv)
     {
-        BN_strtobn(this->pImpl_->key.crt.p, hexP);
-        BN_strtobn(this->pImpl_->key.crt.q, hexQ);
-        BN_strtobn(this->pImpl_->key.crt.dp, hexDP);
-        BN_strtobn(this->pImpl_->key.crt.dq, hexDQ);
-        BN_strtobn(this->pImpl_->key.crt.qInv, hexQinv);
-        this->pImpl_->key.crt.enabled = true;
+        hex_to_bignum(pimpl_->ctx.crt_params_.p_, hex_p);
+        hex_to_bignum(pimpl_->ctx.crt_params_.q_, hex_q);
+        hex_to_bignum(pimpl_->ctx.crt_params_.dp_, hex_dp);
+        hex_to_bignum(pimpl_->ctx.crt_params_.dq_, hex_dq);
+        hex_to_bignum(pimpl_->ctx.crt_params_.qinv_, hex_qinv);
+        pimpl_->ctx.crt_params_.enabled_ = true;
     }
     
-    void RSA::generateKey()
+    void Rsa::generate_key()
     {
-        RSA_GenerateKey(this->pImpl_->key, this->pImpl_->key.kBits);
+        rsa_generate_key(pimpl_->ctx, pimpl_->ctx.modulus_bits_);
     }
 
-    void RSA::clearPadding()
+    void Rsa::clear_padding()
     {
-        this->pImpl_->key.reset();
+        pimpl_->ctx.reset_padding();
     }
 
-    void RSA::addOAEP(ByteSpan label, DIGEST_MODE labelHashMode, DIGEST_MODE mgf1HashMode)
+    void Rsa::add_oaep(ByteSpan label, DIGEST_MODE label_hash_mode, DIGEST_MODE mgf1_hash_mode)
     {
-        RSA_AddOAEP(this->pImpl_->key, label, labelHashMode, mgf1HashMode);
+        rsa_add_oaep(pimpl_->ctx, label, label_hash_mode, mgf1_hash_mode);
     }
 
-    void RSA::addOAEP(ByteSpan label, ByteSpan seed, DIGEST_MODE labelHashMode, DIGEST_MODE mgf1HashMode)
+    void Rsa::add_oaep(ByteSpan label, ByteSpan seed, DIGEST_MODE label_hash_mode, DIGEST_MODE mgf1_hash_mode)
     {
-        RSA_AddOAEP(this->pImpl_->key, label, seed, labelHashMode, mgf1HashMode);
+        rsa_add_oaep(pimpl_->ctx, label, seed, label_hash_mode, mgf1_hash_mode);
     }
 
-    ByteArray RSA::encrypt(ByteSpan message)
+    ByteArray Rsa::encrypt(ByteSpan message)
     {
-        return RSA_Encrypt(this->pImpl_->key, message);
+        return rsa_encrypt(pimpl_->ctx, message);
     }
 
-    ByteArray RSA::decrypt(ByteSpan cipher)
+    ByteArray Rsa::decrypt(ByteSpan cipher)
     {
-        return RSA_Decrypt(this->pImpl_->key, cipher);
+        return rsa_decrypt(pimpl_->ctx, cipher);
     }
 }

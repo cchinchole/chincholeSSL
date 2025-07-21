@@ -12,7 +12,7 @@ using ParamMap = std::map<std::string, nlohmann::json>;
 #define CSSL_TEST_SKIPPED 1
 #define CSSL_TEST_FAILED 255
 
-namespace CSSL
+namespace cssl
 {
 namespace Parser
 {
@@ -190,4 +190,4 @@ uint8_t startTests(const std::string &path, const std::string &extension, uint8_
     return retCode;
 }
 } // namespace Parser
-} // namespace cSSL
+} // namespace cssl

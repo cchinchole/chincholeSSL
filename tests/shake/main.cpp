@@ -84,10 +84,10 @@ SHARsp parseFile(const std::string &filename)
 }
 
 /* Returns 0 on success */
-int test_Shake(ByteArray msg, size_t inputLen, ByteArray MD, DIGEST_MODE mode,
+int test_Shake(ByteArray msg, size_t inputLen, ByteArray MD, cssl::DIGEST_MODE mode,
                size_t digestSize, bool quiet)
 {
-    ByteArray rawDigest = CSSL::Hasher::xof(msg, digestSize, mode);
+    ByteArray rawDigest = cssl::Hasher::xof(msg, digestSize, mode);
     int res = (memcmp(rawDigest.data(), MD.data(), MD.size()));
     if (!quiet)
         if (res != 0)
@@ -95,10 +95,10 @@ int test_Shake(ByteArray msg, size_t inputLen, ByteArray MD, DIGEST_MODE mode,
     return res;
 }
 
-void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
+void runTest(std::string path, std::string fileName, cssl::DIGEST_MODE shaMode,
              int *passed, int *failed)
 {
-    if (shaMode == DIGEST_MODE::NONE)
+    if (shaMode == cssl::DIGEST_MODE::NONE)
         return;
     auto rsp = parseFile(path + fileName);
     int p = 0, f = 0;
@@ -109,7 +109,7 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
         if (t.OutLen.empty())
         {
             digestLen =
-                shaMode == DIGEST_MODE::SHA_3_SHAKE_128 ? 128 / 8 : 256 / 8;
+                shaMode == cssl::DIGEST_MODE::SHA_3_SHAKE_128 ? 128 / 8 : 256 / 8;
         }
         else
         {
@@ -121,10 +121,10 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
         else
         {
             inputLen =
-                shaMode == DIGEST_MODE::SHA_3_SHAKE_128 ? 128 / 8 : 256 / 8;
+                shaMode == cssl::DIGEST_MODE::SHA_3_SHAKE_128 ? 128 / 8 : 256 / 8;
         }
 
-        if (test_Shake(hexToBytes(t.Msg, inputLen), inputLen, hexToBytes(t.MD),
+        if (test_Shake(hex_to_bytes(t.Msg, inputLen), inputLen, hex_to_bytes(t.MD),
                        shaMode, digestLen, false) == 0)
             p++;
         else
@@ -137,14 +137,14 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
     PRINT("[ \e[34m{:<43}\e[0m ]: Passed: {:>3} Failed: {:>3}", fileName, p, f);
 }
 
-DIGEST_MODE haveSHA(const std::string &s)
+cssl::DIGEST_MODE haveSHA(const std::string &s)
 {
-    static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
-        {"SHAKE128", DIGEST_MODE::SHA_3_SHAKE_128},
-        {"SHAKE256", DIGEST_MODE::SHA_3_SHAKE_256}};
+    static const std::unordered_map<std::string, cssl::DIGEST_MODE> sha_map = {
+        {"SHAKE128", cssl::DIGEST_MODE::SHA_3_SHAKE_128},
+        {"SHAKE256", cssl::DIGEST_MODE::SHA_3_SHAKE_256}};
 
     auto it = sha_map.find(s);
-    return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
+    return it != sha_map.end() ? it->second : cssl::DIGEST_MODE::NONE;
 }
 
 int main()

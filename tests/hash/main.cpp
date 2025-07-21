@@ -74,21 +74,21 @@ SHARsp parseFile(const std::string &filename)
 }
 
 /* Returns 0 on success */
-int test_sha(ByteArray msg, ByteArray MD, DIGEST_MODE mode)
+int test_sha(ByteArray msg, ByteArray MD, cssl::DIGEST_MODE mode)
 {
-    ByteArray rawDigest = CSSL::Hasher::hash(msg, mode);
+    ByteArray rawDigest = cssl::Hasher::hash(msg, mode);
     int res = (memcmp(rawDigest.data(), MD.data(), MD.size()));
     return res;
 }
 
-void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
+void runTest(std::string path, std::string fileName, cssl::DIGEST_MODE shaMode,
              int *passed, int *failed)
 {
     auto rsp = parseFile(path + fileName);
     int p = 0, f = 0;
     for (const auto &t : rsp.tests)
     {
-        if (test_sha(hexToBytes(t.Msg, std::stoi(t.Len)/8), hexToBytes(t.MD), shaMode) == 0)
+        if (test_sha(hex_to_bytes(t.Msg, std::stoi(t.Len)/8), hex_to_bytes(t.MD), shaMode) == 0)
             p++;
         else
             f++;
@@ -98,21 +98,21 @@ void runTest(std::string path, std::string fileName, DIGEST_MODE shaMode,
     PRINT("[ \e[34m{}\e[0m ]: Passed: {} Failed: {}", fileName,  p, f);
 }
 
-DIGEST_MODE haveSHA(const std::string& s) {
-    static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
-        {"SHA1", DIGEST_MODE::SHA_1},
-        {"SHA224", DIGEST_MODE::SHA_224},
-        {"SHA256", DIGEST_MODE::SHA_256},
-        {"SHA384", DIGEST_MODE::SHA_384},
-        {"SHA512", DIGEST_MODE::SHA_512},
-        {"SHA3_224", DIGEST_MODE::SHA_3_224},
-        {"SHA3_256", DIGEST_MODE::SHA_3_256},
-        {"SHA3_384", DIGEST_MODE::SHA_3_384},
-        {"SHA3_512", DIGEST_MODE::SHA_3_512}
+cssl::DIGEST_MODE haveSHA(const std::string& s) {
+    static const std::unordered_map<std::string, cssl::DIGEST_MODE> sha_map = {
+        {"SHA1", cssl::DIGEST_MODE::SHA_1},
+        {"SHA224", cssl::DIGEST_MODE::SHA_224},
+        {"SHA256", cssl::DIGEST_MODE::SHA_256},
+        {"SHA384", cssl::DIGEST_MODE::SHA_384},
+        {"SHA512", cssl::DIGEST_MODE::SHA_512},
+        {"SHA3_224", cssl::DIGEST_MODE::SHA_3_224},
+        {"SHA3_256", cssl::DIGEST_MODE::SHA_3_256},
+        {"SHA3_384", cssl::DIGEST_MODE::SHA_3_384},
+        {"SHA3_512", cssl::DIGEST_MODE::SHA_3_512}
     };
     
     auto it = sha_map.find(s);
-    return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
+    return it != sha_map.end() ? it->second : cssl::DIGEST_MODE::NONE;
 }
 
 

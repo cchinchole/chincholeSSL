@@ -1,7 +1,5 @@
-#ifndef LOGGER_HPP
-#define LOGGER_HPP
+#pragma once
 
-#include "../crypto/ec.hpp"
 #include "../utils/bytes.hpp"
 #include <format>
 #include <openssl/bn.h>
@@ -48,7 +46,7 @@ struct std::formatter<BIGNUM*> : std::formatter<std::string> {
 template <>
 struct std::formatter<ByteArray> : std::formatter<std::string> {
   auto format(const ByteArray &array, format_context& ctx) const {
-    auto out = formatter<string>::format(std::format("{}", bytesToHex(array)), ctx);
+    auto out = formatter<string>::format(std::format("{}", bytes_to_hex(array)), ctx);
     return out;
   }
 };
@@ -113,5 +111,3 @@ struct std::formatter<uint8_t[4][4]> {
 #define LOG_HASH(fmt, ...) Logger->print("[{}] [ HASH ] " fmt, getCurrentTime(), ##__VA_ARGS__)
 #define LOG_WARNING(fmt, ...) Logger->print("[{}] [ \e[33mWARNING\e[0m ] " fmt, getCurrentTime(), ##__VA_ARGS__)
 #define LOG_ERROR(fmt, ...) Logger->print("[{}] [ \e[31mERROR\e[0m ] " fmt, getCurrentTime(), ## __VA_ARGS__)
-
-#endif

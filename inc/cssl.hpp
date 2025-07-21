@@ -1,3 +1,4 @@
+#pragma once
 #include "types.hpp"
 #include "utils/bytes.hpp"
 #include "utils/logger.hpp"

@@ -1,30 +1,28 @@
 #pragma once
-#include <memory>
 #include "../utils/bytes.hpp"
 #include "../types.hpp"
+#include <memory>
 
 
-namespace CSSL
+namespace cssl
 {
-class AES {
+class Aes {
     private:
-        class Impl;
-        AES_MODE m_Mode;
-        Impl *pImpl;
+        struct Impl;
+        AES_MODE mode_;
+        std::unique_ptr<Impl> pimpl_;
     public:
-        AES(AES_MODE mode, AES_KEYSIZE keySize);
-        ~AES();
+        Aes(AES_MODE mode, AES_KEYSIZE keySize);
+        ~Aes();
 
-        //Move operator
-        AES &operator=(AES &&other) noexcept;
+        Aes &operator=(Aes &&other) noexcept;
         
-        //Delete the copy operator
-        AES &operator=(const AES &other) = delete;
+        Aes &operator=(const Aes &other) = delete;
 
-        void addKey(ByteSpan key, ByteSpan IV);
-        void addKey(ByteSpan key);
-        void addKey(std::string key, std::string IV);
-        void addKey(std::string key);
+        void load_key(ByteSpan key, ByteSpan iv);
+        void load_key(ByteSpan key);
+        void load_key(std::string key, std::string iv);
+        void load_key(std::string key);
         ByteArray encrypt(ByteSpan message);
         ByteArray decrypt(ByteSpan cipher);
 };

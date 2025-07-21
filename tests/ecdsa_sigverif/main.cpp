@@ -142,34 +142,34 @@ int didTestSucceed(std::string s)
         return 0;
 }
 
-DIGEST_MODE haveSHA(const std::string &s)
+cssl::DIGEST_MODE haveSHA(const std::string &s)
 {
-    static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
-        {"SHA-1", DIGEST_MODE::SHA_1},
-        {"SHA-224", DIGEST_MODE::SHA_224},
-        {"SHA-256", DIGEST_MODE::SHA_256},
-        {"SHA-384", DIGEST_MODE::SHA_384},
-        {"SHA-512", DIGEST_MODE::SHA_512},
-        {"SHA3_224", DIGEST_MODE::SHA_3_224},
-        {"SHA3_256", DIGEST_MODE::SHA_3_256},
-        {"SHA3_384", DIGEST_MODE::SHA_3_384},
-        {"SHA3_512", DIGEST_MODE::SHA_3_512}};
+    static const std::unordered_map<std::string, cssl::DIGEST_MODE> sha_map = {
+        {"SHA-1", cssl::DIGEST_MODE::SHA_1},
+        {"SHA-224", cssl::DIGEST_MODE::SHA_224},
+        {"SHA-256", cssl::DIGEST_MODE::SHA_256},
+        {"SHA-384", cssl::DIGEST_MODE::SHA_384},
+        {"SHA-512", cssl::DIGEST_MODE::SHA_512},
+        {"SHA3_224", cssl::DIGEST_MODE::SHA_3_224},
+        {"SHA3_256", cssl::DIGEST_MODE::SHA_3_256},
+        {"SHA3_384", cssl::DIGEST_MODE::SHA_3_384},
+        {"SHA3_512", cssl::DIGEST_MODE::SHA_3_512}};
 
     auto it = sha_map.find(s);
-    return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
+    return it != sha_map.end() ? it->second : cssl::DIGEST_MODE::NONE;
 }
 
-ECGroup haveCurve(std::string s)
+cssl::EC_GROUP haveCurve(std::string s)
 {
-    static const std::unordered_map<std::string, ECGroup> group_map = {
-        {"P-224", ECGroup::P224},
-        {"P-256", ECGroup::P256},
-        {"P-384", ECGroup::P384},
-        {"P-521", ECGroup::P521},
+    static const std::unordered_map<std::string, cssl::EC_GROUP> group_map = {
+        {"P-224", cssl::EC_GROUP::P224},
+        {"P-256", cssl::EC_GROUP::P256},
+        {"P-384", cssl::EC_GROUP::P384},
+        {"P-521", cssl::EC_GROUP::P521},
     };
 
     auto it = group_map.find(s);
-    return it != group_map.end() ? it->second : ECGroup::NONE;
+    return it != group_map.end() ? it->second : cssl::EC_GROUP::NONE;
 }
 
 int main()
@@ -181,18 +181,17 @@ int main()
     int totalPassed = 0, totalFailed = 0;
     for (const auto &ch : rsp.curve_hash_tests)
     {
-        DIGEST_MODE shaMode = haveSHA(ch.hash);
-        ECGroup group = haveCurve(ch.curve);
+        cssl::DIGEST_MODE shaMode = haveSHA(ch.hash);
+        cssl::EC_GROUP group = haveCurve(ch.curve);
 
-        if (shaMode != DIGEST_MODE::NONE && group != ECGroup::NONE)
+        if (shaMode != cssl::DIGEST_MODE::NONE && group != cssl::EC_GROUP::NONE)
         {
             int p = 0, f = 0;
             for (const auto &t : ch.tests)
             {
-                CSSL::ECKeyPair keyPair =
-                    CSSL::ECKeyPair::From(group, "00", t.Qx, t.Qy);
-                CSSL::ECSignature sig = CSSL::ECSignature::From(t.R, t.S);
-                std::vector<uint8_t> msgBytes = hexToBytes(t.msg_hex);
+                cssl::Ec keyPair = cssl::Ec::from(group, "00", t.Qx, t.Qy);
+                cssl::EcSignature sig = cssl::EcSignature::from(t.R, t.S);
+                std::vector<uint8_t> msgBytes = hex_to_bytes(t.msg_hex);
                 if (keyPair.verify(sig, msgBytes, shaMode) ==
                     didTestSucceed(t.Result))
                     p++;

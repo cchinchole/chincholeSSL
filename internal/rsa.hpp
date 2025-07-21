@@ -1,80 +1,51 @@
-#include "../inc/hash/hash.hpp"
+#pragma once
 #include "../inc/utils/bytes.hpp"
-#include <cstdint>
-#include <openssl/bio.h>
+#include "../inc/types.hpp"
 #include <openssl/bn.h>
-#include <openssl/core_names.h>
-#include <openssl/evp.h>
-#include <openssl/pem.h>
-#include <openssl/rsa.h>
-#include <openssl/ssl.h>
-#include <vector>
 
 // These classes are purely internal no reason to export them.
-enum class RSA_Padding{
+enum class RsaPadding{
     OAEP,
     NONE
 };
 
-class RSA_Padding_Params {
-public:
-    RSA_Padding mode;
-    DIGEST_MODE hashMode;
-    DIGEST_MODE maskHashMode;
-    ByteArray label;
-    ByteArray seed;
+struct RsaPaddingParams {
+    RsaPadding  mode;
+    cssl::DIGEST_MODE label_hash_mode;
+    cssl::DIGEST_MODE hask_hash_mode;
+    ByteArray   label;
+    ByteArray   seed;
 };
 
-class RSA_CRT_Params {
+class RsaCrtParams {
 public:
-    BIGNUM *dp, *dq, *qInv, *p, *q;
-    bool enabled = false;
-    RSA_CRT_Params();
-    ~RSA_CRT_Params();
+    BIGNUM *dp_; 
+    BIGNUM *dq_;
+    BIGNUM *qinv_;
+    BIGNUM *p_; 
+    BIGNUM *q_;
+    bool enabled_ = false;
+    RsaCrtParams();
+    ~RsaCrtParams();
 };
 
-class cRSAKey {
+class RsaKey {
 public:
-    // Need the N, E, D
-    // (N, E) Form the public
-    // (N, D) Form the private
-    int kBits = 4096; 
-    BIGNUM *n, *e, *d;
-    RSA_CRT_Params crt;
-    RSA_Padding_Params padding;
-    void reset();
-    cRSAKey();
-   ~cRSAKey();
+    int modulus_bits_ = 4096; 
+    BIGNUM  *n_,
+            *e_,
+            *d_;
+    RsaCrtParams crt_params_;
+    RsaPaddingParams padding_;
+    void reset_padding();
+    RsaKey();
+   ~RsaKey();
 };
-int rsa_sp800_56b_pairwise_test(cRSAKey &key);
-int gen_rsa_sp800_56b(cRSAKey &key, bool constTime);
-void RSA_GenerateKey(cRSAKey &key, int kBits);
-void RSA_AddOAEP(cRSAKey &key, ByteSpan label, ByteSpan seed, DIGEST_MODE hashMode, DIGEST_MODE maskHashMode);
-void RSA_AddOAEP(cRSAKey &key, ByteSpan label, DIGEST_MODE hashMode, DIGEST_MODE maskHashMode);
-ByteArray RSA_Encrypt(cRSAKey &key, std::span<const uint8_t> src);
-ByteArray RSA_Decrypt(cRSAKey &key, std::span<const uint8_t> cipher);
-ByteArray mgf1(std::span<const uint8_t> seed, size_t maskLen, DIGEST_MODE shaMode = DIGEST_MODE::SHA_1);
-/*
- * Key Pair:
- * <d, n>: Form the private decryption key.
- * <e, n>: Form the public encryption key.
- *
- * Chinese Remainder Theorem Params:
- * <p, q, dP, dQ, qInv>: Form the quintuple private key used for decryption.
- * CRT and Euler's Theorem are used here.
- * https://www.di-mgt.com.au/crt_rsa.html
- * https://math.berkeley.edu/~charles/55/2-21.pdf
- * Benefit of using RSA-CRT over RSA is to speed up the decryption time.
- */
-
-/*
- * https://math.stackexchange.com/questions/2500022/do-primes-expressed-in-binary-have-more-random-bits-on-average-than-natural
- * :: Why there are leading ones in rng generation
- * https://crypto.stanford.edu/pbc/notes/numbertheory/crt.html :: CRT
- * https://mathstats.uncg.edu/sites/pauli/112/HTML/seceratosthenes.html :: Sieve
- * of Eratosthenes
- * http://www.cs.sjsu.edu/~stamp/CS265/SecurityEngineering/chapter5_SE/RSAmath.html
- * :: RSA https://www.di-mgt.com.au/crt_rsa.html :: CRT encryption
- * https://security.stackexchange.com/questions/176394/how-does-openssl-generate-a-big-prime-number-so-fast
- * :: OpenSSL Generating prime numbers
- */
+int rsa_pairwise_test(RsaKey &key);
+int rsa_gen_crt_params(RsaKey &key, bool constTime);
+void rsa_generate_key(RsaKey &key, int kBits);
+void rsa_add_oaep(RsaKey &key, ByteSpan label, ByteSpan seed, cssl::DIGEST_MODE hashMode, cssl::DIGEST_MODE maskHashMode);
+void rsa_add_oaep(RsaKey &key, ByteSpan label, cssl::DIGEST_MODE hashMode, cssl::DIGEST_MODE maskHashMode);
+ByteArray rsa_encrypt(RsaKey &key, std::span<const uint8_t> src);
+ByteArray rsa_decrypt(RsaKey &key, std::span<const uint8_t> cipher);
+ByteArray rsa_mgf1(std::span<const uint8_t> seed, size_t maskLen, cssl::DIGEST_MODE shaMode = cssl::DIGEST_MODE::SHA_1);

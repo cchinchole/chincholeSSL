@@ -168,19 +168,19 @@ int main()
         for (const auto &t : ch.tests)
         {
             totalTests++;
-            CSSL::RSA rsa(kBits);
+            cssl::Rsa rsa(kBits);
             if (t.n.empty() || t.d.empty())
             {
                 totalSkipped++;
                 continue;
             }
-            rsa.loadPrivateKey(t.n, t.d);
-            auto k = rsa.decrypt(hexToBytes(t.c));
+            rsa.load_private_key(t.n, t.d);
+            auto k = rsa.decrypt(hex_to_bytes(t.c));
             bool expectedRes = t.result == "Pass" ? true : false;
             bool res = !k.empty();
             if (expectedRes)
             {
-                auto expectedK = hexToBytes(t.k);
+                auto expectedK = hex_to_bytes(t.k);
                 if (memcmp(expectedK.data(), k.data(), expectedK.size()) == 0)
                 {
                     p++;

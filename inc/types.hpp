@@ -1,5 +1,5 @@
-#ifndef TYPES_HPP
-#define TYPES_HPP
+#pragma once
+namespace cssl {
 enum class DIGEST_MODE
 {
     SHA_1,
@@ -33,7 +33,7 @@ enum class AES_KEYSIZE
     m256 = 2
 };
 
-enum class ECGroup
+enum class EC_GROUP
 {
     P224,
     P256,
@@ -41,4 +41,4 @@ enum class ECGroup
     P521,
     NONE
 };
-#endif
+}

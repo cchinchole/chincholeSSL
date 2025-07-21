@@ -1,5 +1,4 @@
 #include "internal/sha.hpp"
-#include "inc/utils/logger.hpp"
 #include <math.h>
 
 #define SHA384512_NUM_WORDS 16
@@ -13,12 +12,12 @@
     (((value) << (bits)) | ((value) >> (sizeof(uint64_t) * 8 - (bits))))
 #define SHA384512_SHR(value, bits) ((value) >> bits)
 
-uint64_t Ch(uint64_t x, uint64_t y, uint64_t z)
+uint64_t ch(uint64_t x, uint64_t y, uint64_t z)
 {
     return (x & y) ^ (~x & z);
 }
 
-uint64_t Maj(uint64_t x, uint64_t y, uint64_t z)
+uint64_t maj(uint64_t x, uint64_t y, uint64_t z)
 {
     return (x & y) ^ (x & z) ^ (y & z);
 }
@@ -74,10 +73,10 @@ uint64_t sha384512_k[80] = {
     0x431d67c49c100d4c, 0x4cc5d4becb3e42b6, 0x597f299cfc657e2a,
     0x5fcb6fab3ad6faec, 0x6c44198c4a475817};
 
-int SHA_384512_process(SHA_Context *ctx)
+int sha512_process(ShaContext *ctx)
 {
-    uint8_t *block = (uint8_t *)(ctx->blockP);
-    uint64_t *H = (uint64_t *)(ctx->HP);
+    uint8_t *block = (uint8_t *)(ctx->pblock_);
+    uint64_t *H = (uint64_t *)(ctx->ph_);
 
     /* Using non circular queue this time */
     uint64_t W[SHA384512_ROUNDS];
@@ -111,8 +110,8 @@ int SHA_384512_process(SHA_Context *ctx)
     /* Step 3 loop */
     for (int t = 0; t < SHA384512_ROUNDS; t++)
     {
-        tmp1 = h + summat1_512(e) + Ch(e, f, g) + sha384512_k[t] + W[t];
-        tmp2 = summat0_512(a) + Maj(a, b, c);
+        tmp1 = h + summat1_512(e) + ch(e, f, g) + sha384512_k[t] + W[t];
+        tmp2 = summat0_512(a) + maj(a, b, c);
         h = g;
         g = f;
         f = e;
@@ -135,14 +134,14 @@ int SHA_384512_process(SHA_Context *ctx)
     return 0;
 }
 
-int SHA_384512_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
+int sha512_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx)
 {
-    if (ctx->mode != DIGEST_MODE::SHA_512 && ctx->mode != DIGEST_MODE::SHA_384)
+    if (ctx->mode_ != cssl::DIGEST_MODE::SHA_512 && ctx->mode_ != cssl::DIGEST_MODE::SHA_384)
         return -1;
 
-    uint64_t *bMsg_len = ((uint64_t *)ctx->bMsg_lenP);
-    uint8_t *block = (uint8_t *)(ctx->blockP);
-    uint64_t *H = (uint64_t *)(ctx->HP);
+    uint64_t *bMsg_len = ((uint64_t *)ctx->pmsg_len_);
+    uint8_t *block = (uint8_t *)(ctx->pblock_);
+    uint64_t *H = (uint64_t *)(ctx->ph_);
 
     uint64_t carry = byMsg_len * 8;
     uint64_t nextCarry = 0;
@@ -164,44 +163,44 @@ int SHA_384512_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
     }
 
     const uint8_t *src = (uint8_t *)msg;
-    memset(block, 0, getSHABlockLengthByMode(ctx->mode));
+    memset(block, 0, get_block_length(ctx->mode_));
     while (byMsg_len--)
     {
-        block[ctx->blockCur++] = *src++;
-        if (ctx->blockCur == getSHABlockLengthByMode(ctx->mode))
+        block[ctx->block_cursor_++] = *src++;
+        if (ctx->block_cursor_ == get_block_length(ctx->mode_))
         {
-            SHA_384512_process(ctx);
-            ctx->blockCur = 0;
+            sha512_process(ctx);
+            ctx->block_cursor_ = 0;
         }
     }
     return 0;
 }
 
-int SHA_384512_digest(uint8_t *digest_out, SHA_Context *ctx)
+int sha512_digest(uint8_t *digest_out, ShaContext *ctx)
 {
 
-    if (ctx->mode != DIGEST_MODE::SHA_512 && ctx->mode != DIGEST_MODE::SHA_384)
+    if (ctx->mode_ != cssl::DIGEST_MODE::SHA_512 && ctx->mode_ != cssl::DIGEST_MODE::SHA_384)
         return -1;
 
-    uint64_t *bMsg_len = ((uint64_t *)ctx->bMsg_lenP);
-    uint8_t *block = (uint8_t *)(ctx->blockP);
-    uint64_t *H = (uint64_t *)(ctx->HP);
+    uint64_t *bMsg_len = ((uint64_t *)ctx->pmsg_len_);
+    uint8_t *block = (uint8_t *)(ctx->pblock_);
+    uint64_t *H = (uint64_t *)(ctx->ph_);
 
     /* Set the first bit to 1 (0b10000000) */
-    block[ctx->blockCur++] = 0x80;
+    block[ctx->block_cursor_++] = 0x80;
 
-    if (getSHABlockLengthByMode(ctx->mode) - ctx->blockCur > 0)
-        memset(block + ctx->blockCur, 0,
-               getSHABlockLengthByMode(ctx->mode) - ctx->blockCur);
+    if (get_block_length(ctx->mode_) - ctx->block_cursor_ > 0)
+        memset(block + ctx->block_cursor_, 0,
+               get_block_length(ctx->mode_) - ctx->block_cursor_);
 
     /* Check if we can fit the message length into current block if not then
      * process a new block */
-    if (ctx->blockCur >
-        (getSHABlockLengthByMode(ctx->mode) - SHA2_512_LEN_BYTES))
+    if (ctx->block_cursor_ >
+        (get_block_length(ctx->mode_) - SHA2_512_LEN_BYTES))
     {
-        SHA_384512_process(ctx);
-        ctx->blockCur = 0;
-        memset(block, 0, getSHABlockLengthByMode(ctx->mode));
+        sha512_process(ctx);
+        ctx->block_cursor_ = 0;
+        memset(block, 0, get_block_length(ctx->mode_));
     }
 
     uint64_t nSize[2] = {bMsg_len[0], bMsg_len[1]};
@@ -213,15 +212,15 @@ int SHA_384512_digest(uint8_t *digest_out, SHA_Context *ctx)
          * to 16 bytes then swap to the other 64 bit int in the array */
         block[i] = nSize[sizeIdx];
         nSize[sizeIdx] >>= 8;
-        if (i == getSHABlockLengthByMode(ctx->mode) - sizeof(uint64_t))
+        if (i == get_block_length(ctx->mode_) - sizeof(uint64_t))
             sizeIdx++;
     }
 
     /* The final message with the length to process */
-    SHA_384512_process(ctx);
-    ctx->blockCur = 0;
+    sha512_process(ctx);
+    ctx->block_cursor_ = 0;
 
-    for (int i = 0; i < getSHAReturnLengthByMode(ctx->mode) / sizeof(H[i]); i++)
+    for (int i = 0; i < get_return_length(ctx->mode_) / sizeof(H[i]); i++)
     {
         *(digest_out++) = H[i] >> 56;
         *(digest_out++) = H[i] >> 48;

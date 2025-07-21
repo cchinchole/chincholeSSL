@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-using namespace CSSL::Parser;
+using namespace cssl::Parser;
 
 // Returns 1 on success
 uint8_t runTestCase(const TestVector &vector, const TestGroup &group, const TestCase &test)
@@ -26,8 +26,8 @@ uint8_t runTestCase(const TestVector &vector, const TestGroup &group, const Test
         return CSSL_TEST_SKIPPED;
     }
 
-    BIGNUM *check = hexToBignum(value);
-    passed = CSSL::checkIfPrime(check);
+    BIGNUM *check = hex_to_bignum(value);
+    passed = cssl::check_if_prime(check);
     BN_free(check);
     if (result == "valid" || result == "acceptable")
         expectedPass = true;

@@ -158,29 +158,29 @@ int didTestSucceed(std::string s)
         return -1;
 }
 
-DIGEST_MODE haveSHA(const std::string &s)
+cssl::DIGEST_MODE haveSHA(const std::string &s)
 {
-    static const std::unordered_map<std::string, DIGEST_MODE> sha_map = {
-        {"SHA-1", DIGEST_MODE::SHA_1},     {"SHA-224", DIGEST_MODE::SHA_224},
-        {"SHA-256", DIGEST_MODE::SHA_256}, {"SHA-384", DIGEST_MODE::SHA_384},
-        {"SHA-512", DIGEST_MODE::SHA_512},
+    static const std::unordered_map<std::string, cssl::DIGEST_MODE> sha_map = {
+        {"SHA-1", cssl::DIGEST_MODE::SHA_1},     {"SHA-224", cssl::DIGEST_MODE::SHA_224},
+        {"SHA-256", cssl::DIGEST_MODE::SHA_256}, {"SHA-384", cssl::DIGEST_MODE::SHA_384},
+        {"SHA-512", cssl::DIGEST_MODE::SHA_512},
     };
 
     auto it = sha_map.find(s);
-    return it != sha_map.end() ? it->second : DIGEST_MODE::NONE;
+    return it != sha_map.end() ? it->second : cssl::DIGEST_MODE::NONE;
 }
 
-ECGroup haveCurve(std::string s)
+cssl::EC_GROUP haveCurve(std::string s)
 {
-    static const std::unordered_map<std::string, ECGroup> group_map = {
-        {"P-224", ECGroup::P224},
-        {"P-256", ECGroup::P256},
-        {"P-384", ECGroup::P384},
-        {"P-521", ECGroup::P521},
+    static const std::unordered_map<std::string, cssl::EC_GROUP> group_map = {
+        {"P-224", cssl::EC_GROUP::P224},
+        {"P-256", cssl::EC_GROUP::P256},
+        {"P-384", cssl::EC_GROUP::P384},
+        {"P-521", cssl::EC_GROUP::P521},
     };
 
     auto it = group_map.find(s);
-    return it != group_map.end() ? it->second : ECGroup::NONE;
+    return it != group_map.end() ? it->second : cssl::EC_GROUP::NONE;
 }
 
 int main()
@@ -192,21 +192,20 @@ int main()
     int totalPassed = 0, totalFailed = 0;
     for (const auto &ch : rsp.curve_hash_tests)
     {
-        DIGEST_MODE shaMode = haveSHA(ch.hash);
-        ECGroup group = haveCurve(ch.curve);
+        cssl::DIGEST_MODE shaMode = haveSHA(ch.hash);
+        cssl::EC_GROUP group = haveCurve(ch.curve);
         int p = 0, f = 0;
-        if (shaMode != DIGEST_MODE::NONE && group != ECGroup::NONE)
+        if (shaMode != cssl::DIGEST_MODE::NONE && group != cssl::EC_GROUP::NONE)
         {
             //std::cout << "\033[34mCurve: " << ch.curve << "\n";
             //std::cout << "Hash: " << ch.hash << "\033[0m\n";
             for (const auto &t : ch.tests)
             {
-                CSSL::ECKeyPair keyPair =
-                    CSSL::ECKeyPair::From(group, t.d, t.Qx, t.Qy);
-                std::vector<uint8_t> msg = hexToBytes(t.msg_hex);
-                CSSL::ECSignature sig = keyPair.sign(msg, shaMode);
-                std::string R = sig.getPairRS().first;
-                std::string S = sig.getPairRS().second;
+                cssl::Ec keyPair = cssl::Ec::from(group, t.d, t.Qx, t.Qy);
+                std::vector<uint8_t> msg = hex_to_bytes(t.msg_hex);
+                cssl::EcSignature sig = keyPair.sign(msg, shaMode);
+                std::string R = sig.get_rs().first;
+                std::string S = sig.get_rs().second;
                 if (strcmp(R.c_str(), t.R.c_str()) &&
                     strcmp(S.c_str(), t.S.c_str()))
                 {
@@ -227,7 +226,7 @@ int main()
             PRINT("[ \e[34m{} {}\e[0m ]: Passed: {} Failed: {}", ch.curve, ch.hash, p, f);
         }
 
-        if (group != ECGroup::NONE)
+        if (group != cssl::EC_GROUP::NONE)
         {
             totalPassed += p;
             totalFailed += f;

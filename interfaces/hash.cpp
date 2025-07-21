@@ -2,18 +2,18 @@
 #include "../internal/hmac.hpp"
 #include "../internal/sha.hpp"
 
-namespace CSSL
+namespace cssl
 {
 class Hasher::Impl
 {
 public:
-    SHA_Context *ctx_;
+    ShaContext *ctx_;
     DIGEST_MODE mode_;
     bool finalized_;
 
     Impl(DIGEST_MODE mode) : mode_(mode), finalized_(false)
     {
-        ctx_ = SHA_Context_new(mode);
+        ctx_ = sha_new_context(mode);
     }
 
     ~Impl()
@@ -33,7 +33,7 @@ public:
         }
         else
         {
-            ctx_ = SHA_Context_new(mode_);
+            ctx_ = sha_new_context(mode_);
         }
         finalized_ = false;
     }
@@ -44,7 +44,7 @@ public:
         {
             reset();
         }
-        SHA_Update(const_cast<uint8_t *>(data.data()), data.size(), ctx_);
+        sha_update(const_cast<uint8_t *>(data.data()), data.size(), ctx_);
     }
 
     void update(const std::unique_ptr<uint8_t[]> &data, size_t length)
@@ -53,7 +53,7 @@ public:
         {
             reset();
         }
-        SHA_Update(data.get(), length, ctx_);
+        sha_update(data.get(), length, ctx_);
     }
 
     ByteArray digest()
@@ -62,8 +62,8 @@ public:
         {
             reset();
         }
-        ByteArray result(getSHAReturnLengthByMode(mode_));
-        SHA_Digest(result.data(), ctx_);
+        ByteArray result(get_return_length(mode_));
+        sha_digest(result.data(), ctx_);
         finalized_ = true;
         return result;
     }
@@ -80,51 +80,51 @@ public:
             reset();
         }
         ByteArray result(length);
-        SHA_SHAKE_DIGEST_BYTES(ctx_, length);
-        SHA_3_xof(ctx_);
-        SHA_3_shake_digest(result.data(), length, ctx_);
+        sha3_shake_digest_bytes(ctx_, length);
+        sha3_xof(ctx_);
+        sha3_shake_digest(result.data(), length, ctx_);
         finalized_ = true;
         return result;
     }
 };
 
-Hasher::Hasher(DIGEST_MODE mode) : impl_(new Impl(mode)) {}
+Hasher::Hasher(DIGEST_MODE mode) : pimpl_(new Impl(mode)) {}
 
-Hasher::~Hasher() { delete impl_; }
+Hasher::~Hasher() { delete pimpl_; }
 
-Hasher::Hasher(Hasher &&other) noexcept : impl_(other.impl_)
+Hasher::Hasher(Hasher &&other) noexcept : pimpl_(other.pimpl_)
 {
-    other.impl_ = nullptr;
+    other.pimpl_ = nullptr;
 }
 
 Hasher &Hasher::operator=(Hasher &&other) noexcept
 {
     if (this != &other)
     {
-        delete impl_;
-        impl_ = other.impl_;
-        other.impl_ = nullptr;
+        delete pimpl_;
+        pimpl_ = other.pimpl_;
+        other.pimpl_ = nullptr;
     }
     return *this;
 }
 
-void Hasher::reset() { impl_->reset(); }
+void Hasher::reset() { pimpl_->reset(); }
 
 Hasher &Hasher::update(ByteSpan data)
 {
-    impl_->update(data);
+    pimpl_->update(data);
     return *this;
 }
 
 Hasher &Hasher::update(const std::unique_ptr<uint8_t[]> &data, size_t length)
 {
-    impl_->update(data, length);
+    pimpl_->update(data, length);
     return *this;
 }
 
-ByteArray Hasher::digest() { return impl_->digest(); }
+ByteArray Hasher::digest() { return pimpl_->digest(); }
 
-ByteArray Hasher::xof(size_t length) { return impl_->xof(length); }
+ByteArray Hasher::xof(size_t length) { return pimpl_->xof(length); }
 
 ByteArray Hasher::hash(ByteSpan data, DIGEST_MODE mode)
 {
@@ -133,24 +133,29 @@ ByteArray Hasher::hash(ByteSpan data, DIGEST_MODE mode)
     return hasher.digest();
 }
 
-ByteArray Hasher::xof(ByteSpan data, size_t BDigestLength, DIGEST_MODE mode)
+ByteArray Hasher::xof(ByteSpan data, size_t digest_length_bytes, DIGEST_MODE mode)
 {
     Hasher hasher(mode);
     hasher.update(data);
-    return hasher.xof(BDigestLength);
+    return hasher.xof(digest_length_bytes);
 }
 
 ByteArray Hasher::hmac(ByteSpan data, ByteSpan key, DIGEST_MODE mode)
 {
-    SHA_Context *ctx = SHA_Context_new(mode);
-    ByteArray result(getSHAReturnLengthByMode(mode));
-    hmac_sha(ctx->mode, result.data(), data, key);
+    ShaContext *ctx = sha_new_context(mode);
+    ByteArray result(get_return_length(mode));
+    hmacFinalize(ctx->mode_, result.data(), data, key);
     delete ctx;
     return result;
 }
 
-size_t Hasher::returnLength()
+size_t Hasher::return_length()
 {
-    return getSHAReturnLengthByMode(impl_->ctx_->mode);
+    return get_return_length(pimpl_->ctx_->mode_);
+}
+
+size_t Hasher::block_length()
+{
+    return get_block_length(pimpl_->ctx_->mode_);
 }
 }

@@ -118,26 +118,26 @@ SiggenRsp parseSigGen(const std::string &filename)
     return rsp;
 }
 
-AES_MODE getMode(std::string &s)
+cssl::AES_MODE getMode(std::string &s)
 {
-    static const std::unordered_map<std::string, AES_MODE> stringToEnum = {
-        {"ECB", AES_MODE::ECB}, {"CBC", AES_MODE::CBC}, {"CTR", AES_MODE::CTR},
-        {"CFB", AES_MODE::CFB}, {"OFB", AES_MODE::OFB},
+    static const std::unordered_map<std::string, cssl::AES_MODE> stringToEnum = {
+        {"ECB", cssl::AES_MODE::ECB}, {"CBC", cssl::AES_MODE::CBC}, {"CTR", cssl::AES_MODE::CTR},
+        {"CFB", cssl::AES_MODE::CFB}, {"OFB", cssl::AES_MODE::OFB},
     };
 
     auto it = stringToEnum.find(s);
     if (it == stringToEnum.end())
-        return AES_MODE::NONE;
+        return cssl::AES_MODE::NONE;
 
     return it->second;
 }
 
-AES_KEYSIZE getKeySize(std::string &s)
+cssl::AES_KEYSIZE getKeySize(std::string &s)
 {
-    static const std::unordered_map<std::string, AES_KEYSIZE> stringToEnum = {
-        {"128", AES_KEYSIZE::m128},
-        {"192", AES_KEYSIZE::m192},
-        {"256", AES_KEYSIZE::m256},
+    static const std::unordered_map<std::string, cssl::AES_KEYSIZE> stringToEnum = {
+        {"128", cssl::AES_KEYSIZE::m128},
+        {"192", cssl::AES_KEYSIZE::m192},
+        {"256", cssl::AES_KEYSIZE::m256},
     };
 
     auto it = stringToEnum.find(s);
@@ -148,9 +148,9 @@ void runTest(std::string path, std::string fileName, std::string sMode,
              std::string keySize, int *passed, int *failed)
 {
 
-    AES_MODE mode = getMode(sMode);
-    AES_KEYSIZE kSize = getKeySize(keySize);
-    if (mode == AES_MODE::NONE)
+    cssl::AES_MODE mode = getMode(sMode);
+    cssl::AES_KEYSIZE kSize = getKeySize(keySize);
+    if (mode == cssl::AES_MODE::NONE)
     {
         printf("Invalid AES mode\n");
         return;
@@ -164,18 +164,18 @@ void runTest(std::string path, std::string fileName, std::string sMode,
         {
             if (ch.state == "ENCRYPT")
             {
-                CSSL::AES aes(mode, kSize);
+                cssl::Aes aes(mode, kSize);
 
-                if (mode != AES_MODE::ECB)
-                    aes.addKey(t.KEY, t.IV);
+                if (mode != cssl::AES_MODE::ECB)
+                    aes.load_key(t.KEY, t.IV);
                 else
-                    aes.addKey(t.KEY);
+                    aes.load_key(t.KEY);
 
-                std::vector<uint8_t> buffer = hexToBytes(t.PLAINTEXT);
+                std::vector<uint8_t> buffer = hex_to_bytes(t.PLAINTEXT);
                 std::vector<uint8_t> output =
                     aes.encrypt(buffer); // AES_Encrypt(ctx, buffer);
-                std::string hexOutput = bytesToHex(output);
-                if (std::memcmp(output.data(), hexToBytes(t.CIPHERTEXT).data(),
+                std::string hexOutput = bytes_to_hex(output);
+                if (std::memcmp(output.data(), hex_to_bytes(t.CIPHERTEXT).data(),
                                 output.size()) == 0)
                     passedEncryption++;
                 else
@@ -183,16 +183,16 @@ void runTest(std::string path, std::string fileName, std::string sMode,
             }
             else if (ch.state == "DECRYPT")
             {
-                CSSL::AES aes(mode, kSize);
-                if (mode != AES_MODE::ECB)
-                    aes.addKey(t.KEY, t.IV);
+                cssl::Aes aes(mode, kSize);
+                if (mode != cssl::AES_MODE::ECB)
+                    aes.load_key(t.KEY, t.IV);
                 else
-                    aes.addKey(t.KEY);
+                    aes.load_key(t.KEY);
 
-                std::vector<uint8_t> buffer = hexToBytes(t.CIPHERTEXT);
+                std::vector<uint8_t> buffer = hex_to_bytes(t.CIPHERTEXT);
                 std::vector<uint8_t> output = aes.decrypt(buffer);
 
-                if (std::memcmp(output.data(), hexToBytes(t.PLAINTEXT).data(),
+                if (std::memcmp(output.data(), hex_to_bytes(t.PLAINTEXT).data(),
                                 output.size()) == 0)
                     passedDecryption++;
                 else

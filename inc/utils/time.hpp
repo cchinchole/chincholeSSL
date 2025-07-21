@@ -1,3 +1,4 @@
+#pragma once
 #include <chrono>
 class Timer
 {
@@ -9,5 +10,5 @@ public:
   void start();
 
   void stop();
-  unsigned int getElapsed(bool useStop = false, int secondType = 0);
+  unsigned int get_elapsed(bool useStop = false, int secondType = 0);
 };

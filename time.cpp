@@ -11,7 +11,7 @@ void Timer::stop()
     endp = std::chrono::high_resolution_clock::now();
 }
 
-unsigned int Timer::getElapsed(bool useStop, int secondType)
+unsigned int Timer::get_elapsed(bool useStop, int secondType)
 {
     if (useStop)
         stop();

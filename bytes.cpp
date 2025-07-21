@@ -3,7 +3,7 @@
 #include <openssl/bn.h>
 #include <stdexcept>
 
-std::string bytesToHex(const std::vector<uint8_t> &bytes, bool uppercase)
+std::string bytes_to_hex(const std::vector<uint8_t> &bytes, bool uppercase)
 {
     std::ostringstream oss;
     oss << std::hex << std::setfill('0')
@@ -15,7 +15,7 @@ std::string bytesToHex(const std::vector<uint8_t> &bytes, bool uppercase)
     return oss.str();
 }
 
-std::vector<uint8_t> hexToBytes(const std::string &hex)
+std::vector<uint8_t> hex_to_bytes(const std::string &hex)
 {
     if (hex.size() % 2 != 0)
         throw std::invalid_argument("Invalid hex string");
@@ -33,7 +33,7 @@ std::vector<uint8_t> hexToBytes(const std::string &hex)
     return bytes;
 }
 
-std::vector<uint8_t> hexToBytes(const std::string &hex, size_t byteLength)
+std::vector<uint8_t> hex_to_bytes(const std::string &hex, size_t byteLength)
 {
     if (hex.size() % 2 != 0)
         throw std::invalid_argument("Invalid hex string");
@@ -51,29 +51,29 @@ std::vector<uint8_t> hexToBytes(const std::string &hex, size_t byteLength)
     return bytes;
 }
 
-std::vector<uint8_t> bytePtrToByteArray(uint8_t *from, size_t len)
+std::vector<uint8_t> byteptr_to_bytearray(uint8_t *from, size_t len)
 {
     return std::vector<uint8_t>(from, from + len);
 }
 
-std::vector<uint8_t> charToByteArray(const char *buffer, size_t length)
+std::vector<uint8_t> char_to_bytearray(const char *buffer, size_t length)
 {
     return std::vector<uint8_t>(buffer, buffer + length);
 }
 
-std::string asciiToHex(const std::string &ascii, bool uppercase)
+std::string ascii_to_hex(const std::string &ascii, bool uppercase)
 {
-    return bytesToHex(std::vector<uint8_t>(ascii.begin(), ascii.end()),
+    return bytes_to_hex(std::vector<uint8_t>(ascii.begin(), ascii.end()),
                       uppercase);
 }
 
-ByteArray asciiToByteArray(const std::string &ascii)
+ByteArray ascii_to_bytearray(const std::string &ascii)
 {
-    return hexToBytes(asciiToHex(ascii));
+    return hex_to_bytes(ascii_to_hex(ascii));
 }
 
-std::vector<uint8_t> convertBignumToByteArray(BIGNUM *cipherNumber,
-                                           size_t maxBytes)
+std::vector<uint8_t> bignum_to_bytearray(BIGNUM *cipherNumber,
+                                              size_t maxBytes)
 {
 
     std::vector<uint8_t> vec;
@@ -92,7 +92,7 @@ std::vector<uint8_t> convertBignumToByteArray(BIGNUM *cipherNumber,
     return vec;
 }
 
-ByteArray stripPadding(const ByteArray &input)
+ByteArray strip_padding(const ByteArray &input)
 {
     size_t index = 0;
     while (index < input.size() && input[index] == 0x00)
@@ -101,22 +101,31 @@ ByteArray stripPadding(const ByteArray &input)
     return ByteArray(input.begin() + index, input.end());
 }
 
-BIGNUM *hexToBignum(const std::string &hex)
+void hex_to_bignum(BIGNUM *bn, const std::string &str)
+{
+    BIGNUM *bnVal = BN_new();
+    BN_hex2bn(&bnVal, str.c_str());
+    BN_copy(bn, bnVal);
+    BN_free(bnVal);
+}
+
+BIGNUM *hex_to_bignum(const std::string &hex)
 {
     BIGNUM *bn = nullptr;
     BN_hex2bn(&bn, hex.c_str());
     return bn;
 }
 
-char *printWord(uint8_t *input, size_t length, size_t blockSize)
+char *print_word(uint8_t *input, size_t length, size_t blockSize)
 {
     int blocks = length / blockSize;
     char *output = (char *)malloc(2 * length + blocks);
     char *ptr = output;
     for (int i = 0; i < blocks; i++)
     {
-        ptr += sprintf(ptr, "%s",
-                       bytesToHex(bytePtrToByteArray(input, blockSize)).c_str());
+        ptr +=
+            sprintf(ptr, "%s",
+                    bytes_to_hex(byteptr_to_bytearray(input, blockSize)).c_str());
         ptr += sprintf(ptr, " ");
     }
     return output;

@@ -3,14 +3,14 @@
 #include "../utils/bytes.hpp"
 #include <memory>
 
-namespace CSSL
+namespace cssl
 {
 
 class Hasher
 {
 private:
     class Impl;
-    Impl *impl_;
+    Impl *pimpl_;
 
 public:
     explicit Hasher(DIGEST_MODE mode = DIGEST_MODE::SHA_1);
@@ -29,13 +29,14 @@ public:
 
     ByteArray digest();
 
-    size_t returnLength();
+    size_t return_length();
+    size_t block_length();
 
     ByteArray xof(size_t length);
 
     static ByteArray hash(ByteSpan data, DIGEST_MODE mode);
 
-    static ByteArray xof(ByteSpan data, size_t BDigestLength, DIGEST_MODE mode);
+    static ByteArray xof(ByteSpan data, size_t digest_length_bytes, DIGEST_MODE mode);
 
     static ByteArray hmac(ByteSpan data, ByteSpan key, DIGEST_MODE mode);
 };

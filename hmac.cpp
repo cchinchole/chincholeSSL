@@ -1,19 +1,18 @@
 #include "internal/hmac.hpp"
 #include "inc/hash/hash.hpp"
-#include "inc/utils/logger.hpp"
 #include <algorithm>
 #include <math.h>
 
-using namespace CSSL;
+using namespace cssl;
 
 /* FIPS 198-1 */
-void hmac_sha(DIGEST_MODE digestMode, uint8_t *hmac_out,
+void hmacFinalize(DIGEST_MODE digestMode, uint8_t *hmac_out,
               ByteSpan msg, ByteSpan key)
 {
     Hasher h(digestMode);
 
-    size_t blockLen = getSHABlockLengthByMode(digestMode);
-    size_t retLen = getSHAReturnLengthByMode(digestMode);
+    size_t blockLen = h.block_length();
+    size_t retLen = h.return_length();
 
     size_t outerKeySize = blockLen + retLen;
     size_t innerKeySize = blockLen + msg.size();

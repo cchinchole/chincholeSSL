@@ -1,55 +1,54 @@
 #pragma once
-#include "../hash/hash.hpp"
 #include "../utils/bytes.hpp"
-#include <span>
+#include "../types.hpp"
+#include <memory>
 #include <string>
 #include <utility>
 
 
-namespace CSSL
+namespace cssl
 {
-class ECSignature
+class EcSignature
 {
-    friend class ECKeyPair;
+    friend class Ec;
 
 public:
-    static ECSignature From(const std::string &hexR, const std::string &hexS);
-
-    ECSignature(const ECSignature &) = default;
-    ECSignature(ECSignature &&) = default;
-    ECSignature &operator=(const ECSignature &) = default;
-    ECSignature &operator=(ECSignature &&) = default;
-    ~ECSignature();
-    ECSignature();
-    std::pair<std::string, std::string> getPairRS();
+    static EcSignature from(const std::string &hexR, const std::string &hexS);
+    EcSignature(const EcSignature &) = delete;
+    EcSignature(EcSignature &&) = default;
+    EcSignature &operator=(const EcSignature &) = delete;
+    EcSignature &operator=(EcSignature &&) = default;
+    ~EcSignature();
+    EcSignature();
+    std::pair<std::string, std::string> get_rs();
 
 private:
     struct Impl;
-    std::unique_ptr<Impl> pImpl;
+    std::unique_ptr<Impl> pimpl_;
 };
 
-class ECKeyPair
+class Ec
 {
 public:
-    static ECKeyPair Generate(ECGroup group);
-    static ECKeyPair From(ECGroup group, const std::string &hexPriv,
+    static Ec generate_key(EC_GROUP group);
+    static Ec from(EC_GROUP group, const std::string &hexPriv,
                           const std::string &hexPubX,
                           const std::string &hexPubY);
 
-    ECSignature sign(std::span<const uint8_t> message,
+    EcSignature sign(ByteSpan message,
                      DIGEST_MODE shaMode = DIGEST_MODE::SHA_512) const;
-    bool verify(const ECSignature &sig, std::span<const uint8_t> message,
+    bool verify(const EcSignature &sig, ByteSpan message,
                 DIGEST_MODE shaMode = DIGEST_MODE::SHA_512) const;
 
-    ECKeyPair(const ECKeyPair &) = delete;
-    ECKeyPair &operator=(const ECKeyPair &) = delete;
-    ECKeyPair(ECKeyPair &&) noexcept;
-    ECKeyPair &operator=(ECKeyPair &&) noexcept;
-    ~ECKeyPair();
-    ECKeyPair(ECGroup group);
+    Ec(const Ec &) = delete;
+    Ec &operator=(const Ec &) = delete;
+    Ec(Ec &&) noexcept;
+    Ec &operator=(Ec &&) noexcept;
+    ~Ec();
+    Ec(EC_GROUP group);
 
 private:
     struct Impl;
-    std::unique_ptr<Impl> pImpl;
+    std::unique_ptr<Impl> m_pImpl;
 };
 }

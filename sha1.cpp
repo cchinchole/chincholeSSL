@@ -1,5 +1,4 @@
 #include "internal/sha.hpp"
-#include "inc/utils/logger.hpp"
 #include <math.h>
 
 #define SHA1_NUM_WORDS 16
@@ -9,17 +8,17 @@
 #define SHA1_ROTL(value, bits)                                                 \
     (((value) << (bits)) | ((value) >> (sizeof(uint32_t) * 8 - (bits))))
 
-uint32_t Ch(uint32_t x, uint32_t y, uint32_t z)
+uint32_t ch(uint32_t x, uint32_t y, uint32_t z)
 {
     return (x & y) ^ (~x & z);
 }
 
-uint32_t Parity(uint32_t x, uint32_t y, uint32_t z)
+uint32_t parity(uint32_t x, uint32_t y, uint32_t z)
 {
     return x ^ y ^ z;
 }
 
-uint32_t Maj(uint32_t x, uint32_t y, uint32_t z)
+uint32_t maj(uint32_t x, uint32_t y, uint32_t z)
 {
     return (x & y) ^ (x & z) ^ (y & z);
 }
@@ -27,13 +26,13 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z)
 uint32_t sha1_f(uint32_t x, uint32_t y, uint32_t z, int t)
 {
     if (t <= 19)
-        return Ch(x, y, z);
+        return ch(x, y, z);
     else if (t <= 39)
-        return Parity(x, y, z);
+        return parity(x, y, z);
     else if (t <= 59)
-        return Maj(x, y, z);
+        return maj(x, y, z);
     else if (t <= 79)
-        return Parity(x, y, z);
+        return parity(x, y, z);
     else
         return -1;
 }
@@ -52,12 +51,12 @@ uint32_t sha1_k(int t)
         return -1;
 }
 
-int SHA_1_Process(SHA_Context *ctx)
+int sha1_process(ShaContext *ctx)
 {
     /* Using circular queue schedular in accordance to FIPS 180-4 6.1.3 */
     uint32_t W[SHA1_NUM_WORDS];
-    uint8_t *block = (uint8_t *)(ctx->blockP);
-    uint32_t *H = (uint32_t *)(ctx->HP);
+    uint8_t *block = (uint8_t *)(ctx->pblock_);
+    uint32_t *H = (uint32_t *)(ctx->ph_);
 
     /* Step 1: Preparing the message schedular */
     for (int i = 0; i < SHA1_NUM_WORDS; i++)
@@ -106,10 +105,10 @@ int SHA_1_Process(SHA_Context *ctx)
     return 0;
 }
 
-int SHA_1_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
+int sha1_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx)
 {
-    uint64_t *bMsg_len = ((uint64_t *)ctx->bMsg_lenP);
-    uint8_t *block = (uint8_t *)(ctx->blockP);
+    uint64_t *bMsg_len = ((uint64_t *)ctx->pmsg_len_);
+    uint8_t *block = (uint8_t *)(ctx->pblock_);
     /* Make sure the bits are not exceeding 2^64 */
     if ((*bMsg_len + (byMsg_len * 8)) >= pow(2, 64))
         return -1;
@@ -117,55 +116,55 @@ int SHA_1_update(const uint8_t *msg, size_t byMsg_len, SHA_Context *ctx)
     /* Clear the block with 0's then copy up to 64 bytes of a message into the
      * block. If we hit 64 then process this message and continue. */
     const uint8_t *src = (uint8_t *)msg;
-    memset(block, 0, getSHABlockLengthByMode(ctx->mode));
+    memset(block, 0, get_block_length(ctx->mode_));
     *bMsg_len += (byMsg_len * 8);
     while (byMsg_len--)
     {
-        block[ctx->blockCur++] = *src++;
-        if (ctx->blockCur == getSHABlockLengthByMode(ctx->mode))
+        block[ctx->block_cursor_++] = *src++;
+        if (ctx->block_cursor_ == get_block_length(ctx->mode_))
         {
-            SHA_1_Process(ctx);
-            ctx->blockCur = 0;
+            sha1_process(ctx);
+            ctx->block_cursor_ = 0;
         }
     }
     return 0;
 }
 
-int SHA_1_digest(uint8_t *digest_out, SHA_Context *ctx)
+int sha1_digest(uint8_t *digest_out, ShaContext *ctx)
 {
 
-    uint8_t *block = (uint8_t *)(ctx->blockP);
-    uint32_t *H = (uint32_t *)(ctx->HP);
+    uint8_t *block = (uint8_t *)(ctx->pblock_);
+    uint32_t *H = (uint32_t *)(ctx->ph_);
 
     /* Set the first bit to 1 (0b10000000) */
-    block[ctx->blockCur++] = 0x80;
+    block[ctx->block_cursor_++] = 0x80;
 
-    if (getSHABlockLengthByMode(ctx->mode) - ctx->blockCur > 0)
-        memset(block + ctx->blockCur, 0,
-               getSHABlockLengthByMode(ctx->mode) - ctx->blockCur);
+    if (get_block_length(ctx->mode_) - ctx->block_cursor_ > 0)
+        memset(block + ctx->block_cursor_, 0,
+               get_block_length(ctx->mode_) - ctx->block_cursor_);
 
     /* Check if we can fit the message length into current block if not then
      * process a new block */
-    if (ctx->blockCur > (getSHABlockLengthByMode(ctx->mode) - sizeof(uint64_t)))
+    if (ctx->block_cursor_ > (get_block_length(ctx->mode_) - sizeof(uint64_t)))
     {
-        SHA_1_Process(ctx);
-        ctx->blockCur = 0;
-        memset(block, 0, getSHABlockLengthByMode(ctx->mode));
+        sha1_process(ctx);
+        ctx->block_cursor_ = 0;
+        memset(block, 0, get_block_length(ctx->mode_));
     }
-    uint64_t nSize = *((uint32_t *)ctx->bMsg_lenP);
+    uint64_t nSize = *((uint32_t *)ctx->pmsg_len_);
 
     for (int i = 1; i <= 4; i++)
     {
         /* Will pull the last byte of the size then remove it */
-        block[getSHABlockLengthByMode(ctx->mode) - i] = nSize;
+        block[get_block_length(ctx->mode_) - i] = nSize;
         nSize >>= 8;
     }
 
     /* The final message with the length to process */
-    SHA_1_Process(ctx);
-    ctx->blockCur = 0;
+    sha1_process(ctx);
+    ctx->block_cursor_ = 0;
 
-    for (int i = 0; i < getSHAReturnLengthByMode(ctx->mode) / sizeof(H[i]); i++)
+    for (int i = 0; i < get_return_length(ctx->mode_) / sizeof(H[i]); i++)
     {
         *(digest_out++) = H[i] >> 24;
         *(digest_out++) = H[i] >> 16;
