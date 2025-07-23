@@ -10,9 +10,8 @@ namespace cssl {
         RsaKey ctx;
     };
 
-    Rsa::Rsa(size_t bits)
+    Rsa::Rsa(size_t bits) : pimpl_(new Impl())
     {
-        pimpl_ = new Impl();
         pimpl_->ctx.modulus_bits_ = bits;
     }
 

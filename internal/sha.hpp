@@ -16,9 +16,9 @@ private:
 public:
     uint64_t block_cursor_ = 0;
     cssl::DIGEST_MODE mode_ = cssl::DIGEST_MODE::SHA_1;
-    void *ph_;
-    void *pmsg_len_;
-    void *pblock_;
+    void* ph_;
+    void* pmsg_len_;
+    void* pblock_;
     virtual void clear() {}
     virtual ~ShaContext() {}
 };
@@ -147,15 +147,15 @@ char *sha_mode_name(cssl::DIGEST_MODE mode);
 void sha3_shake_digest_bytes(ShaContext *ctx_raw, size_t digestBytes);
 
 int sha1_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx);
-int sha1_digest(uint8_t *digest_out, ShaContext *ctx);
 int sha256_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx);
-int sha256_digest(uint8_t *digest_out, ShaContext *ctx);
-int sha3_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx);
-int sha3_digest(uint8_t *digest_out, ShaContext *ctx);
-int sha3_xof(ShaContext *ctx);
-int sha3_shake_digest(uint8_t *digestOut, size_t digestLen, ShaContext *ctx);
 int sha512_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx);
+int sha3_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx);
+int sha1_digest(uint8_t *digest_out, ShaContext *ctx);
+int sha256_digest(uint8_t *digest_out, ShaContext *ctx);
 int sha512_digest(uint8_t *digest_out, ShaContext *ctx);
+int sha3_digest(uint8_t *digest_out, ShaContext *ctx);
+int sha3_shake_digest(uint8_t *digestOut, size_t digestLen, ShaContext *ctx);
+int sha3_xof(ShaContext *ctx);
 
 int sha_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx);
 int sha_digest(uint8_t *digest_out, ShaContext *ctx);

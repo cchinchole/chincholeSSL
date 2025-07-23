@@ -1,4 +1,5 @@
-#include "../inc/cssl.hpp"
+#include "../inc/crypto/ec.hpp"
+#include "../inc/utils/logger.hpp"
 #include <openssl/bn.h>
 
 int main()

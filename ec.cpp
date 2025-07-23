@@ -51,67 +51,67 @@ int ec_generate_signature(EcKey &key, cEcSignature &sig,
                                        cssl::DIGEST_MODE shaMode,
                                        char *kSecret)
 {
-    int retCode = -1;
+    int retcode = -1;
     BN_CTX *ctx = BN_CTX_new();
     BN_CTX_start(ctx);
 
-    BIGNUM *k = BN_CTX_get(ctx);
-    BIGNUM *kInv = BN_CTX_get(ctx);
+    BIGNUM *k_secret = BN_CTX_get(ctx);
+    BIGNUM *k_secret_inv = BN_CTX_get(ctx);
     BIGNUM *tmp = BN_CTX_get(ctx);
-    BIGNUM *E = BN_CTX_get(ctx);
+    BIGNUM *e = BN_CTX_get(ctx);
     EcPrimeField *group = key.getGroup();
-    EcPoint *RPoint = new EcPoint();
+    EcPoint *return_point = new EcPoint();
 
-    /* Step 1 - 2 */
+    // Step 1 - 2
     auto hash = cssl::Hasher::hash(msg, shaMode);
-    int NLen = BN_num_bits(group->n_); /* N = len(n) */
-    int HLen = hash.size() * 8;
+    int len_modulus = BN_num_bits(group->n_); /* N = len(n) */
+    int len_hash = hash.size() * 8;
     BN_bin2bn(hash.data(), hash.size(), tmp);
     hash.clear();
-    if (HLen > NLen)
-        BN_rshift(E, tmp, HLen - NLen);
+    if (len_hash > len_modulus)
+        BN_rshift(e, tmp, len_hash - len_modulus);
     else
-        BN_copy(E, tmp);
+        BN_copy(e, tmp);
 
-    /* Step 3 - 4 */
-    /* Add in forcing a KSecret for utilization with test suite */
+    // Step 3 - 4
+    // Add in forcing a KSecret for utilization with test suite
     if (!kSecret)
     {
-        BN_rand_range_ex(k, group->n_, 0, ctx);
+        BN_rand_range_ex(k_secret, group->n_, 0, ctx);
     }
     else
     {
-        BN_hex2bn(&k, kSecret);
+        BN_hex2bn(&k_secret, kSecret);
     }
-    BN_mod_inverse(kInv, k, group->n_, ctx);
+    BN_mod_inverse(k_secret_inv, k_secret, group->n_, ctx);
 
     /* Step 5 */
-    ec_scalar_mult(group, RPoint, k, group->g_);
+    ec_scalar_mult(group, return_point, k_secret, group->g_);
 
     /* Step 6 - 8 */
-    BN_mod(sig.r_, RPoint->x_, group->n_, ctx);
+    BN_mod(sig.r_, return_point->x_, group->n_, ctx);
 
     /* Step 9 */
     BN_mul(tmp, sig.r_, key.priv_, ctx);
-    BN_add(tmp, tmp, E);
-    BN_mod_mul(sig.s_, kInv, tmp, group->n_, ctx);
+    BN_add(tmp, tmp, e);
+    BN_mod_mul(sig.s_, k_secret_inv, tmp, group->n_, ctx);
 
     /* Step 10 */
-    BN_zero(k);
-    BN_zero(kInv);
+    BN_zero(k_secret);
+    BN_zero(k_secret_inv);
 
     /* Step 11 */
     if (BN_is_zero(sig.s_) || BN_is_zero(sig.r_))
     {
-        retCode = -1;
+        retcode = -1;
         goto ending;
     }
-    retCode = 0;
+    retcode = 0;
 ending:
-    delete RPoint;
+    delete return_point;
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
-    return retCode;
+    return retcode;
 }
 
 /* FIPS 186-5 6.4.2 */
@@ -119,81 +119,81 @@ int ec_verify_signature(EcKey &key, cEcSignature &sig,
                                      ByteSpan msg,
                                      cssl::DIGEST_MODE shaMode)
 {
-    int retCode = -1;
-    EcPrimeField *D = key.getGroup();
-    EcPoint *Q = &key.pub_;
+    int retcode = -1;
+    EcPrimeField *d_group = key.getGroup();
+    EcPoint *q_pub = &key.pub_;
 
     BN_CTX *ctx = BN_CTX_secure_new();
     BN_CTX_start(ctx);
 
-    BIGNUM *sInv = BN_CTX_get(ctx);
-    BIGNUM *E = BN_CTX_get(ctx);
+    BIGNUM *sinv = BN_CTX_get(ctx);
+    BIGNUM *e = BN_CTX_get(ctx);
     BIGNUM *u = BN_CTX_get(ctx);
     BIGNUM *u2 = BN_CTX_get(ctx);
     BIGNUM *v = BN_CTX_get(ctx);
     BIGNUM *tmp = BN_CTX_get(ctx);
     EcPoint *addend1 = new EcPoint();
     EcPoint *addend2 = new EcPoint();
-    EcPoint *RPoint = new EcPoint();
+    EcPoint *return_point = new EcPoint();
 
     // Step 2 - 3: Hash the message
     ByteArray hash = cssl::Hasher::hash(msg, shaMode);
 
-    if (BN_is_zero(sig.r_) || BN_is_zero(sig.s_) || BN_ucmp(sig.r_, D->n_) >= 0 ||
-        BN_ucmp(sig.s_, D->n_) >= 0)
+    if (BN_is_zero(sig.r_) || BN_is_zero(sig.s_) || BN_ucmp(sig.r_, d_group->n_) >= 0 ||
+        BN_ucmp(sig.s_, d_group->n_) >= 0)
         return -1; // Either R or S is not within 0, n-1
 
     // Step 3: Convert leftmost N bits of hash to integer
-    int NLen = BN_num_bits(D->n_); // N = len(n)
-    int HLen = hash.size() * 8; // hash length in bits
+    int len_modulus = BN_num_bits(d_group->n_); // N = len(n)
+    int len_hash = hash.size() * 8; // hash length in bits
 
     // Store hash in tmp
     BN_bin2bn(hash.data(), hash.size(), tmp);
 
     // If the Hash bits > Order bits then only copy the higher order bits to E
     //  else fully copy the hash into E
-    if (HLen > NLen)
-        BN_rshift(E, tmp, HLen - NLen);
+    if (len_hash > len_modulus)
+        BN_rshift(e, tmp, len_hash - len_modulus);
     else
-        BN_copy(E, tmp);
+        BN_copy(e, tmp);
 
     // Step 4: Compute s⁻¹ mod n
-    BN_mod_inverse(sInv, sig.s_, D->n_, ctx);
+    BN_mod_inverse(sinv, sig.s_, d_group->n_, ctx);
 
     // Step 5: Compute u = e⋅s⁻¹ mod n, v = r⋅s⁻¹ mod n 
-    BN_mod_mul(u, E, sInv, D->n_, ctx);
-    BN_mod_mul(v, sig.r_, sInv, D->n_, ctx);
+    BN_mod_mul(u, e, sinv, d_group->n_, ctx);
+    BN_mod_mul(v, sig.r_, sinv, d_group->n_, ctx);
 
-    ec_scalar_mult(D, addend1, u, D->g_);
-    ec_scalar_mult(D, addend2, v, Q);
-    ec_add(D, RPoint, addend1, addend2);
+    ec_scalar_mult(d_group, addend1, u, d_group->g_);
+    ec_scalar_mult(d_group, addend2, v, q_pub);
+    ec_add(d_group, return_point, addend1, addend2);
 
-    if (RPoint->isAtInfinity())
+    if (return_point->isAtInfinity())
     {
-        retCode = -1;
+        retcode = -1;
         goto ending;
     }
 
-    BN_nnmod(tmp, RPoint->x_, D->n_, ctx);
+    BN_nnmod(tmp, return_point->x_, d_group->n_, ctx);
 
     if (BN_cmp(sig.r_, tmp) == 0)
     {
-        retCode = 0;
+        retcode = 0;
         goto ending;
     }
     else
     {
-        retCode = -1;
+        retcode = -1;
         goto ending;
     }
 
 ending:
     delete addend1;
     delete addend2;
-    delete RPoint;
+    delete return_point;
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
-    return retCode;
+    return retcode;
 }
 
 EcPoint::EcPoint()
@@ -452,7 +452,7 @@ void ec_scalar_mult(EcPrimeField *g, EcPoint *Q_output, BIGNUM *scalar, EcPoint 
 }
 
 /*
- * Original
+ * Original ECScalarMult, less optimal than the new method which uses window.
 void ECScalarMult(cECPrimeField *g,
                   cECPoint *Q_output,
                   BIGNUM *scalar,

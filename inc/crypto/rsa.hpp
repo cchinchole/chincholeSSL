@@ -9,7 +9,7 @@ class Rsa {
         struct Impl;
         Impl *pimpl_;
     public:
-        Rsa(size_t bits);
+        explicit Rsa(size_t bits);
         ~Rsa();
         bool is_crt_enabled();
         void from(std::string hex_p, std::string hex_q, std::string hex_e);

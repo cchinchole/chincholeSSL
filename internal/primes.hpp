@@ -9,8 +9,8 @@
 #include <openssl/core_names.h>
 
 typedef unsigned short prime_t;
-#define NUMPRIMES 2048
 #define MAXULONGSIZE 0xffffffffffffffffL
+constexpr static uint32_t kNumPrimes = 2048;
 #define square(x) ((BN_ULONG)(x) * (BN_ULONG)(x))
 
 
@@ -40,10 +40,8 @@ struct dataSqrt
 
 #define OSSL_NELEM(x) (sizeof(x) / sizeof((x)[0]))
 
-bool checkPrime(BIGNUM *w);
-//int generatePrimes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits = 2048, int testingMR = 0);
-//bool miller_rabin_is_prime(BIGNUM *n, int iterations, BN_CTX *ctx = BN_CTX_secure_new());
-void FIPS186_4_GEN_PRIMES(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP = false, ACVP_TEST *testParams = NULL);
+bool check_prime(BIGNUM *w);
+void fips186_4_gen_primes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits, bool doACVP = false, ACVP_TEST *testParams = NULL);
 
 static const prime_t primes[2048] = {
     2,

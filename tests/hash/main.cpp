@@ -1,6 +1,7 @@
 #include "../../inc/hash/hash.hpp"
 #include "../../inc/utils/bytes.hpp"
 #include "../../inc/utils/logger.hpp"
+#include "types.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>

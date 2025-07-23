@@ -14,7 +14,8 @@ using namespace cssl;
 // gen_rsa_sp800_56b
 int rsa_pairwise_test(RsaKey &key)
 {
-    BIGNUM *k, *tmp;
+    BIGNUM *k;
+    BIGNUM *tmp;
     BN_CTX *ctx = BN_CTX_new();
     BN_CTX_start(ctx);
     k = BN_CTX_get(ctx);
@@ -246,15 +247,15 @@ std::vector<uint8_t> rsa_decrypt_primative(RsaKey &key,
                                            std::span<const uint8_t> cipher)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
-    bool errorRaised = false;
+    bool error_raised = false;
     size_t k = key.modulus_bits_ / 8;
     // RSA block size
-    unsigned int maxBytes = k; // key.kBits / 8;
+    unsigned int max_bytes = k; // key.kBits / 8;
 
     // Assume cipher is multiple of maxBytes
-    unsigned int numPages = cipher.size() / maxBytes;
+    unsigned int num_pages = cipher.size() / max_bytes;
 
-    if (cipher.size() % maxBytes != 0)
+    if (cipher.size() % max_bytes != 0)
     {
         BN_CTX_free(ctx);
 
@@ -262,28 +263,28 @@ std::vector<uint8_t> rsa_decrypt_primative(RsaKey &key,
         return {};
     }
 
-    std::vector<uint8_t> returnData;
+    std::vector<uint8_t> return_data;
 
     // Preallocate for efficiency
-    returnData.reserve(numPages * maxBytes);
-    for (unsigned int i = 0; i < numPages; i++)
+    return_data.reserve(num_pages * max_bytes);
+    for (unsigned int i = 0; i < num_pages; i++)
     {
         BN_CTX_start(ctx);
 
         // Convert cipher block to BIGNUM
-        BIGNUM *cipherNumber = BN_CTX_get(ctx);
-        BN_bin2bn(cipher.data() + i * maxBytes, maxBytes, cipherNumber);
+        BIGNUM *cipher_number = BN_CTX_get(ctx);
+        BN_bin2bn(cipher.data() + i * max_bytes, max_bytes, cipher_number);
 
-        if (BN_cmp(cipherNumber, key.n_) == 0 ||
-            BN_cmp(cipherNumber, key.n_) == 1)
+        if (BN_cmp(cipher_number, key.n_) == 0 ||
+            BN_cmp(cipher_number, key.n_) == 1)
         {
             // Failure;
-            errorRaised = true;
+            error_raised = true;
             goto Error;
         }
 
         // Decrypt
-        BIGNUM *decryptedNumber = BN_CTX_get(ctx);
+        BIGNUM *decrypted_number = BN_CTX_get(ctx);
         if (key.crt_params_.enabled_)
         {
             // CRT Decryption
@@ -294,10 +295,10 @@ std::vector<uint8_t> rsa_decrypt_primative(RsaKey &key,
             BIGNUM *hq = BN_CTX_get(ctx);
 
             // m1 = c^(dP) mod p
-            BN_mod_exp(m1, cipherNumber, key.crt_params_.dp_, key.crt_params_.p_, ctx);
+            BN_mod_exp(m1, cipher_number, key.crt_params_.dp_, key.crt_params_.p_, ctx);
 
             // m2 = c^(dQ) mod q
-            BN_mod_exp(m2, cipherNumber, key.crt_params_.dq_, key.crt_params_.q_, ctx);
+            BN_mod_exp(m2, cipher_number, key.crt_params_.dq_, key.crt_params_.q_, ctx);
 
             // m1subm2 = (m1 - m2)
             BN_sub(m1subm2, m1, m2);
@@ -309,191 +310,191 @@ std::vector<uint8_t> rsa_decrypt_primative(RsaKey &key,
             BN_mul(hq, h, key.crt_params_.q_, ctx);
 
             // m = m2 + h * q
-            BN_add(decryptedNumber, m2, hq);
+            BN_add(decrypted_number, m2, hq);
         }
         else
         {
             // Standard decryption: m = c^d mod n
-            BN_mod_exp(decryptedNumber, cipherNumber, key.d_, key.n_, ctx);
+            BN_mod_exp(decrypted_number, cipher_number, key.d_, key.n_, ctx);
         }
 
-        LOG_RSA("Decrypted numbers: {}", decryptedNumber);
+        LOG_RSA("Decrypted numbers: {}", decrypted_number);
 
         // Convert decrypted data to binary
-        std::vector<uint8_t> decryptedBlock(k);
-        BN_bn2binpad(decryptedNumber, decryptedBlock.data(), k);
-        returnData.insert(returnData.end(), decryptedBlock.begin(),
-                          decryptedBlock.end());
+        std::vector<uint8_t> decrypted_block(k);
+        BN_bn2binpad(decrypted_number, decrypted_block.data(), k);
+        return_data.insert(return_data.end(), decrypted_block.begin(),
+                          decrypted_block.end());
         BN_CTX_end(ctx);
     }
 
 Error:
-    if (errorRaised)
+    if (error_raised)
     {
         BN_CTX_end(ctx);
         BN_CTX_free(ctx);
         return {};
     }
     BN_CTX_free(ctx);
-    return returnData;
+    return return_data;
 }
 
 // NIST SP800-56B 7.2.2.3
-ByteArray rsa_oaep_encode(RsaKey &key, std::span<const uint8_t> msg)
+ByteArray rsa_oaep_encode(RsaKey& key, std::span<const uint8_t> msg)
 {
-    const size_t kLen = msg.size(); // Msg length
-    const size_t nLen = key.modulus_bits_ / 8;
+    const size_t len_msg = msg.size(); // Msg length
+    const size_t len_modulus = key.modulus_bits_ / 8;
 
     // Step A
-    ByteArray lHash = cssl::Hasher::hash(key.padding_.label, key.padding_.label_hash_mode);
+    ByteArray label_hash = cssl::Hasher::hash(key.padding_.label, key.padding_.label_hash_mode);
 
-    const size_t hLen = lHash.size();
+    const size_t len_hash = label_hash.size();
 
-    if (kLen > (nLen - (2 * hLen) - 2))
+    if (len_msg > (len_modulus - (2 * len_hash) - 2))
     {
         // TODO: indicate error
     }
 
     // Step B
-    size_t psLen = nLen - kLen - (2 * hLen) - 2;
-    ByteArray PS(psLen, 0x00);
+    size_t len_ps = len_modulus - len_msg - (2 * len_hash) - 2;
+    ByteArray ps(len_ps, 0x00);
 
     // Step C
     //  DB = HA || PS || 00000001 || K
-    ByteArray DB;
-    DB.insert(DB.end(), lHash.begin(), lHash.end());
-    DB.insert(DB.end(), PS.begin(), PS.end());
-    DB.push_back(0x01);
-    DB.insert(DB.end(), msg.begin(), msg.end());
+    ByteArray db;
+    db.insert(db.end(), label_hash.begin(), label_hash.end());
+    db.insert(db.end(), ps.begin(), ps.end());
+    db.push_back(0x01);
+    db.insert(db.end(), msg.begin(), msg.end());
 
     // Step D
     if (key.padding_.seed.empty())
     {
-        key.padding_.seed.resize(hLen);
-        RAND_bytes(key.padding_.seed.data(), hLen);
+        key.padding_.seed.resize(len_hash);
+        RAND_bytes(key.padding_.seed.data(), len_hash);
     }
 
     // Step E
-    ByteArray dbMask =
-        rsa_mgf1(key.padding_.seed, nLen - hLen - 1, key.padding_.hask_hash_mode);
+    ByteArray db_mask =
+        rsa_mgf1(key.padding_.seed, len_modulus - len_hash - 1, key.padding_.hask_hash_mode);
 
     // Step F
-    ByteArray maskedDB(DB.size());
-    for (size_t i = 0; i < DB.size(); i++)
+    ByteArray masked_db(db.size());
+    for (size_t i = 0; i < db.size(); i++)
     {
-        maskedDB[i] = DB[i] ^ dbMask[i];
+        masked_db[i] = db[i] ^ db_mask[i];
     }
 
     // Step G
-    ByteArray seedMask = rsa_mgf1(maskedDB, hLen, key.padding_.hask_hash_mode);
+    ByteArray seed_mask = rsa_mgf1(masked_db, len_hash, key.padding_.hask_hash_mode);
 
     // Step H
-    ByteArray maskedSeed(hLen);
-    for (size_t i = 0; i < hLen; i++)
+    ByteArray masked_seed(len_hash);
+    for (size_t i = 0; i < len_hash; i++)
     {
-        maskedSeed[i] = key.padding_.seed[i] ^ seedMask[i];
+        masked_seed[i] = key.padding_.seed[i] ^ seed_mask[i];
     }
 
     // Step I
     //  EM = 00000000 || maskedMGFSeed || maskedDB
-    ByteArray EM;
-    EM.push_back(0x00);
-    EM.insert(EM.end(), maskedSeed.begin(), maskedSeed.end());
-    EM.insert(EM.end(), maskedDB.begin(), maskedDB.end());
-    return EM;
+    ByteArray em;
+    em.push_back(0x00);
+    em.insert(em.end(), masked_seed.begin(), masked_seed.end());
+    em.insert(em.end(), masked_db.begin(), masked_db.end());
+    return em;
 }
 
 // NIST SP800-56B 7.2.2.4
-ByteArray rsa_oaep_decode(RsaKey &key, std::span<const uint8_t> EM)
+ByteArray rsa_oaep_decode(RsaKey& key, std::span<const uint8_t> em)
 {
-    const size_t nLen = key.modulus_bits_ / 8;
+    const size_t len_modulus = key.modulus_bits_ / 8;
 
     // Step A
-    ByteArray HA = cssl::Hasher::hash(key.padding_.label, key.padding_.label_hash_mode);
+    ByteArray hashed_label = cssl::Hasher::hash(key.padding_.label, key.padding_.label_hash_mode);
 
-    const size_t hLen = HA.size();
-    bool decryptionError = false;
+    const size_t len_hash = hashed_label.size();
+    bool decryption_error = false;
 
     // Initial check to see if Decrypt failed
-    if (EM.empty())
+    if (em.empty())
     {
-        decryptionError = true;
+        decryption_error = true;
         return ByteArray();
     }
 
     // Confirm correct size and that the first bit is padded
-    if (EM[0] != 0x00)
+    if (em[0] != 0x00)
     {
-        decryptionError = true;
+        decryption_error = true;
     }
 
-    if (EM.size() != nLen)
+    if (em.size() != len_modulus)
     {
-        decryptionError = true;
+        decryption_error = true;
     }
 
     // Step B
-    const uint8_t *pMaskedSeed =
-        EM.data() + 1; // Pulls the masked MGFSeed disregarding the 0x00
-    const uint8_t *pMaskedDB =
-        EM.data() + 1 +
-        hLen; // Pulls the maskedDB skips hLen (seed hash) +1 0x00
+    const uint8_t *pmasked_seed =
+        em.data() + 1; // Pulls the masked MGFSeed disregarding the 0x00
+    const uint8_t *pmasked_db =
+        em.data() + 1 +
+        len_hash; // Pulls the maskedDB skips hLen (seed hash) +1 0x00
 
-    ByteArray maskedSeed(pMaskedSeed, pMaskedSeed + hLen);
-    ByteArray maskedDB(pMaskedDB, pMaskedDB + (nLen - hLen - 1));
+    ByteArray masked_seed(pmasked_seed, pmasked_seed + len_hash);
+    ByteArray masked_db(pmasked_db, pmasked_db + (len_modulus - len_hash - 1));
 
     // Step C
-    ByteArray msgSeedMask = rsa_mgf1(maskedDB, hLen, key.padding_.hask_hash_mode);
+    ByteArray msg_seed_mask = rsa_mgf1(masked_db, len_hash, key.padding_.hask_hash_mode);
 
     // Step D
-    ByteArray seed(hLen);
-    for (size_t i = 0; i < hLen; i++)
+    ByteArray seed(len_hash);
+    for (size_t i = 0; i < len_hash; i++)
     {
-        seed[i] = maskedSeed[i] ^ msgSeedMask[i];
+        seed[i] = masked_seed[i] ^ msg_seed_mask[i];
     }
 
     // Step E
-    ByteArray dbMask = rsa_mgf1(seed, nLen - hLen - 1, key.padding_.hask_hash_mode);
+    ByteArray db_mask = rsa_mgf1(seed, len_modulus - len_hash - 1, key.padding_.hask_hash_mode);
 
     // Step F
-    ByteArray DB(maskedDB.size());
-    for (size_t i = 0; i < maskedDB.size(); i++)
+    ByteArray db(masked_db.size());
+    for (size_t i = 0; i < masked_db.size(); i++)
     {
-        DB[i] = maskedDB[i] ^ dbMask[i];
+        db[i] = masked_db[i] ^ db_mask[i];
     }
 
     // Step G
-    if (!std::equal(DB.begin(), DB.begin() + hLen, HA.begin()))
+    if (!std::equal(db.begin(), db.begin() + len_hash, hashed_label.begin()))
     {
         // Label is incorrect (HA)
-        decryptionError = true;
+        decryption_error = true;
     }
 
     // Check the formatting
-    size_t index = hLen;
-    while (index < DB.size())
+    size_t idx = len_hash;
+    while (idx < db.size())
     {
-        if (DB[index] == 0x01)
+        if (db[idx] == 0x01)
         {
-            index++;
+            idx++;
             break;
         }
 
-        if (DB[index] != 0x00)
+        if (db[idx] != 0x00)
         {
-            decryptionError = true; // Padding is incorrect
+            decryption_error = true; // Padding is incorrect
         }
-        index++;
+        idx++;
     }
 
-    if (index >= DB.size())
+    if (idx >= db.size())
     {
-        decryptionError = true; // Did not find the 0x01
+        decryption_error = true; // Did not find the 0x01
     }
 
-    if (!decryptionError)
+    if (!decryption_error)
     {
-        ByteArray msg(DB.begin() + index, DB.end());
+        ByteArray msg(db.begin() + idx, db.end());
         return msg;
     }
     else

@@ -44,7 +44,7 @@ uint64_t sigma1_512(uint64_t x)
     return SHA384512_ROTR(x, 19) ^ SHA384512_ROTR(x, 61) ^ SHA384512_SHR(x, 6);
 }
 
-uint64_t sha384512_k[80] = {
+constexpr static uint64_t sha384512_k[80] = {
     0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f,
     0xe9b5dba58189dbbc, 0x3956c25bf348b538, 0x59f111f1b605d019,
     0x923f82a4af194f9b, 0xab1c5ed5da6d8118, 0xd807aa98a3030242,

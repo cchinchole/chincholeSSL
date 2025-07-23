@@ -5,10 +5,10 @@ namespace cssl
 {
 bool check_if_prime(BIGNUM *w)
 {
-    return checkPrime(w);
+    return check_prime(w);
 }
 void gen_primes(BIGNUM *p, BIGNUM *q, BIGNUM *e, int bits)
 {
-    FIPS186_4_GEN_PRIMES(p, q, e, bits, false, NULL);
+    fips186_4_gen_primes(p, q, e, bits, false, NULL);
 }
 }

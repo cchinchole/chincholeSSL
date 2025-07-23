@@ -9,10 +9,10 @@ std::string ec_group_string(cssl::EC_GROUP group);
 // Purely internal classes, no reason to export them.
 class EcPoint {
   public:
-    BIGNUM *x_,
-           *y_;
+    BIGNUM* x_;
+    BIGNUM* y_;
     EcPoint();
-    EcPoint &operator=(const EcPoint &other) {
+    EcPoint& operator=(const EcPoint& other) {
         if (this != &other) {
             BN_copy(x_, other.x_);
             BN_copy(y_, other.y_);
@@ -29,14 +29,14 @@ class EcPoint {
 
 class EcPrimeField {
   public:
-    BIGNUM *p_,
-           *a_,
-           *b_,
-           *n_;
+    BIGNUM* p_;
+    BIGNUM* a_;
+    BIGNUM* b_;
+    BIGNUM* n_;
     int h;
     EcPoint *g_;
     cssl::EC_GROUP group_;
-    EcPrimeField(const char *p, const char *a,const char *b,const char *n,const  char *gx,const  char *gy, cssl::EC_GROUP group) {
+    EcPrimeField(const char* p, const char* a, const char* b, const char* n, const char* gx, const char* gy, cssl::EC_GROUP group) {
         p_ = BN_secure_new();
         a_ = BN_secure_new();
         b_ = BN_secure_new();
@@ -62,10 +62,10 @@ class EcPrimeField {
 class EcKey {
   public:
     cssl::EC_GROUP group_;
-    BIGNUM *priv_; /* d */
+    BIGNUM* priv_; /* d */
     EcPoint pub_; /* Q */
     EcKey(cssl::EC_GROUP group);
-    EcKey &operator=(const EcKey &from) {
+    EcKey& operator=(const EcKey& from) {
         if (this != &from) {
             BN_copy(priv_, from.priv_);
             group_ = from.group_;
@@ -73,14 +73,14 @@ class EcKey {
         }
         return *this;
     }
-    EcPrimeField *getGroup();
+    EcPrimeField* getGroup();
     ~EcKey() { BN_free(priv_); }
 };
 
 class cEcSignature {
   public:
-    BIGNUM *r_;
-    BIGNUM *s_;
+    BIGNUM* r_;
+    BIGNUM* s_;
     cEcSignature();
     ~cEcSignature() {
         BN_free(r_);

@@ -10,7 +10,7 @@
 #include "inc/utils/logger.hpp"
 
 /* FIPS 197 5.1.1 table 4 */
-static const uint8_t sbox[256] = {
+constexpr static uint8_t kSbox[256] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,
     0xfe, 0xd7, 0xab, 0x76, 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
     0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0, 0xb7, 0xfd, 0x93, 0x26,
@@ -35,7 +35,7 @@ static const uint8_t sbox[256] = {
     0xb0, 0x54, 0xbb, 0x16};
 
 /* FIPS 197 5.3.2*/
-static const uint8_t invSBox[256] = {
+constexpr static uint8_t kInvSbox[256] = {
     0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e,
     0x81, 0xf3, 0xd7, 0xfb, 0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87,
     0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb, 0x54, 0x7b, 0x94, 0x32,
@@ -60,33 +60,38 @@ static const uint8_t invSBox[256] = {
     0x55, 0x21, 0x0c, 0x7d};
 
 /* FIPS 197 5.2 - Table 5 added 0x00 as padding */
-const uint8_t rCon[11] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10,
+const uint8_t kRcon[11] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10,
                           0x20, 0x40, 0x80, 0x1b, 0x36};
 
-static constexpr std::array<int, 3> tNR = {10, 12, 14};
-static constexpr std::array<int, 3> tNK = {4, 6, 8};
+constexpr static std::array<int, 3> kNr = {10, 12, 14};
+constexpr static std::array<int, 3> kNk = {4, 6, 8};
+
+constexpr static uint8_t kMultMixColumns[16] = {
+    0x0e, 0x0b, 0x0d, 0x09, 0x09, 0x0e, 0x0b, 0x0d,
+    0x0d, 0x09, 0x0e, 0x0b, 0x0b, 0x0d, 0x09, 0x0e,
+};
 
 /* FOR (nk,nr) AES256: 8,14 , 192: 6,12; 128: 4, 10*/
-int getNR(AesContext &ctx) { return tNR[static_cast<int>(ctx.key_size_)]; }
+int get_nr(AesContext &ctx) { return kNr[static_cast<int>(ctx.key_size_)]; }
 
-int getNK(AesContext &ctx) { return tNK[static_cast<int>(ctx.key_size_)]; }
+int get_nk(AesContext &ctx) { return kNk[static_cast<int>(ctx.key_size_)]; }
 
-std::string roundKeyToString(const uint8_t *w)
+std::string roundkey_to_string(const uint8_t *w)
 {
     std::ostringstream oss;
     oss << std::hex << std::setfill('0');
 
-    for (uint8_t i = 0; i < nB; i++)
-        for (uint8_t j = 0; j < nB; j++)
-            oss << std::setw(2) << static_cast<unsigned>(w[(j * nB) + i]);
+    for (uint8_t i = 0; i < kNb; i++)
+        for (uint8_t j = 0; j < kNb; j++)
+            oss << std::setw(2) << static_cast<unsigned>(w[(j * kNb) + i]);
 
     return oss.str();
 }
 
-std::string tempToString(const uint8_t *temp)
+std::string temp_to_string(const uint8_t *temp)
 {
     std::stringstream ss;
-    for (uint8_t j = 0; j < nB; j++)
+    for (uint8_t j = 0; j < kNb; j++)
     {
         ss << std::hex << std::setw(2) << std::setfill('0')
            << static_cast<int>(temp[j]);
@@ -96,23 +101,23 @@ std::string tempToString(const uint8_t *temp)
     return ss.str();
 }
 
-std::string wnkToString(AesContext &ctx, uint8_t i)
+std::string wnk_to_string(AesContext &ctx, uint8_t i)
 {
     std::stringstream ss;
-    for (uint8_t j = 0; j < nB; j++)
+    for (uint8_t j = 0; j < kNb; j++)
     {
         ss << std::hex << std::setw(2) << std::setfill('0')
-           << static_cast<int>(ctx.w_[(i - getNK(ctx)) * 4 + j]);
+           << static_cast<int>(ctx.w_[(i - get_nk(ctx)) * 4 + j]);
         if (j < 3)
             ss << " ";
     }
     return ss.str();
 }
 
-std::string wnkOpsToString(AesContext &ctx, uint8_t i)
+std::string wnk_ops_to_string(AesContext &ctx, uint8_t i)
 {
     std::stringstream ss;
-    for (uint8_t j = 0; j < nB; j++)
+    for (uint8_t j = 0; j < kNb; j++)
     {
         ss << std::hex << std::setw(2) << std::setfill('0')
            << static_cast<int>(ctx.w_[(i) * 4 + j]);
@@ -122,14 +127,14 @@ std::string wnkOpsToString(AesContext &ctx, uint8_t i)
     return ss.str();
 }
 
-std::string stateToString(uint8_t state[nB][nB])
+std::string state_to_string(uint8_t state[kNb][kNb])
 {
     std::string result;
-    result.reserve(2 * nB * nB + 1);
+    result.reserve(2 * kNb * kNb + 1);
     char buf[3];
-    for (uint8_t i = 0; i < nB; i++)
+    for (uint8_t i = 0; i < kNb; i++)
     {
-        for (uint8_t j = 0; j < nB; j++)
+        for (uint8_t j = 0; j < kNb; j++)
         {
             snprintf(buf, 3, "%02hhX", state[j][i]);
             result += buf;
@@ -138,7 +143,7 @@ std::string stateToString(uint8_t state[nB][nB])
     return result;
 }
 
-void rotateWord(uint8_t *a)
+void rotate_word(uint8_t *a)
 {
     uint8_t temp[4];
     for (uint8_t i = 0; i < 3; i++)
@@ -149,390 +154,386 @@ void rotateWord(uint8_t *a)
         a[i] = temp[i];
 }
 
-void subWord(uint8_t *a)
+void sub_word(uint8_t *a)
 {
     uint8_t temp[4];
     for (uint8_t i = 0; i < 4; i++)
-        temp[i] = sbox[a[i]];
+        temp[i] = kSbox[a[i]];
 
     for (uint8_t i = 0; i < 4; i++)
         a[i] = temp[i];
 }
 
-void subWord(uint8_t state[4][4])
+void sub_word(uint8_t state[4][4])
 {
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            state[i][j] = sbox[state[i][j]];
+            state[i][j] = kSbox[state[i][j]];
 }
 
-void invSubWord(uint8_t state[4][4])
+void inv_sub_word(uint8_t state[4][4])
 {
     for (uint8_t i = 0; i < 4; i++)
         for (uint8_t j = 0; j < 4; j++)
-            state[i][j] = invSBox[state[i][j]];
+            state[i][j] = kInvSbox[state[i][j]];
 }
 
-void shiftRows(uint8_t state[4][4])
+void shift_rows(uint8_t state[4][4])
 {
-    uint8_t temp;
-    temp = state[0][1];
-    for (uint8_t i = 0; i < nB - 1; i++)
+    uint8_t tmp;
+    tmp = state[0][1];
+    for (uint8_t i = 0; i < kNb - 1; i++)
     {
         state[i][1] = state[i + 1][1];
     }
-    state[3][1] = temp;
+    state[3][1] = tmp;
 
-    temp = state[0][2];
+    tmp = state[0][2];
     state[0][2] = state[2][2];
-    state[2][2] = temp;
+    state[2][2] = tmp;
 
-    temp = state[1][2];
+    tmp = state[1][2];
     state[1][2] = state[3][2];
-    state[3][2] = temp;
+    state[3][2] = tmp;
 
-    temp = state[0][3];
+    tmp = state[0][3];
     state[0][3] = state[3][3];
     state[3][3] = state[2][3];
     state[2][3] = state[1][3];
-    state[1][3] = temp;
+    state[1][3] = tmp;
 }
 
-void invShiftRows(uint8_t state[4][4])
+void inv_shift_rows(uint8_t state[4][4])
 {
-    uint8_t temp;
-    temp = state[3][1];
-    for (uint8_t i = nB - 1; i > 0; i--)
+    uint8_t tmp;
+    tmp = state[3][1];
+    for (uint8_t i = kNb - 1; i > 0; i--)
     {
         state[i][1] = state[i - 1][1];
     }
-    state[0][1] = temp;
+    state[0][1] = tmp;
 
-    temp = state[0][2];
+    tmp = state[0][2];
     state[0][2] = state[2][2];
-    state[2][2] = temp;
+    state[2][2] = tmp;
 
-    temp = state[1][2];
+    tmp = state[1][2];
     state[1][2] = state[3][2];
-    state[3][2] = temp;
+    state[3][2] = tmp;
 
-    temp = state[0][3];
+    tmp = state[0][3];
     state[0][3] = state[1][3];
     state[1][3] = state[2][3];
     state[2][3] = state[3][3];
-    state[3][3] = temp;
+    state[3][3] = tmp;
 }
 
-uint8_t xTime(uint8_t x) { return (x << 1) ^ (((x >> 7) & 1) * 0x1b); }
+uint8_t xtime(uint8_t x) { return (x << 1) ^ (((x >> 7) & 1) * 0x1b); }
 
-void mixColumns(uint8_t state[nB][nB])
+void mix_columns(uint8_t state[kNb][kNb])
 {
-    for (uint8_t i = 0; i < nB; i++)
+    for (uint8_t i = 0; i < kNb; i++)
     {
         uint8_t tmp = state[i][0];
         uint8_t tmp2 = state[i][0] ^ state[i][1] ^ state[i][2] ^ state[i][3];
-
         uint8_t tmp3 = state[i][0] ^ state[i][1];
-        tmp3 = xTime(tmp3);
+
+        tmp3 = xtime(tmp3);
         state[i][0] ^= tmp3 ^ tmp2;
 
         tmp3 = state[i][1] ^ state[i][2];
-        tmp3 = xTime(tmp3);
+        tmp3 = xtime(tmp3);
         state[i][1] ^= tmp3 ^ tmp2;
 
         tmp3 = state[i][2] ^ state[i][3];
-        tmp3 = xTime(tmp3);
+        tmp3 = xtime(tmp3);
         state[i][2] ^= tmp3 ^ tmp2;
 
         tmp3 = state[i][3] ^ tmp;
-        tmp3 = xTime(tmp3);
+        tmp3 = xtime(tmp3);
         state[i][3] ^= tmp3 ^ tmp2;
     }
 }
 
-uint8_t aMult(uint8_t x, uint8_t y)
+uint8_t amult(uint8_t x, uint8_t y)
 {
-    return (((y & 1) * x) ^ ((y >> 1 & 1) * xTime(x)) ^
-            ((y >> 2 & 1) * xTime(xTime(x))) ^
-            ((y >> 3 & 1) * xTime(xTime(xTime(x)))) ^
-            ((y >> 4 & 1) * xTime(xTime(xTime(xTime(x))))));
+    return (((y & 1) * x) ^ ((y >> 1 & 1) * xtime(x)) ^
+            ((y >> 2 & 1) * xtime(xtime(x))) ^
+            ((y >> 3 & 1) * xtime(xtime(xtime(x)))) ^
+            ((y >> 4 & 1) * xtime(xtime(xtime(xtime(x))))));
 }
 
 /* FIPS 197 5.3.3 */
-void invMixColumns(uint8_t state[4][4])
+void inv_mix_columns(uint8_t state[4][4])
 {
-    uint8_t multK[16] = {
-        0x0e, 0x0b, 0x0d, 0x09, 0x09, 0x0e, 0x0b, 0x0d,
-        0x0d, 0x09, 0x0e, 0x0b, 0x0b, 0x0d, 0x09, 0x0e,
-    };
     for (uint8_t i = 0; i < 4; i++)
     {
         uint8_t tmp[4] = {state[i][0], state[i][1], state[i][2], state[i][3]};
-        for (uint8_t j = 0; j < nB; j++) // enumerating which state
+        for (uint8_t j = 0; j < kNb; j++) // enumerating which state
         {
             state[i][j] = 0;
-            for (uint8_t k = 0; k < nB; k++) // enumerating the variables
-                state[i][j] ^= aMult(tmp[k], multK[j * 4 + k]);
+            for (uint8_t k = 0; k < kNb; k++) // enumerating the variables
+                state[i][j] ^= amult(tmp[k], kMultMixColumns[j * 4 + k]);
         }
     }
 }
 
 // TODO Fix the debugging in this.
 // FIPS_197_5_2
-int keyExpansion(AesContext &ctx, const uint8_t *key)
+int key_expansion(AesContext &ctx, const uint8_t *key)
 {
-    int retCode = 0;
-    uint8_t temp[4];
-    for (uint8_t i = 0; i <= getNK(ctx) - 1; i++)
-        for (uint8_t j = 0; j < nB; j++)
-            ctx.w_[(i * nB) + j] = key[(i * nB) + j];
+    int retcode = 0;
+    uint8_t tmp[4];
+    for (uint8_t i = 0; i <= get_nk(ctx) - 1; i++)
+        for (uint8_t j = 0; j < kNb; j++)
+            ctx.w_[(i * kNb) + j] = key[(i * kNb) + j];
 
-    LOG_AES("[Key Expansion (w)]: {}\n", roundKeyToString(ctx.w_));
-    for (uint8_t i = getNK(ctx); i <= 4 * getNR(ctx) + 3; i++)
+    LOG_AES("[Key Expansion (w)]: {}\n", roundkey_to_string(ctx.w_));
+    for (uint8_t i = get_nk(ctx); i <= 4 * get_nr(ctx) + 3; i++)
     {
-        for (uint8_t j = 0; j < nB; j++)
-            temp[j] = ctx.w_[(i - 1) * nB + j];
+        for (uint8_t j = 0; j < kNb; j++)
+            tmp[j] = ctx.w_[(i - 1) * kNb + j];
         LOG_AES("[KeyExpansion Round {}]", i);
-        LOG_AES("temp: {}", tempToString(temp));
-        if (i % getNK(ctx) == 0)
+        LOG_AES("temp: {}", temp_to_string(tmp));
+        if (i % get_nk(ctx) == 0)
         {
-            rotateWord(temp);
-            LOG_AES("after rotate temp: {}", tempToString(temp));
+            rotate_word(tmp);
+            LOG_AES("after rotate temp: {}", temp_to_string(tmp));
 
-            subWord(temp);
-            LOG_AES("after subtract temp: {}", tempToString(temp));
+            sub_word(tmp);
+            LOG_AES("after subtract temp: {}", temp_to_string(tmp));
 
-            temp[0] ^= rCon[i / getNK(ctx)];
-            LOG_AES("after xor temp: {}", tempToString(temp));
+            tmp[0] ^= kRcon[i / get_nk(ctx)];
+            LOG_AES("after xor temp: {}", temp_to_string(tmp));
         }
-        else if (getNK(ctx) > 6 && (i % getNK(ctx)) == 4)
+        else if (get_nk(ctx) > 6 && (i % get_nk(ctx)) == 4)
         {
-            subWord(temp);
-            LOG_AES("after subtract temp: {}", tempToString(temp));
+            sub_word(tmp);
+            LOG_AES("after subtract temp: {}", temp_to_string(tmp));
         }
 
-        LOG_AES("w[i-nk]: {}", wnkToString(ctx, i));
-        for (uint8_t j = 0; j < nB; j++)
+        LOG_AES("w[i-nk]: {}", wnk_to_string(ctx, i));
+        for (uint8_t j = 0; j < kNb; j++)
         {
-            ctx.w_[(i * nB) + j] = ctx.w_[(i - getNK(ctx)) * nB + j] ^ temp[j];
+            ctx.w_[(i * kNb) + j] = ctx.w_[(i - get_nk(ctx)) * kNb + j] ^ tmp[j];
         }
-        LOG_AES("w[i] xor: {}\n", wnkOpsToString(ctx, i));
+        LOG_AES("w[i] xor: {}\n", wnk_ops_to_string(ctx, i));
     }
-    return retCode;
+    return retcode;
 }
 
 //FIPS_197_5_1_4
-void addRoundKey(int round, uint8_t state[nB][nB],
+void add_round_key(int round, uint8_t state[kNb][kNb],
                                const uint8_t *w)
 {
-    for (uint8_t i = 0; i < nB; i++)
-        for (uint8_t j = 0; j < nB; j++)
-            (state)[i][j] ^= w[(round * nB * nB) + (i * nB) + j];
+    for (uint8_t i = 0; i < kNb; i++)
+        for (uint8_t j = 0; j < kNb; j++)
+            (state)[i][j] ^= w[(round * kNb * kNb) + (i * kNb) + j];
 }
 
 //FIPS_197_5_1
-int aCipher(AesContext &ctx)
+int aes_cipher(AesContext &ctx)
 {
     int retcode = 0;
-    LOG_AES("start state: {}\n", stateToString(ctx.state_).c_str());
+    LOG_AES("start state: {}\n", state_to_string(ctx.state_).c_str());
 
-    addRoundKey(0, ctx.state_, ctx.w_);
+    add_round_key(0, ctx.state_, ctx.w_);
 
-    for (uint8_t round = 1; round <= getNR(ctx) - 1; round++)
+    for (uint8_t round = 1; round <= get_nr(ctx) - 1; round++)
     {
         LOG_AES("Cipher Round [ {} ]:", round);
 
-        LOG_AES("start rnd: {} ", stateToString(ctx.state_).c_str());
-        subWord(ctx.state_);
+        LOG_AES("start rnd: {} ", state_to_string(ctx.state_).c_str());
+        sub_word(ctx.state_);
 
-        LOG_AES("after sub: {} ", stateToString(ctx.state_).c_str());
-        shiftRows(ctx.state_);
+        LOG_AES("after sub: {} ", state_to_string(ctx.state_).c_str());
+        shift_rows(ctx.state_);
 
-        LOG_AES("after shift: {} ", stateToString(ctx.state_).c_str());
-        mixColumns(ctx.state_);
+        LOG_AES("after shift: {} ", state_to_string(ctx.state_).c_str());
+        mix_columns(ctx.state_);
 
-        LOG_AES("after mix: {}\n", stateToString(ctx.state_).c_str());
-        addRoundKey(round, ctx.state_, ctx.w_);
+        LOG_AES("after mix: {}\n", state_to_string(ctx.state_).c_str());
+        add_round_key(round, ctx.state_, ctx.w_);
     }
 
-    LOG_AES("Cipher Round [ {} ]: ", getNR(ctx));
-    LOG_AES("start rnd: {}", stateToString(ctx.state_).c_str());
+    LOG_AES("Cipher Round [ {} ]: ", get_nr(ctx));
+    LOG_AES("start rnd: {}", state_to_string(ctx.state_).c_str());
 
-    subWord(ctx.state_);
-    LOG_AES("after sub: {}", stateToString(ctx.state_).c_str());
+    sub_word(ctx.state_);
+    LOG_AES("after sub: {}", state_to_string(ctx.state_).c_str());
 
-    shiftRows(ctx.state_);
-    LOG_AES("after shift: {}", stateToString(ctx.state_).c_str());
+    shift_rows(ctx.state_);
+    LOG_AES("after shift: {}", state_to_string(ctx.state_).c_str());
 
-    addRoundKey(getNR(ctx), ctx.state_, ctx.w_);
-    LOG_AES("output state: {}\n", stateToString(ctx.state_).c_str());
+    add_round_key(get_nr(ctx), ctx.state_, ctx.w_);
+    LOG_AES("output state: {}\n", state_to_string(ctx.state_).c_str());
     return retcode;
 }
 
 //FIPS_197_5_3_
-int invCipher(AesContext &ctx)
+int inv_cipher(AesContext &ctx)
 {
     int retcode = 0;
-    LOG_AES("start state: {}\n", stateToString(ctx.state_).c_str());
+    LOG_AES("start state: {}\n", state_to_string(ctx.state_).c_str());
 
-    addRoundKey(getNR(ctx), ctx.state_, ctx.w_);
-    for (uint8_t round = getNR(ctx) - 1; round >= 1; round--)
+    add_round_key(get_nr(ctx), ctx.state_, ctx.w_);
+    for (uint8_t round = get_nr(ctx) - 1; round >= 1; round--)
     {
         LOG_AES("InvCipher Round [ {} ]: ", round);
-        LOG_AES("start rnd: {}", stateToString(ctx.state_).c_str());
-        invShiftRows(ctx.state_);
+        LOG_AES("start rnd: {}", state_to_string(ctx.state_).c_str());
+        inv_shift_rows(ctx.state_);
 
-        LOG_AES("after invshift: {}", stateToString(ctx.state_).c_str());
-        invSubWord(ctx.state_);
+        LOG_AES("after invshift: {}", state_to_string(ctx.state_).c_str());
+        inv_sub_word(ctx.state_);
 
-        LOG_AES("after invsub: {}", stateToString(ctx.state_).c_str());
-        addRoundKey(round, ctx.state_, ctx.w_);
+        LOG_AES("after invsub: {}", state_to_string(ctx.state_).c_str());
+        add_round_key(round, ctx.state_, ctx.w_);
 
-        invMixColumns(ctx.state_);
-        LOG_AES("after invmix: {}\n", stateToString(ctx.state_).c_str());
+        inv_mix_columns(ctx.state_);
+        LOG_AES("after invmix: {}\n", state_to_string(ctx.state_).c_str());
     }
     LOG_AES("Cipher Round [ {} ]: ", 0);
-    LOG_AES("start rnd: {}", stateToString(ctx.state_).c_str());
-    invShiftRows(ctx.state_);
+    LOG_AES("start rnd: {}", state_to_string(ctx.state_).c_str());
+    inv_shift_rows(ctx.state_);
 
-    LOG_AES("after invshift: {}", stateToString(ctx.state_).c_str());
-    invSubWord(ctx.state_);
+    LOG_AES("after invshift: {}", state_to_string(ctx.state_).c_str());
+    inv_sub_word(ctx.state_);
 
-    LOG_AES("after invsub: {}", stateToString(ctx.state_).c_str());
-    addRoundKey(0, ctx.state_, ctx.w_);
+    LOG_AES("after invsub: {}", state_to_string(ctx.state_).c_str());
+    add_round_key(0, ctx.state_, ctx.w_);
 
-    LOG_AES("output state: {}\n", stateToString(ctx.state_).c_str());
+    LOG_AES("output state: {}\n", state_to_string(ctx.state_).c_str());
     return retcode;
 }
 
 // SP800-38A  6.1
-int ecbEncrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
+int aes_ecb_encrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
                 size_t buf_len)
 {
-    for (size_t i = 0; i < buf_len; i += AES_BlockSize)
+    for (size_t i = 0; i < buf_len; i += kAesBlockSize)
     {
-        memcpy(ctx.state_, buf, AES_BlockSize);
-        aCipher(ctx);
-        memcpy(output, ctx.state_, AES_BlockSize);
-        buf += AES_BlockSize;
-        output += AES_BlockSize;
+        memcpy(ctx.state_, buf, kAesBlockSize);
+        aes_cipher(ctx);
+        memcpy(output, ctx.state_, kAesBlockSize);
+        buf += kAesBlockSize;
+        output += kAesBlockSize;
     }
     return 0;
 }
 
 // SP800-38A  6.1
-int ecbDecrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
+int aes_ecb_decrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
                 size_t buf_len)
 {
-    for (size_t i = 0; i < buf_len; i += AES_BlockSize)
+    for (size_t i = 0; i < buf_len; i += kAesBlockSize)
     {
-        memcpy(ctx.state_, buf, AES_BlockSize);
-        invCipher(ctx);
-        memcpy(output, ctx.state_, AES_BlockSize);
-        buf += AES_BlockSize;
-        output += AES_BlockSize;
+        memcpy(ctx.state_, buf, kAesBlockSize);
+        inv_cipher(ctx);
+        memcpy(output, ctx.state_, kAesBlockSize);
+        buf += kAesBlockSize;
+        output += kAesBlockSize;
     }
     return 0;
 }
 
 // SP800-38A  6.2
-int cbcEncrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
+int aes_cbc_encrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
                 size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv_, 16);
-    for (size_t i = 0; i < buf_len; i += AES_BlockSize)
+    for (size_t i = 0; i < buf_len; i += kAesBlockSize)
     {
-        memcpy(ctx.state_, buf, AES_BlockSize);
+        memcpy(ctx.state_, buf, kAesBlockSize);
 
         /* XOR'ing the current buffer segment with the IV */
         for (size_t j = 0; j < 4; j++)
             for (size_t k = 0; k < 4; k++)
                 ctx.state_[j][k] ^= iv[j * 4 + k];
 
-        aCipher(ctx);
-        memcpy(output, ctx.state_, AES_BlockSize);
-        memcpy(iv, ctx.state_, AES_BlockSize);
-        buf += AES_BlockSize;
-        output += AES_BlockSize;
+        aes_cipher(ctx);
+        memcpy(output, ctx.state_, kAesBlockSize);
+        memcpy(iv, ctx.state_, kAesBlockSize);
+        buf += kAesBlockSize;
+        output += kAesBlockSize;
     }
     return 0;
 }
 
 // SP800-38A 6.2
-int cbcDecrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
+int aes_cbc_decrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
                 size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv_, 16);
-    uint8_t nextIV[AES_BlockSize];
-    for (size_t i = 0; i < buf_len; i += AES_BlockSize)
+    uint8_t nextIV[kAesBlockSize];
+    for (size_t i = 0; i < buf_len; i += kAesBlockSize)
     {
-        memcpy(nextIV, buf, AES_BlockSize);
-        memcpy(ctx.state_, buf, AES_BlockSize);
-        invCipher(ctx);
+        memcpy(nextIV, buf, kAesBlockSize);
+        memcpy(ctx.state_, buf, kAesBlockSize);
+        inv_cipher(ctx);
 
         /* XOR'ing the current buffer segment with the IV */
-        for (uint8_t j = 0; j < nB; j++)
-            for (uint8_t k = 0; k < nB; k++)
-                ctx.state_[j][k] ^= iv[j * nB + k];
+        for (uint8_t j = 0; j < kNb; j++)
+            for (uint8_t k = 0; k < kNb; k++)
+                ctx.state_[j][k] ^= iv[j * kNb + k];
 
-        memcpy(output, ctx.state_, AES_BlockSize);
-        memcpy(iv, nextIV, AES_BlockSize);
-        buf += AES_BlockSize;
-        output += AES_BlockSize;
+        memcpy(output, ctx.state_, kAesBlockSize);
+        memcpy(iv, nextIV, kAesBlockSize);
+        buf += kAesBlockSize;
+        output += kAesBlockSize;
     }
     return 0;
 }
 
 // SP800-38A 6.3
 // Current implementation only works for 128mode.
-int cfbXCrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
+int aes_cfb_xcrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
                size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv_, 16);
-    uint8_t keystream[AES_BlockSize];
-    for (size_t i = 0; i < buf_len; i += AES_BlockSize)
+    uint8_t keystream[kAesBlockSize];
+    for (size_t i = 0; i < buf_len; i += kAesBlockSize)
     {
-        memcpy(ctx.state_, iv, AES_BlockSize);
-        aCipher(ctx);
-        memcpy(keystream, ctx.state_, AES_BlockSize);
+        memcpy(ctx.state_, iv, kAesBlockSize);
+        aes_cipher(ctx);
+        memcpy(keystream, ctx.state_, kAesBlockSize);
 
         // XOR'ing the current buffer segment with the IV
-        for (uint8_t j = 0; j < nB; j++)
-            for (uint8_t k = 0; k < nB; k++)
-                output[j * nB + k] = buf[j * nB + k] ^ keystream[j * nB + k];
+        for (uint8_t j = 0; j < kNb; j++)
+            for (uint8_t k = 0; k < kNb; k++)
+                output[j * kNb + k] = buf[j * kNb + k] ^ keystream[j * kNb + k];
 
-        memcpy(iv, keystream, AES_BlockSize);
+        memcpy(iv, keystream, kAesBlockSize);
 
-        buf += AES_BlockSize;
-        output += AES_BlockSize;
+        buf += kAesBlockSize;
+        output += kAesBlockSize;
     }
     return 0;
 }
 
 // SP800-38A 6.4
-int ofbXCrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
+int aes_ofb_xcrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
                size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv_, 16);
 
-    uint8_t keystream[AES_BlockSize];
-    for (size_t i = 0; i < buf_len; i += AES_BlockSize)
+    uint8_t keystream[kAesBlockSize];
+    for (size_t i = 0; i < buf_len; i += kAesBlockSize)
     {
-        memcpy(ctx.state_, iv, AES_BlockSize);
-        aCipher(ctx);
-        memcpy(keystream, ctx.state_, AES_BlockSize);
-        memcpy(iv, keystream, AES_BlockSize);
+        memcpy(ctx.state_, iv, kAesBlockSize);
+        aes_cipher(ctx);
+        memcpy(keystream, ctx.state_, kAesBlockSize);
+        memcpy(iv, keystream, kAesBlockSize);
 
         // XOR'ing the current buffer segment with the IV
-        for (uint8_t j = 0; j < nB; j++)
-            for (uint8_t k = 0; k < nB; k++)
-                output[j * nB + k] = buf[j * nB + k] ^ keystream[j * nB + k];
-        buf += AES_BlockSize;
-        output += AES_BlockSize;
+        for (uint8_t j = 0; j < kNb; j++)
+            for (uint8_t k = 0; k < kNb; k++)
+                output[j * kNb + k] = buf[j * kNb + k] ^ keystream[j * kNb + k];
+        buf += kAesBlockSize;
+        output += kAesBlockSize;
     }
     return 0;
 }
@@ -540,21 +541,21 @@ int ofbXCrypt(AesContext &ctx, uint8_t *output, const uint8_t *buf,
 /* Uses the IV as the Tcounter, properly set the IV using the standard counter
  * method */
 // SP800-38A 6.5
-int ctrXCrypt(AesContext &ctx, uint8_t *out, const uint8_t *buf, size_t buf_len)
+int aes_ctr_xcrypt(AesContext &ctx, uint8_t *out, const uint8_t *buf, size_t buf_len)
 {
     uint8_t iv[16];
     memcpy(iv, ctx.iv_, 16);
-    uint8_t TCounterBuffer[AES_BlockSize];
-    for (size_t j = 0, TInc = AES_BlockSize; j < buf_len; j++, TInc++)
+    uint8_t TCounterBuffer[kAesBlockSize];
+    for (size_t j = 0, TInc = kAesBlockSize; j < buf_len; j++, TInc++)
     {
-        if (TInc == AES_BlockSize)
+        if (TInc == kAesBlockSize)
         {
-            memcpy(TCounterBuffer, iv, AES_BlockSize);
-            memcpy(ctx.state_, TCounterBuffer, AES_BlockSize);
-            aCipher(ctx);
-            memcpy(TCounterBuffer, ctx.state_, AES_BlockSize);
+            memcpy(TCounterBuffer, iv, kAesBlockSize);
+            memcpy(ctx.state_, TCounterBuffer, kAesBlockSize);
+            aes_cipher(ctx);
+            memcpy(TCounterBuffer, ctx.state_, kAesBlockSize);
 
-            for (size_t i = AES_BlockSize - 1; i >= 0; i--)
+            for (size_t i = kAesBlockSize - 1; i >= 0; i--)
                 if (iv[i] == 0xFF)
                     iv[i] = 0;
                 else
@@ -571,14 +572,14 @@ int ctrXCrypt(AesContext &ctx, uint8_t *out, const uint8_t *buf, size_t buf_len)
 
 int aes_set_iv(AesContext &ctx, ByteSpan iv)
 {
-    memcpy(ctx.iv_, iv.data(), AES_BlockSize);
+    memcpy(ctx.iv_, iv.data(), kAesBlockSize);
     return 0;
 }
 
 // Wrapped for better naming
 int aes_key_expansion(AesContext &ctx, ByteSpan key)
 {
-    return keyExpansion(ctx, key.data());
+    return key_expansion(ctx, key.data());
 }
 
 ByteArray aes_encrypt(AesContext &ctx, ByteSpan buf)
@@ -588,23 +589,23 @@ ByteArray aes_encrypt(AesContext &ctx, ByteSpan buf)
     switch (ctx.mode_)
     {
     case cssl::AES_MODE::CBC:
-        cbcEncrypt(ctx, output.data(), buf.data(), buf.size());
+        aes_cbc_encrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case cssl::AES_MODE::ECB:
-        ecbEncrypt(ctx, output.data(), buf.data(), buf.size());
+        aes_ecb_encrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case cssl::AES_MODE::CTR:
-        ctrXCrypt(ctx, output.data(), buf.data(), buf.size());
+        aes_ctr_xcrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case cssl::AES_MODE::OFB:
-        ofbXCrypt(ctx, output.data(), buf.data(), buf.size());
+        aes_ofb_xcrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case cssl::AES_MODE::CFB:
-        cfbXCrypt(ctx, output.data(), buf.data(), buf.size());
+        aes_cfb_xcrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     default:
@@ -622,23 +623,23 @@ ByteArray aes_decrypt(AesContext &ctx, ByteSpan buf)
     switch (ctx.mode_)
     {
     case cssl::AES_MODE::CBC:
-        cbcDecrypt(ctx, output.data(), buf.data(), buf.size());
+        aes_cbc_decrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case cssl::AES_MODE::ECB:
-        ecbDecrypt(ctx, output.data(), buf.data(), buf.size());
+        aes_ecb_decrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case cssl::AES_MODE::CTR:
-        ctrXCrypt(ctx, output.data(), buf.data(), buf.size());
+        aes_ctr_xcrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case cssl::AES_MODE::OFB:
-        ofbXCrypt(ctx, output.data(), buf.data(), buf.size());
+        aes_ofb_xcrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     case cssl::AES_MODE::CFB:
-        cfbXCrypt(ctx, output.data(), buf.data(), buf.size());
+        aes_cfb_xcrypt(ctx, output.data(), buf.data(), buf.size());
         break;
 
     default:

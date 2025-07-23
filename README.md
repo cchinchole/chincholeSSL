@@ -28,11 +28,11 @@ Note: you can use the global include header "cssl/cssl.hpp or include the module
     std::string aes_kat_key = "2b7e151628aed2a6abf7158809cf4f3c";
     std::string aes_iv_key = "000102030405060708090a0b0c0d0e0f";
     std::string cbc_kat = "3243f6a8885a308d313198a2e0370734";
-    cSSL::AES aes(AES_MODE::CBC, AES_KEYSIZE::m128);
+    cssl::Aes aes(cssl::AES_MODE::CBC, cssl::AES_KEYSIZE::m128);
 
-    aes.addKey(aes_kat_key, aes_iv_key);
+    aes.load_key(aes_kat_key, aes_iv_key);
 
-    ByteArray buffer = hexToBytes(cbc_kat);
+    ByteArray buffer = hex_to_bytes(cbc_kat);
     ByteArray cipher = aes.encrypt(buffer);
     ByteArray decipher = aes.decrypt(cipher);
 ```
@@ -41,24 +41,25 @@ Note: you can use the global include header "cssl/cssl.hpp or include the module
 ```cpp
     #include "cssl/crypto/rsa.hpp"
     #include "cssl/utils/bytes.hpp"
-    cSSL::RSA rsaOAEP(1024);
+
+    cssl::Rsa rsaOAEP(1024);
 
     // Load the key like this
-    rsaOAEP.loadPublicKey(modulus, publicExponent);
-    rsaOAEP.loadPrivateKey(modulus, privateExponent);
+    rsaOAEP.load_public_key(modulus, publicExponent);
+    rsaOAEP.load_private_key(modulus, privateExponent);
 
     // Additionally add and enable CRT
     // ex1: dP, ex2: dQ, coe: qInv
-    rsaOAEP.loadCRT(P, Q, ex1, ex2, coe);
+    rsaOAEP.load_crt(P, Q, ex1, ex2, coe);
 
     // Or generate the key using the primes
-    //rsaOAEP.fromPrimes(P, Q, publicExponent);
+    //rsaOAEP.from(P, Q, publicExponent);
 
     // Or completely generate a new key.
-    //rsaOAEP.generateKey();
+    //rsaOAEP.generate_key();
     
     //No need to specify the label can leave it empty, same with the seed. This is mostly for ensuring a constant Encode.
-    rsaOAEP.addOAEP({}, hexToBytes("18b776ea21069d69776a33e96bad48e1dda0a5ef"), DIGEST_MODE::SHA_1, DIGEST_MODE::SHA_1);
+    rsaOAEP.add_oaep({}, hex_to_bytes("18b776ea21069d69776a33e96bad48e1dda0a5ef"), cssl::DIGEST_MODE::SHA_1, cssl::DIGEST_MODE::SHA_1);
 
     //Leaving off the addOAEP will use raw RSA.
     ByteArray c = rsaOAEP.encrypt(hexToBytes("6628194e12073db03ba94cda9ef9532397d50dba79b987004afefe34"));
@@ -69,11 +70,30 @@ Note: you can use the global include header "cssl/cssl.hpp or include the module
 ```cpp
     #include "cssl/crypto/ec.hpp"
     #include "cssl/utils/bytes.hpp"
-    cSSL::ECKeyPair keypair = cSSL::ECKeyPair::Generate(ECGroup::P256);
-    //ECKeyPair keypair = ECKeyPair::From(group, "d", "px", "py");
-    ByteArray msg = hexToBytes("aabbccddeeffaabbcceeddeedd11001100");
-    cSSL::ECSignature sig = keypair.sign(msg, DIGEST_MODE::SHA_256);
-    bool verification = keypair.verify(sig, msg, DIGEST_MODE::SHA_256);
+
+    cssl::Ec ec = cssl::Ec::generate_key(cssl::EC_GROUP::P256);
+    //Ec ec = Ec::from(group, "d", "px", "py");
+    ByteArray msg = hex_to_bytes("aabbccddeeffaabbcceeddeedd11001100");
+    cssl::EcSignature sig = ec.sign(msg, cssl::DIGEST_MODE::SHA_256);
+    bool verification = ec.verify(sig, msg, cssl::DIGEST_MODE::SHA_256);
+```
+
+### HASH ###
+```cpp
+    #include "../inc/hash/hash.hpp"
+
+    //Example for oneshot hashing. For SHAKE use Hasher::xof
+    ByteArray msg = hex_to_bytes(ascii_to_hex("Hello World!"));
+    ByteArray hash = cssl::Hasher::hash(msg, cssl::DIGEST_MODE::SHA_1);
+
+    //Example for HMAC
+    ByteArray key = hex_to_bytes(ascii_to_hex("HelloKey!"));
+    ByteArray hmacDigest = cssl::Hasher::hmac(msg, key, cssl::DIGEST_MODE::SHA_3_512);
+
+    //Example using update + SHAKE
+    cssl::Hasher h(cssl::DIGEST_MODE::SHA_3_SHAKE_128);
+    h.update(msg);
+    ByteArray hash = h.xof(72); //72 being the amount of bytes to output.
 ```
 ### Building an application ###
 ```

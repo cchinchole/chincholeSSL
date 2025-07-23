@@ -23,36 +23,51 @@ Aes &Aes::operator=(Aes &&other) noexcept
 }
 
 Aes::~Aes() = default;
-Aes::Aes(AES_MODE mode, AES_KEYSIZE keySize)
+Aes::Aes(AES_MODE mode, AES_KEYSIZE key_size) : mode_(mode), pimpl_(std::make_unique<Impl>())
 {
-    this->mode_ = mode;
-    this->pimpl_ = std::make_unique<Impl>();
     this->pimpl_->ctx.mode_ = mode;
-    this->pimpl_->ctx.key_size_ = keySize;
+    this->pimpl_->ctx.key_size_ = key_size;
 }
 
-void Aes::load_key(ByteSpan key, ByteSpan iv)
+bool Aes::load_key(ByteSpan key, ByteSpan iv)
 {
     aes_key_expansion(this->pimpl_->ctx, key);
     aes_set_iv(this->pimpl_->ctx, iv);
+    return true;
 }
 
-void Aes::load_key(ByteSpan key)
+bool Aes::load_key(ByteSpan key)
 {
     if(this->mode_ == AES_MODE::ECB)
+    {
         aes_key_expansion(this->pimpl_->ctx, key);
+        return true;
+    }
     else
+    {
         LOG_ERROR("Attempting to load only a key in non ECB mode");
+        return false;
+    }
 }
 
-void Aes::load_key(std::string key, std::string iv)
+bool Aes::load_key(std::string key, std::string iv)
 {
     load_key(hex_to_bytes(key), hex_to_bytes(iv));
+    return true;
 }
 
-void Aes::load_key(std::string key)
+bool Aes::load_key(std::string key)
 {
-    load_key(hex_to_bytes(key));
+    if(this->mode_ == AES_MODE::ECB)
+    {
+        load_key(hex_to_bytes(key));
+        return true;
+    }
+    else
+    {
+        LOG_ERROR("Attempting to load only a key in non ECB mode");
+        return false;
+    }
 }
 
 ByteArray Aes::encrypt(ByteSpan message)
