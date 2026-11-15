@@ -71,6 +71,9 @@ Note: you can use the global include header "cssl/cssl.hpp or include the module
     #include "cssl/crypto/ec.hpp"
     #include "cssl/utils/bytes.hpp"
 
+    //Note that you cannot use SHAKE digest functions for the signature,
+    //It will silently fail to verify or generate the signature.
+
     cssl::Ec ec = cssl::Ec::generate_key(cssl::EC_GROUP::P256);
     //Ec ec = Ec::from(group, "d", "px", "py");
     ByteArray msg = hex_to_bytes("aabbccddeeffaabbcceeddeedd11001100");

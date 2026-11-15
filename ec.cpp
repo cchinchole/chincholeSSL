@@ -1,6 +1,9 @@
 #include "internal/ec.hpp"
+#include "inc/types.hpp"
 #include "inc/utils/bytes.hpp"
 #include "inc/hash/hash.hpp"
+
+#include <assert.h>
 
 #include <cstddef>
 #include <math.h>
@@ -45,6 +48,11 @@ Generate:
     return 0;
 }
 
+//NO_RETCODE_SET = -1,
+//INVALID_SIGNATURE = 1,
+//DIGEST_INVALID_MODE = 10,
+//INVALID_SIGNATURE_PARAMS = 11,
+
 /* FIPS 186-5 6.4.1 */
 int ec_generate_signature(EcKey &key, cEcSignature &sig,
                                        ByteSpan msg,
@@ -62,10 +70,22 @@ int ec_generate_signature(EcKey &key, cEcSignature &sig,
     EcPrimeField *group = key.getGroup();
     EcPoint *return_point = new EcPoint();
 
+    ByteArray hash;
+    int len_modulus = 0;
+    int len_hash = 0;
+
+    if(shaMode==cssl::DIGEST_MODE::SHA_3_SHAKE_128 || shaMode==cssl::DIGEST_MODE::SHA_3_SHAKE_256)
+    {
+        // Invalid hash function
+        retcode = 10;
+        goto ending;
+    }
+
     // Step 1 - 2
-    auto hash = cssl::Hasher::hash(msg, shaMode);
-    int len_modulus = BN_num_bits(group->n_); /* N = len(n) */
-    int len_hash = hash.size() * 8;
+    hash = cssl::Hasher::hash(msg, shaMode);
+    len_modulus = BN_num_bits(group->n_); /* N = len(n) */
+    len_hash = hash.size() * 8;
+
     BN_bin2bn(hash.data(), hash.size(), tmp);
     hash.clear();
     if (len_hash > len_modulus)
@@ -114,12 +134,18 @@ ending:
     return retcode;
 }
 
+//NO_RETCODE_SET = -1,
+//INVALID_SIGNATURE = 1,
+//DIGEST_INVALID_MODE = 10,
+//INVALID_SIGNATURE_PARAMS = 11,
+
 /* FIPS 186-5 6.4.2 */
 int ec_verify_signature(EcKey &key, cEcSignature &sig,
                                      ByteSpan msg,
                                      cssl::DIGEST_MODE shaMode)
 {
     int retcode = -1;
+
     EcPrimeField *d_group = key.getGroup();
     EcPoint *q_pub = &key.pub_;
 
@@ -135,17 +161,30 @@ int ec_verify_signature(EcKey &key, cEcSignature &sig,
     EcPoint *addend1 = new EcPoint();
     EcPoint *addend2 = new EcPoint();
     EcPoint *return_point = new EcPoint();
+    ByteArray hash;
+    int len_modulus = 0;
+    int len_hash = 0;
 
+    if(shaMode==cssl::DIGEST_MODE::SHA_3_SHAKE_128 || shaMode==cssl::DIGEST_MODE::SHA_3_SHAKE_256)
+    {
+        // Invalid hash function
+        retcode = 10;
+        goto ending;
+    }
+        
     // Step 2 - 3: Hash the message
-    ByteArray hash = cssl::Hasher::hash(msg, shaMode);
+    hash = cssl::Hasher::hash(msg, shaMode);
 
-    if (BN_is_zero(sig.r_) || BN_is_zero(sig.s_) || BN_ucmp(sig.r_, d_group->n_) >= 0 ||
-        BN_ucmp(sig.s_, d_group->n_) >= 0)
-        return -1; // Either R or S is not within 0, n-1
+    if (BN_is_zero(sig.r_) || BN_is_zero(sig.s_) || BN_ucmp(sig.r_, d_group->n_) >= 0 || BN_ucmp(sig.s_, d_group->n_) >= 0)
+    {
+       // Either R or S is not within 0, n-1
+       retcode = 11;
+       goto ending;
+    }
 
     // Step 3: Convert leftmost N bits of hash to integer
-    int len_modulus = BN_num_bits(d_group->n_); // N = len(n)
-    int len_hash = hash.size() * 8; // hash length in bits
+    len_modulus = BN_num_bits(d_group->n_); // N = len(n)
+    len_hash = hash.size() * 8; // hash length in bits
 
     // Store hash in tmp
     BN_bin2bn(hash.data(), hash.size(), tmp);
@@ -170,7 +209,7 @@ int ec_verify_signature(EcKey &key, cEcSignature &sig,
 
     if (return_point->isAtInfinity())
     {
-        retcode = -1;
+        retcode = 1;
         goto ending;
     }
 
@@ -178,12 +217,12 @@ int ec_verify_signature(EcKey &key, cEcSignature &sig,
 
     if (BN_cmp(sig.r_, tmp) == 0)
     {
-        retcode = 0;
+        retcode = 0; // Success
         goto ending;
     }
     else
     {
-        retcode = -1;
+        retcode = 1; // Invalid signature
         goto ending;
     }
 
@@ -193,6 +232,8 @@ ending:
     delete return_point;
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
+
+    assert(retcode != -1 && "Unreachable code was hit.\n");
     return retcode;
 }
 
