@@ -61,12 +61,11 @@ int sha256_process(ShaContext *ctx)
 
     /* Step 1: setup the message schedule */
     for (int i = 0; i < SHA256_NUM_WORDS; i++)
-        for (int j = 0; j < sizeof(uint32_t); j++)
-        {
-            char z = block[i * sizeof(uint32_t) + j];
-            W[i] <<= 8;
-            W[i] |= block[i * sizeof(uint32_t) + j];
-        }
+    {
+        const uint8_t *p = &block[i*sizeof(uint32_t)];
+        W[i] = ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
++              ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+    }
 
     for (int i = 16; i < SHA256_ROUNDS; i++)
     {
@@ -120,13 +119,12 @@ int sha256_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx)
     uint64_t *bMsg_len = ((uint64_t *)ctx->pmsg_len_);
     uint8_t *block = (uint8_t *)(ctx->pblock_);
     /* Make sure the bits are not exceeding 2^64 */
-    if ((*bMsg_len + (byMsg_len * 8)) >= pow(2, 64))
+    if (byMsg_len > (UINT64_MAX - *bMsg_len)/8)
         return -1;
 
     /* Clear the block with 0's then copy up to 64 bytes of a message into the
      * block. If we hit 64 then process this message and continue. */
     const uint8_t *src = (uint8_t *)msg;
-    memset(block, 0, get_block_length(ctx->mode_));
     *bMsg_len += (byMsg_len * 8);
     while (byMsg_len--)
     {
@@ -163,10 +161,10 @@ int sha256_digest(uint8_t *digest_out, ShaContext *ctx)
     }
     uint64_t nSize = *((uint32_t *)ctx->pmsg_len_);
 
-    for (int i = 1; i <= 4; i++)
+    for (int i = 1; i < 8; i++)
     {
         /* Will pull the last byte of the size then remove it */
-        block[get_block_length(ctx->mode_) - i] = nSize;
+        block[get_block_length(ctx->mode_) - i] = (uint8_t)(nSize&0xFF);
         nSize >>= 8;
     }
 

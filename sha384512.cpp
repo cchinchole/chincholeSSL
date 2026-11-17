@@ -83,11 +83,14 @@ int sha512_process(ShaContext *ctx)
 
     /* Step 1: setup the message schedule */
     for (int i = 0; i < SHA384512_NUM_WORDS; i++)
+    {
+        uint64_t w = 0;
         for (int j = 0; j < sizeof(uint64_t); j++)
         {
-            W[i] <<= 8;
-            W[i] |= block[i * sizeof(uint64_t) + j];
+            w = (w << 8) | block[i*sizeof(uint64_t)+j];
         }
+        W[i] = w;
+    }
 
     for (int i = 16; i < SHA384512_ROUNDS; i++)
     {
@@ -163,7 +166,6 @@ int sha512_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx)
     }
 
     const uint8_t *src = (uint8_t *)msg;
-    memset(block, 0, get_block_length(ctx->mode_));
     while (byMsg_len--)
     {
         block[ctx->block_cursor_++] = *src++;
@@ -210,7 +212,7 @@ int sha512_digest(uint8_t *digest_out, ShaContext *ctx)
     {
         /* Will pull the last byte of the size then remove it. Will enumerate up
          * to 16 bytes then swap to the other 64 bit int in the array */
-        block[i] = nSize[sizeIdx];
+        block[i] = (uint8_t)(nSize[sizeIdx]&0xFF);
         nSize[sizeIdx] >>= 8;
         if (i == get_block_length(ctx->mode_) - sizeof(uint64_t))
             sizeIdx++;
@@ -220,17 +222,14 @@ int sha512_digest(uint8_t *digest_out, ShaContext *ctx)
     sha512_process(ctx);
     ctx->block_cursor_ = 0;
 
-    for (int i = 0; i < get_return_length(ctx->mode_) / sizeof(H[i]); i++)
-    {
-        *(digest_out++) = H[i] >> 56;
-        *(digest_out++) = H[i] >> 48;
-        *(digest_out++) = H[i] >> 40;
-        *(digest_out++) = H[i] >> 32;
-        *(digest_out++) = H[i] >> 24;
-        *(digest_out++) = H[i] >> 16;
-        *(digest_out++) = H[i] >> 8;
-        *(digest_out++) = H[i];
-    }
-
+    //This was bugged with the original for loop of return_length/8 as a SHA512_224 return would fail since we will run only 3 times (3.5 rounded down) rather than the 4 times we need.
+    //Missing the remaining bytes
+    size_t remaining = get_return_length(ctx->mode_);
+    for(int i = 0; i < 8 && remaining > 0; i++)
+        for(int j = 0; j < 8 && remaining > 0; j++)
+        {
+            *(digest_out++) = (uint8_t)(H[i] >> (56-8*j));
+            remaining--;
+        }
     return 0;
 }

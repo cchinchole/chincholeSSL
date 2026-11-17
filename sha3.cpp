@@ -112,7 +112,9 @@ int sha3_keccakf(uint64_t sponge[kSha3SpongeArr][kSha3SpongeArr])
 int sha3_update(const uint8_t *msg, size_t byMsg_len, ShaContext *ctx_raw)
 {
     Sha3Context *ctx = (Sha3Context*)ctx_raw;
-    if (!msg || byMsg_len == 0)
+    if (byMsg_len == 0)
+        return 0;
+    if (msg==NULL)
         return -1;
     for (int i = 0; i < byMsg_len; i++)
     {
