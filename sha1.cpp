@@ -152,7 +152,7 @@ int sha1_digest(uint8_t *digest_out, ShaContext *ctx)
     }
     uint64_t nSize = *((uint32_t *)ctx->pmsg_len_);
 
-    for (int i = 1; i < 8; i++)
+    for (int i = 1; i <= 8; i++)
     {
         /* Will pull the last byte of the size then remove it */
         block[get_block_length(ctx->mode_) - i] = (uint8_t)(nSize & 0xFF);
